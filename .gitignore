@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Secrets & local config (never commit)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Runtime / local state (contains real OAuth tokens + usage counters)
+.tokens.json
+**/.tokens.json
+.usage.json
+**/.usage.json
+
+# Build output
+dist/
+build/
+**/dist/
+**/build/
+
+# Vite cache
+.vite/
+**/.vite/
+
+# Logs
+*.log
+**/*.log
+
+# OS / editor
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,25 @@
+{
+  "name": "@pulseos/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pulse OS backend — Express API gateway to weather, stocks, news, sports, AI, calendar and music providers.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "tsdav": "^2.3.1"
+  },
+  "optionalDependencies": {
+    "googleapis": "^144.0.0",
+    "node-ical": "^0.20.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

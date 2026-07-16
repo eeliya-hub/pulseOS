@@ -1,0 +1,24 @@
+{
+  "name": "pulseos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pulse OS — a personal command-center dashboard (React frontend + Express backend).",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n frontend,backend -c cyan,magenta \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "dev:backend": "npm --workspace backend run dev",
+    "build": "npm --workspace frontend run build",
+    "start:backend": "npm --workspace backend run start",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

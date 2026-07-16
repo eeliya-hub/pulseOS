@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.local
+.tokens.json
+.usage.json
+*.log

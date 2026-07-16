@@ -1,0 +1,104 @@
+// Thin client for the Pulse OS Express backend. This is the single place the
+// frontend talks to real integrations — swap the existing mock services
+// (weather.js, markets.js, …) over to these calls one view at a time.
+//
+// Travel and Finance intentionally have NO backend calls — they stay local.
+
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
+
+async function request(path, { method = 'GET', body, params } = {}) {
+  const url = new URL(`${BASE_URL}${path}`);
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v != null && v !== '') url.searchParams.set(k, v);
+    });
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = new Error(data?.error?.message ?? `Request failed (${res.status})`);
+    err.status = res.status;
+    err.code = data?.error?.code;
+    throw err;
+  }
+  return data;
+}
+
+export const api = {
+  status: () => request('/status'),
+
+  weather: {
+    current: (params) => request('/weather', { params }),
+    forecast: (params) => request('/weather/forecast', { params }),
+    summary: (params) => request('/weather/summary', { params }),
+  },
+  stocks: {
+    quotes: (symbols) => request('/stocks', { params: { symbols: symbols.join(',') } }),
+    quote: (symbol) => request(`/stocks/${symbol}`),
+    ticker: () => request('/stocks/ticker'),
+  },
+  news: {
+    headlines: (params) => request('/news', { params }),
+    search: (q) => request('/news/search', { params: { q } }),
+    local: (q) => request('/news/local', { params: { q } }),
+  },
+  sports: {
+    // Unified card data for a followed team/constructor.
+    team: (name, sport, league, leagueLabel) =>
+      request('/sports/team', { params: { name, sport, league, leagueLabel } }),
+    // Per-sport endpoints backing the dedicated frontend service modules.
+    football: {
+      standings: (competition) => request('/sports/football/standings', { params: { competition } }),
+      fixtures: (competition, type) => request('/sports/football/fixtures', { params: { competition, type } }),
+    },
+    nba: {
+      standings: () => request('/sports/nba/standings'),
+      games: (type) => request('/sports/nba/games', { params: { type } }),
+    },
+    nfl: {
+      standings: () => request('/sports/nfl/standings'),
+      games: (type) => request('/sports/nfl/games', { params: { type } }),
+    },
+    f1: {
+      races: (type) => request('/sports/f1/races', { params: { type } }),
+      standings: (type) => request('/sports/f1/standings', { params: { type } }),
+    },
+  },
+  ai: {
+    chat: (payload) => request('/ai/chat', { method: 'POST', body: payload }),
+  },
+  launch: Object.assign((app, url) => request('/launch', { method: 'POST', body: { app, url } }), {
+    apps: () => request('/launch/apps'),
+    iconUrl: (app) => `${BASE_URL}/launch/icon?app=${encodeURIComponent(app)}`,
+  }),
+  calendar: {
+    status: () => request('/calendar/status'),
+    calendars: () => request('/calendar/calendars'),
+    googleAuthUrl: () => request('/calendar/google/auth'),
+    appleConnect: (appleId, appPassword) =>
+      request('/calendar/apple/connect', { method: 'POST', body: { appleId, appPassword } }),
+    appleDisconnect: () => request('/calendar/apple/disconnect', { method: 'POST' }),
+    events: (params) => request('/calendar/events', { params }),
+    createEvent: (event) => request('/calendar/events', { method: 'POST', body: event }),
+    updateEvent: (event) => request('/calendar/events', { method: 'PATCH', body: event }),
+    deleteEvent: (event) => request('/calendar/events', { method: 'DELETE', body: event }),
+  },
+  geo: (q) => request('/geo', { params: { q } }),
+  music: {
+    authUrl: () => request('/music/auth'),
+    token: () => request('/music/token'),
+    transfer: (deviceId, play = true) =>
+      request('/music/transfer', { method: 'PUT', body: { deviceId, play } }),
+    play: (payload) => request('/music/play', { method: 'PUT', body: payload }),
+    nowPlaying: () => request('/music/now-playing'),
+    playlists: () => request('/music/playlists'),
+    recentlyPlayed: () => request('/music/recently-played'),
+    search: (q) => request('/music/search', { params: { q } }),
+  },
+};
