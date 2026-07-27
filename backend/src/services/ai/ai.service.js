@@ -36,14 +36,15 @@ export const aiService = {
    * @param {string} [params.model]
    * @param {number} [params.maxTokens]
    */
-  async chat({ messages, prompt, system, provider, model, maxTokens, tools, userName }) {
+  async chat({ messages, prompt, system, provider, model, maxTokens, tools, userName, instructions }) {
     const convo = messages?.length ? messages : prompt ? [{ role: 'user', content: prompt }] : null;
     if (!convo) throw ApiError.badRequest('Provide `prompt` or a non-empty `messages` array.');
 
     // When `tools` is requested, hand the model the tool schemas + the agent
-    // system prompt so it can read/write the user's data.
+    // system prompt so it can read/write the user's data. `instructions` are the
+    // user's own persona preferences, folded into that prompt.
     const toolSchemas = tools ? TOOLS : undefined;
-    const useSystem = system ?? (tools ? systemPrompt(userName) : undefined);
+    const useSystem = system ?? (tools ? systemPrompt(userName, instructions) : undefined);
 
     const chosen = resolveProvider(provider);
 

@@ -38,10 +38,40 @@ async function makeClient({ appleId, appPassword }) {
 const normColor = (c) => (c ? `#${String(c).replace('#', '').slice(0, 6)}` : null);
 const isEventCalendar = (c) => !c.components || c.components.includes('VEVENT');
 
-async function connectedClient(user) {
+// Reuse the CalDAV client + calendar list across requests. iCloud throttles
+// repeated Basic-auth logins, and re-logging-in (plus re-listing calendars) on
+// every request was intermittently failing — which surfaced as "no events".
+// Caching those makes reads both faster and far more reliable.
+const CLIENT_TTL = 10 * 60 * 1000;
+const clientCache = new Map(); // userKey -> { client, at }
+const calCache = new Map(); // userKey -> { calendars, at }
+const userKey = (user) => user || 'default';
+
+function invalidate(user) {
+  clientCache.delete(userKey(user));
+  calCache.delete(userKey(user));
+}
+
+async function getClient(user, fresh = false) {
+  const key = userKey(user);
+  const hit = clientCache.get(key);
+  if (!fresh && hit && Date.now() - hit.at < CLIENT_TTL) return hit.client;
   const creds = tokenStore.get('apple', user);
   if (!creds) throw ApiError.unauthorized('Apple Calendar not connected.');
-  return makeClient(creds);
+  const client = await makeClient(creds);
+  clientCache.set(key, { client, at: Date.now() });
+  return client;
+}
+
+// The user's event calendars, cached briefly (they rarely change).
+async function getEventCalendars(user, fresh = false) {
+  const key = userKey(user);
+  const hit = calCache.get(key);
+  if (!fresh && hit && Date.now() - hit.at < CLIENT_TTL) return hit.calendars;
+  const client = await getClient(user, fresh);
+  const calendars = (await client.fetchCalendars()).filter(isEventCalendar);
+  calCache.set(key, { calendars, at: Date.now() });
+  return calendars;
 }
 
 export const appleProvider = {
@@ -67,14 +97,14 @@ export const appleProvider = {
 
   disconnect(user) {
     tokenStore.clear('apple', user);
+    invalidate(user);
     return { connected: false };
   },
 
   async listCalendars(user) {
     if (!this.isConnected(user)) return [];
-    const client = await connectedClient(user);
-    const calendars = await client.fetchCalendars();
-    return calendars.filter(isEventCalendar).map((c) => ({
+    const calendars = await getEventCalendars(user);
+    return calendars.map((c) => ({
       id: c.url,
       name: c.displayName || 'Calendar',
       color: normColor(c.calendarColor),
@@ -84,57 +114,81 @@ export const appleProvider = {
   },
 
   async listEvents({ timeMin, timeMax, user } = {}) {
-    const client = await connectedClient(user);
     const nodeIcal = await loadNodeIcal();
-    const calendars = (await client.fetchCalendars()).filter(isEventCalendar);
-
     const start = (timeMin ? new Date(timeMin) : new Date()).toISOString();
     const end = (timeMax ? new Date(timeMax) : new Date(Date.now() + 60 * 86_400_000)).toISOString();
 
-    const all = [];
-    for (const calendar of calendars) {
-      const meta = {
-        calendarId: calendar.url,
-        calendarName: calendar.displayName || 'Calendar',
-        color: normColor(calendar.calendarColor),
-        calendarWritable: !calendar.readOnly,
-      };
-      let objects = [];
-      try {
-        objects = await client.fetchCalendarObjects({ calendar, timeRange: { start, end } });
-      } catch {
-        continue;
-      }
-      for (const obj of objects) {
-        if (!obj?.data) continue;
-        try {
-          const parsed = nodeIcal.sync.parseICS(obj.data);
-          for (const ev of eventsFromParsed(parsed, { timeMin, timeMax, source: 'apple' })) {
-            all.push({
-              ...ev,
-              calendarId: meta.calendarId,
-              calendarName: meta.calendarName,
-              color: meta.color,
-              providerUrl: obj.url,
-              etag: obj.etag,
-              // Recurring events can be deleted (whole series, or one occurrence
-              // via EXDATE) but not edited — rebuilding would drop their RRULE.
-              writable: meta.calendarWritable,
-              editable: meta.calendarWritable && !ev.recurring,
-            });
+    // Fetch every calendar's objects in parallel. If EVERY calendar read fails,
+    // the whole attempt failed (a dead client / iCloud throttle) — throw so the
+    // caller can retry or serve a cached result, rather than reporting "no events".
+    const fetchAll = async (fresh) => {
+      const client = await getClient(user, fresh);
+      const calendars = await getEventCalendars(user, fresh);
+      let failures = 0;
+
+      const perCalendar = await Promise.all(
+        calendars.map(async (calendar) => {
+          const meta = {
+            calendarId: calendar.url,
+            calendarName: calendar.displayName || 'Calendar',
+            color: normColor(calendar.calendarColor),
+            calendarWritable: !calendar.readOnly,
+          };
+          let objects;
+          try {
+            objects = await client.fetchCalendarObjects({ calendar, timeRange: { start, end } });
+          } catch {
+            failures += 1;
+            return [];
           }
-        } catch {
-          /* skip unparseable object */
-        }
+          const events = [];
+          for (const obj of objects) {
+            if (!obj?.data) continue;
+            try {
+              const parsed = nodeIcal.sync.parseICS(obj.data);
+              for (const ev of eventsFromParsed(parsed, { timeMin, timeMax, source: 'apple' })) {
+                events.push({
+                  ...ev,
+                  calendarId: meta.calendarId,
+                  calendarName: meta.calendarName,
+                  color: meta.color,
+                  providerUrl: obj.url,
+                  etag: obj.etag,
+                  // Recurring events can be deleted (whole series, or one occurrence
+                  // via EXDATE) but not edited — rebuilding would drop their RRULE.
+                  writable: meta.calendarWritable,
+                  editable: meta.calendarWritable && !ev.recurring,
+                });
+              }
+            } catch {
+              /* skip unparseable object */
+            }
+          }
+          return events;
+        }),
+      );
+
+      if (calendars.length && failures === calendars.length) {
+        throw new Error('All Apple calendar reads failed');
       }
+      return perCalendar.flat();
+    };
+
+    let all;
+    try {
+      all = await fetchAll(false);
+    } catch {
+      // A cached client/login can go stale (iCloud drops it) — rebuild once.
+      invalidate(user);
+      all = await fetchAll(true);
     }
     return all.sort((a, b) => new Date(a.start) - new Date(b.start));
   },
 
   async createEvent({ calendarId, title, description, location, start, end, allDay, user }) {
     if (!title || !start) throw ApiError.badRequest('An event needs at least a `title` and `start`.');
-    const client = await connectedClient(user);
-    const calendars = (await client.fetchCalendars()).filter(isEventCalendar);
+    const client = await getClient(user);
+    const calendars = await getEventCalendars(user);
     const calendar = calendars.find((c) => c.url === calendarId) || calendars[0];
     if (!calendar) throw ApiError.badRequest('No writable iCloud calendar found.');
     const uid = `pulseos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@icloud`;
@@ -145,7 +199,7 @@ export const appleProvider = {
 
   async updateEvent({ providerUrl, etag, uid, title, description, location, start, end, allDay, user }) {
     if (!providerUrl) throw ApiError.badRequest('Missing the event reference to update.');
-    const client = await connectedClient(user);
+    const client = await getClient(user);
     const iCalString = buildICS({
       uid: uid || `pulseos-${Date.now()}@icloud`,
       title,
@@ -161,12 +215,12 @@ export const appleProvider = {
 
   async deleteEvent({ providerUrl, etag, calendarId, scope, recurring, occurrenceStart, allDay, user }) {
     if (!providerUrl) throw ApiError.badRequest('Missing the event reference to delete.');
-    const client = await connectedClient(user);
+    const client = await getClient(user);
 
     // Delete a single occurrence of a series by adding an EXDATE to the master.
     if (recurring && scope !== 'all' && occurrenceStart) {
       try {
-        const calendars = (await client.fetchCalendars()).filter(isEventCalendar);
+        const calendars = await getEventCalendars(user);
         const calendar = calendars.find((c) => c.url === calendarId) || calendars[0];
         const [obj] = await client.fetchCalendarObjects({ calendar, objectUrls: [providerUrl] });
         if (obj?.data) {

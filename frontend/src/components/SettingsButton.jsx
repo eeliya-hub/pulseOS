@@ -39,7 +39,7 @@ export default function SettingsButton({
         ? createPortal(
         <div
           data-settings=""
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(false);
           }}
@@ -87,6 +87,16 @@ export default function SettingsButton({
                 <StocksPicker />
               </div>
             ) : null}
+            {fields.includes('ai') ? (
+              <Textarea
+                className={fields.length > 1 ? 'mt-4' : ''}
+                label="How Pulse should talk to you"
+                value={settings.aiInstructions ?? ''}
+                onChange={(v) => update({ aiInstructions: v })}
+                placeholder="e.g. Keep replies short and direct. Call me Eel. Be upbeat in the mornings. Always give times in 24h."
+                hint="Your assistant follows this in every chat and voice reply"
+              />
+            ) : null}
           </div>
         </div>,
             document.body,
@@ -107,6 +117,24 @@ function Field({ label, value, onChange, placeholder, hint, className = '' }) {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+      />
+      {hint ? <span className="mt-1 block text-[10px] text-white/38">{hint}</span> : null}
+    </label>
+  );
+}
+
+function Textarea({ label, value, onChange, placeholder, hint, className = '' }) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+        {label}
+      </span>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={4}
+        className="glass-scroll w-full resize-none rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm leading-6 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
       />
       {hint ? <span className="mt-1 block text-[10px] text-white/38">{hint}</span> : null}
     </label>

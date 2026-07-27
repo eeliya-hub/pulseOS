@@ -72,6 +72,20 @@ export const api = {
   },
   ai: {
     chat: (payload) => request('/ai/chat', { method: 'POST', body: payload }),
+    // One-shot spoken sample of a prebuilt voice → { audio (base64 wav), mimeType }.
+    voicePreview: (voice) => request('/ai/voice-preview', { method: 'POST', body: { voice } }),
+    // WebSocket endpoint for the real-time Gemini Live voice session. `name` and
+    // the user's persona `instructions` personalize the system prompt; `voice`
+    // pins which prebuilt Gemini voice speaks.
+    voiceWsUrl: (name, instructions, voice) => {
+      const base = BASE_URL.replace(/^http/i, 'ws');
+      const params = new URLSearchParams();
+      if (name) params.set('name', name);
+      if (instructions) params.set('instructions', instructions);
+      if (voice) params.set('voice', voice);
+      const qs = params.toString();
+      return `${base}/voice${qs ? `?${qs}` : ''}`;
+    },
   },
   launch: Object.assign((app, url) => request('/launch', { method: 'POST', body: { app, url } }), {
     apps: () => request('/launch/apps'),

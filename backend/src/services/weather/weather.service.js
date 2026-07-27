@@ -1,3 +1,4 @@
+import { config } from '../../config/env.js';
 import { createCache } from '../../utils/cache.js';
 import { openWeatherProvider } from './openweather.provider.js';
 
@@ -44,23 +45,27 @@ export const weatherService = {
     const units = params.units ?? 'metric';
     const key = `summary:${params.city ?? `${params.lat},${params.lon}`}:${units}`;
     return cache.wrap(key, async () => {
-      // OpenWeather reads anything after a comma as a country/state code, so
-      // "Ashford, Kent" 404s. Fall back to just the first part (the town/city).
+      // Resolve the typed place → coordinates first (biased to the home country),
+      // so "Kent" lands on the UK county rather than Kent, WA. Fetching by lat/lon
+      // is also what unlocks air quality without a second lookup.
+      const geo = await resolveCoords(params);
+      const query = geo ? { lat: geo.lat, lon: geo.lon } : { city: params.city?.split(',')[0]?.trim() || params.city };
+
+      // Fallback to the raw city query if geocoding produced nothing.
       const getCurrent = async () => {
         try {
-          return await openWeatherProvider.getCurrent({ ...params, units });
+          return await openWeatherProvider.getCurrent({ ...query, units });
         } catch (err) {
           const short = params.city?.split(',')[0]?.trim();
           if (short && short !== params.city) {
-            return openWeatherProvider.getCurrent({ ...params, city: short, units });
+            return openWeatherProvider.getCurrent({ city: short, units });
           }
           throw err;
         }
       };
-      const shortCity = params.city?.split(',')[0]?.trim() || params.city;
       const [current, forecast] = await Promise.all([
         getCurrent(),
-        openWeatherProvider.getForecast({ ...params, city: shortCity, units }).catch(() => ({})),
+        openWeatherProvider.getForecast({ ...query, units }).catch(() => ({})),
       ]);
 
       const points = (forecast.list ?? []).slice(0, 12).map((p) => ({
@@ -91,7 +96,7 @@ export const weatherService = {
       }
 
       return {
-        location: current.name,
+        location: geo?.name || current.name,
         temperature: Math.round(current.main?.temp),
         condition: current.weather?.[0]?.description
           ? current.weather[0].description.replace(/\b\w/g, (m) => m.toUpperCase())
@@ -110,6 +115,32 @@ export const weatherService = {
     });
   },
 };
+
+// Resolve a request to coordinates. If lat/lon are supplied, use them; otherwise
+// geocode the typed place name. A bare name (no comma → no explicit country) is
+// biased to the configured home country so local place names resolve correctly.
+async function resolveCoords(params) {
+  if (params.lat != null && params.lon != null) return { lat: params.lat, lon: params.lon, name: null };
+  const raw = (params.city || '').trim();
+  if (!raw) return null;
+
+  const matches = await openWeatherProvider.geocode({ city: raw }).catch(() => []);
+  if (!matches?.length) return null;
+
+  let best = matches[0];
+  const bias = config.weather.defaultCountry;
+  if (bias && !raw.includes(',')) {
+    const biased = matches.find((m) => m.country === bias);
+    if (biased) best = biased;
+  }
+  return {
+    lat: best.lat,
+    lon: best.lon,
+    name: best.name,
+    country: best.country,
+    state: best.state,
+  };
+}
 
 // Aggregate the 3-hour forecast list into per-day high/low + a representative
 // icon (whatever's forecast closest to midday). Returns up to 6 days incl. today.

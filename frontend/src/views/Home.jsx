@@ -1,4 +1,17 @@
-import { CalendarDays, Check, Cloud, CloudRain, ImagePlus, Settings2, Sun, X } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  Cloud,
+  CloudRain,
+  Globe,
+  ImagePlus,
+  Plus,
+  Settings2,
+  Sparkles,
+  Sun,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import GlassCard from '../components/GlassCard.jsx';
@@ -121,10 +134,36 @@ function uniqueEventChoices(upcoming) {
   });
 }
 
-// Open the corresponding native app on the machine (via the backend `open -a`),
-// falling back silently if the backend can't be reached.
-function launchApp(app) {
-  api.launch(app).catch(() => {});
+// A launchpad item is either a macOS app name (string) or a website shortcut
+// ({ url, name }). These helpers normalize the two so the grid + picker stay tidy.
+const isSite = (item) => Boolean(item) && typeof item === 'object' && typeof item.url === 'string';
+const hostOf = (url) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return (url || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  }
+};
+const itemKey = (item) => (isSite(item) ? `site:${item.url}` : `app:${item}`);
+const itemLabel = (item) => (isSite(item) ? item.name || hostOf(item.url) : item);
+// Add a scheme if the user typed a bare host, then validate it as http(s).
+function normalizeUrl(raw) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '';
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const u = new URL(withScheme);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? u.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+// Open a launchpad item — a native app (via the backend `open -a`) or a website
+// (opened in the default browser), failing silently if the backend is unreachable.
+function launchItem(item) {
+  if (isSite(item)) api.launch(undefined, item.url).catch(() => {});
+  else api.launch(item).catch(() => {});
 }
 
 // Fallback day-by-day outlook (used until live weather arrives / when there's no
@@ -152,10 +191,15 @@ const HOME_GRID_ROWS = '1.6fr 1fr';
 // Bar height scaled to the visible range of daily highs.
 const barHeight = (temp, min, max) => 28 + (72 * (temp - min)) / ((max - min) || 1);
 
-export default function Home() {
+// Brief prompt that nudges the assistant to read today's schedule, tasks + weather.
+const TODAY_BRIEF_PROMPT =
+  "Give me a brief of my day — what's on my calendar, my open tasks, and the weather. Keep it short and warm.";
+
+export default function Home({ onAskPulse }) {
   const { weather } = useWeather();
   const { settings, update } = useSettings();
   const [now, setNow] = useState(() => new Date());
+  const [askText, setAskText] = useState('');
   const life = useLifeData();
   const calendar = useCalendarEvents();
   const daily = weather?.daily?.length ? weather.daily : DEFAULT_DAILY;
@@ -195,15 +239,59 @@ export default function Home() {
   const launchpad = settings.launchpad ?? [];
   const [showLaunchpad, setShowLaunchpad] = useState(false);
 
+  const askPulse = (text) => {
+    const query = (text ?? askText).trim();
+    if (!query || !onAskPulse) return;
+    onAskPulse(query);
+    setAskText('');
+  };
+
   return (
     <div className="flex h-full flex-col">
       <header className="relative shrink-0 pb-4 pt-5 text-center">
         <h1 className="display-type text-3xl font-extralight tracking-wide text-white/95 md:text-[2.65rem]">
           {getGreeting(now)}, <span className="cyan-name font-light">{settings.name}</span>
         </h1>
-        <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.32em] text-white/36">
+        <p className="mt-2.5 text-[10px] font-medium uppercase tracking-[0.32em] text-white/36">
           A calm start · {upcoming.filter((e) => e.offset === 0).length} today
         </p>
+
+        {onAskPulse && (
+          <div className="mx-auto mt-4 flex w-full max-w-xl items-center gap-2">
+            <form
+              className="group relative flex-1"
+              onSubmit={(event) => {
+                event.preventDefault();
+                askPulse();
+              }}
+            >
+              <label htmlFor="home-ask-pulse" className="sr-only">
+                Ask Pulse
+              </label>
+              <Sparkles
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/60"
+                aria-hidden="true"
+              />
+              <input
+                id="home-ask-pulse"
+                type="text"
+                value={askText}
+                onChange={(event) => setAskText(event.target.value)}
+                placeholder="Ask Pulse anything…"
+                className="w-full rounded-full border border-white/12 bg-white/7 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-cyan-100/30 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(116,242,255,0.08)]"
+              />
+            </form>
+            <button
+              type="button"
+              onClick={() => askPulse(TODAY_BRIEF_PROMPT)}
+              className="soft-button inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-semibold text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-cyan-100/80" aria-hidden="true" />
+              Today’s brief
+            </button>
+          </div>
+        )}
+
         <SettingsButton className="absolute right-0 top-5" />
       </header>
 
@@ -428,24 +516,27 @@ export default function Home() {
                 onClick={() => setShowLaunchpad(true)}
                 className="mx-auto rounded-xl px-4 py-3 text-xs text-white/45 transition hover:text-white/75"
               >
-                Choose apps to add →
+                Choose apps &amp; sites to add →
               </button>
             ) : (
               <div className="grid grid-cols-5 items-start gap-x-2 gap-y-3">
-                {launchpad.slice(0, 10).map((app) => (
-                  <button
-                    key={app}
-                    type="button"
-                    onClick={() => launchApp(app)}
-                    className="group flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1 transition hover:-translate-y-1 hover:bg-white/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                    aria-label={`Open ${app}`}
-                  >
-                    <AppIcon app={app} />
-                    <span className="w-full truncate text-center text-[10px] font-medium text-white/45 transition group-hover:text-white/80">
-                      {app}
-                    </span>
-                  </button>
-                ))}
+                {launchpad.slice(0, 10).map((item) => {
+                  const label = itemLabel(item);
+                  return (
+                    <button
+                      key={itemKey(item)}
+                      type="button"
+                      onClick={() => launchItem(item)}
+                      className="group flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1 transition hover:-translate-y-1 hover:bg-white/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                      aria-label={`Open ${label}`}
+                    >
+                      {isSite(item) ? <SiteIcon url={item.url} /> : <AppIcon app={item} />}
+                      <span className="w-full truncate text-center text-[10px] font-medium text-white/45 transition group-hover:text-white/80">
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -721,10 +812,35 @@ function AppIcon({ app, size = 'h-11 w-11' }) {
   );
 }
 
-// Pick which installed apps show on the launchpad.
+// A website shortcut tile — the site's favicon on a soft tile, with a globe
+// fallback for sites that don't serve one.
+function SiteIcon({ url, size = 'h-11 w-11' }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className={`grid ${size} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 shadow-lg ring-1 ring-white/10`}>
+      {failed ? (
+        <Globe className="h-5 w-5 text-cyan-100/70" strokeWidth={1.6} aria-hidden="true" />
+      ) : (
+        <img
+          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostOf(url))}&sz=128`}
+          alt=""
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="h-6 w-6 rounded object-contain"
+        />
+      )}
+    </span>
+  );
+}
+
+// Pick which installed apps + website shortcuts show on the launchpad.
 function LaunchpadPicker({ selected, onChange, onClose }) {
   const [apps, setApps] = useState(null);
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState('apps'); // 'apps' | 'sites'
+  const [siteName, setSiteName] = useState('');
+  const [siteUrl, setSiteUrl] = useState('');
+  const [siteError, setSiteError] = useState('');
 
   useEffect(() => {
     api.launch
@@ -733,11 +849,34 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
       .catch(() => setApps([]));
   }, []);
 
-  const sel = new Set(selected);
+  const sel = new Set(selected.filter((item) => !isSite(item)));
+  const sites = selected.filter(isSite);
+  const atLimit = selected.length >= 10;
+
   const toggle = (name) => {
-    if (sel.has(name)) onChange(selected.filter((a) => a !== name));
-    else if (selected.length < 10) onChange([...selected, name]);
+    if (sel.has(name)) onChange(selected.filter((a) => isSite(a) || a !== name));
+    else if (!atLimit) onChange([...selected, name]);
   };
+  const addSite = () => {
+    const url = normalizeUrl(siteUrl);
+    if (!url) {
+      setSiteError('Enter a valid web address, e.g. figma.com');
+      return;
+    }
+    if (selected.some((item) => isSite(item) && item.url === url)) {
+      setSiteError('That site is already on your launchpad.');
+      return;
+    }
+    if (atLimit) {
+      setSiteError('Launchpad is full — remove something first.');
+      return;
+    }
+    onChange([...selected, { url, name: siteName.trim() || hostOf(url) }]);
+    setSiteName('');
+    setSiteUrl('');
+    setSiteError('');
+  };
+  const removeSite = (url) => onChange(selected.filter((item) => !(isSite(item) && item.url === url)));
   const filtered = (apps ?? []).filter((a) => a.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return createPortal(
@@ -749,7 +888,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
       <div className="absolute inset-0 bg-[#070b18]/70 backdrop-blur-sm" aria-hidden="true" />
       <div className="theme-card fade-in relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-3xl p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="display-type text-lg font-light text-white text-glow">Launchpad apps</h2>
+          <h2 className="display-type text-lg font-light text-white text-glow">Launchpad</h2>
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-medium text-white/40">{selected.length}/10</span>
             <button
@@ -763,47 +902,146 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
           </div>
         </div>
 
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search apps…"
-          className="mb-3 w-full shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
-        />
-
-        <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
-          {apps === null ? (
-            <p className="py-10 text-center text-xs text-white/40">Reading your applications…</p>
-          ) : filtered.length === 0 ? (
-            <p className="py-10 text-center text-xs text-white/40">No apps found.</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-              {filtered.map((a) => {
-                const on = sel.has(a.name);
-                return (
-                  <button
-                    key={a.name}
-                    type="button"
-                    onClick={() => toggle(a.name)}
-                    className={[
-                      'flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-                      on ? 'bg-cyan-200/12 ring-1 ring-cyan-200/25' : 'hover:bg-white/[0.06]',
-                    ].join(' ')}
-                  >
-                    <AppIcon app={a.name} size="h-8 w-8" />
-                    <span className={`min-w-0 flex-1 truncate text-xs ${on ? 'text-white' : 'text-white/70'}`}>
-                      {a.name}
-                    </span>
-                    {on && <Check className="h-4 w-4 shrink-0 text-cyan-100" aria-hidden="true" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+        <div className="mb-3 flex shrink-0 gap-1 rounded-xl bg-white/6 p-1 text-xs font-semibold">
+          {[
+            ['apps', 'Apps'],
+            ['sites', 'Websites'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={[
+                'flex-1 rounded-lg px-3 py-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                tab === id ? 'bg-white/12 text-white ring-1 ring-white/10' : 'text-white/50 hover:text-white/80',
+              ].join(' ')}
+            >
+              {label}
+              {id === 'sites' && sites.length ? ` · ${sites.length}` : ''}
+            </button>
+          ))}
         </div>
 
-        <p className="mt-3 shrink-0 text-[10px] text-white/38">
-          Pick up to 10 apps. Icons come straight from each app; tap a launchpad tile to open it.
-        </p>
+        {tab === 'apps' ? (
+          <>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search apps…"
+              className="mb-3 w-full shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+            />
+
+            <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+              {apps === null ? (
+                <p className="py-10 text-center text-xs text-white/40">Reading your applications…</p>
+              ) : filtered.length === 0 ? (
+                <p className="py-10 text-center text-xs text-white/40">No apps found.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                  {filtered.map((a) => {
+                    const on = sel.has(a.name);
+                    return (
+                      <button
+                        key={a.name}
+                        type="button"
+                        onClick={() => toggle(a.name)}
+                        className={[
+                          'flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                          on ? 'bg-cyan-200/12 ring-1 ring-cyan-200/25' : 'hover:bg-white/[0.06]',
+                        ].join(' ')}
+                      >
+                        <AppIcon app={a.name} size="h-8 w-8" />
+                        <span className={`min-w-0 flex-1 truncate text-xs ${on ? 'text-white' : 'text-white/70'}`}>
+                          {a.name}
+                        </span>
+                        {on && <Check className="h-4 w-4 shrink-0 text-cyan-100" aria-hidden="true" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <p className="mt-3 shrink-0 text-[10px] text-white/38">
+              Pick up to 10 items. Icons come straight from each app; tap a launchpad tile to open it.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="mb-3 shrink-0 space-y-2">
+              <div className="flex gap-2">
+                <input
+                  value={siteName}
+                  onChange={(e) => setSiteName(e.target.value)}
+                  placeholder="Name (optional)"
+                  className="w-1/3 shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+                />
+                <input
+                  value={siteUrl}
+                  onChange={(e) => {
+                    setSiteUrl(e.target.value);
+                    setSiteError('');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addSite();
+                    }
+                  }}
+                  placeholder="figma.com"
+                  className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+                />
+                <button
+                  type="button"
+                  onClick={addSite}
+                  disabled={atLimit || !siteUrl.trim()}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-cyan-200/15 px-3 py-2 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add
+                </button>
+              </div>
+              {siteError && <p className="text-[11px] font-medium text-rose-300/80">{siteError}</p>}
+            </div>
+
+            <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+              {sites.length === 0 ? (
+                <p className="py-10 text-center text-xs text-white/40">
+                  No websites yet — add one above to pin it to your launchpad.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {sites.map((site) => (
+                    <div
+                      key={site.url}
+                      className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-2.5 py-2"
+                    >
+                      <SiteIcon url={site.url} size="h-8 w-8" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium text-white">
+                          {site.name || hostOf(site.url)}
+                        </span>
+                        <span className="block truncate text-[11px] text-white/40">{hostOf(site.url)}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeSite(site.url)}
+                        aria-label={`Remove ${site.name || hostOf(site.url)}`}
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/35 transition hover:bg-white/10 hover:text-rose-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <p className="mt-3 shrink-0 text-[10px] text-white/38">
+              Pick up to 10 items total. Websites open in your default browser.
+            </p>
+          </>
+        )}
       </div>
     </div>,
     document.body,

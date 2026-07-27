@@ -14,13 +14,25 @@ const DEFAULTS = {
     { id: 'Formula 1:Formula 1', sport: 'f1', leagueId: null, leagueLabel: 'Formula 1', team: 'Formula 1' },
   ],
   stocks: ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'GOOGL'],
+  // Free-typed guidance on how the Pulse assistant should talk to the user
+  // (tone, format, focus). Sent with every AI chat and folded into its prompt.
+  aiInstructions: '',
+  // User-authored quick prompts, shown as one-tap chips in the chat. Each is
+  // { title, prompt }: the title labels the chip, the prompt is what's sent.
+  customPrompts: [],
+  // Which Gemini Live prebuilt voice Pulse speaks with (see services/ai/voices.js).
+  voiceName: 'Puck',
+  // Long-term memory: durable facts Pulse has learned about the user, recalled in
+  // every future conversation. Each is { id, text, at }.
+  memories: [],
   icalFeeds: [], // [{ id, name, url }] — subscribed .ics calendar feeds
   hiddenCalendars: [], // calendarIds toggled off in the Life Hub
   // Home highlight tracker: always show the next event whose title matches
   // `match` (e.g. a recurring shift), under a custom `label`, optionally renamed
   // to `title` in the UI only. Empty `match` = just the next upcoming event.
   pinned: { label: 'Highlighted event', match: '', title: '', image: '', excludeFromUpcoming: false },
-  // Home launchpad — macOS app names to show/open, with their own icons.
+  // Home launchpad — items are either a macOS app name (string, opened with its
+  // own icon) or a website shortcut ({ url, name }, opened in the browser).
   launchpad: ['Safari', 'Mail', 'Calendar', 'Notes', 'Music', 'App Store', 'System Settings', 'Photos'],
 };
 
@@ -45,7 +57,24 @@ function migrate(saved) {
     saved.pinned?.label === 'Up next' && !saved.pinned.match && !saved.pinned.title
       ? { ...saved.pinned, label: 'Highlighted event' }
       : saved.pinned;
-  return { ...saved, follows, pinned: { ...DEFAULTS.pinned, ...pinned } };
+  // Older versions stored custom prompts as plain strings — lift them to
+  // { title, prompt } objects.
+  const customPrompts = (saved.customPrompts ?? [])
+    .map((p) =>
+      typeof p === 'string'
+        ? { title: p.slice(0, 40), prompt: p }
+        : { title: p.title ?? '', prompt: p.prompt ?? p.text ?? '' },
+    )
+    .filter((p) => p.title || p.prompt);
+  // Normalize memories (tolerate older plain-string entries).
+  const memories = (saved.memories ?? [])
+    .map((m, i) =>
+      typeof m === 'string'
+        ? { id: `m-legacy-${i}`, text: m, at: 0 }
+        : { id: m.id ?? `m-${i}`, text: m.text ?? '', at: m.at ?? 0 },
+    )
+    .filter((m) => m.text.trim());
+  return { ...saved, follows, pinned: { ...DEFAULTS.pinned, ...pinned }, customPrompts, memories };
 }
 
 let state = load();

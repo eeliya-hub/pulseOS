@@ -42,11 +42,17 @@ async function exchange(params) {
   });
 }
 
+// Refresh well before expiry. The Web Playback SDK is a long-lived singleton that
+// caches whatever token we hand it, so a tight margin let it run a token to expiry
+// mid-session → `storage-resolve` 403 (audio won't stream) even though the account
+// is fine. A 10-minute buffer keeps the SDK's token comfortably fresh.
+const TOKEN_REFRESH_BUFFER_MS = 10 * 60_000;
+
 async function accessToken(user) {
   const tokens = tokenStore.get('spotify', user);
   if (!tokens) throw ApiError.unauthorized('Spotify not connected. Visit /api/music/auth first.');
 
-  if (Date.now() < (tokens.expires_at ?? 0) - 60_000) return tokens.access_token;
+  if (Date.now() < (tokens.expires_at ?? 0) - TOKEN_REFRESH_BUFFER_MS) return tokens.access_token;
 
   // refresh
   const refreshed = await exchange({ grant_type: 'refresh_token', refresh_token: tokens.refresh_token });

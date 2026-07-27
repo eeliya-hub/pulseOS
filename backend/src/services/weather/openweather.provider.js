@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { fetchJson } from '../../utils/httpClient.js';
 
 const BASE = 'https://api.openweathermap.org/data/2.5';
+const GEO = 'https://api.openweathermap.org/geo/1.0';
 const INTEGRATION = 'OpenWeather';
 
 function requireKey() {
@@ -34,6 +35,14 @@ export const openWeatherProvider = {
   async getAirQuality({ lat, lon }) {
     const key = requireKey();
     const url = `${BASE}/air_pollution?lat=${lat}&lon=${lon}&appid=${key}`;
+    return fetchJson(url, { integration: INTEGRATION });
+  },
+
+  // Geocoding — turn a free-typed place name into candidate {name, lat, lon,
+  // country, state} matches. More reliable than /weather?q for towns + counties.
+  async geocode({ city, limit = 5 }) {
+    const key = requireKey();
+    const url = `${GEO}/direct?q=${encodeURIComponent(city)}&limit=${limit}&appid=${key}`;
     return fetchJson(url, { integration: INTEGRATION });
   },
 };

@@ -5,3 +5,5 @@ export const aiRouter = Router();
 
 // POST /api/ai/chat
 aiRouter.post('/chat', aiController.chat);
+// POST /api/ai/voice-preview
+aiRouter.post('/voice-preview', aiController.voicePreview);

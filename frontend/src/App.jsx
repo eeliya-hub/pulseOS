@@ -9,12 +9,17 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import bgImage from './assets/bg.jpg';
+import ChatPopover from './components/ChatPopover.jsx';
 import Dock from './components/Dock.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
+import MiniPlayer from './components/MiniPlayer.jsx';
+import PulseLauncher from './components/PulseLauncher.jsx';
 import TopBar from './components/TopBar.jsx';
+import VoiceAssistant from './components/VoiceAssistant.jsx';
 import { useConversations } from './hooks/useConversations.js';
 import { runPreload } from './services/preload.js';
 import AIAssistant from './views/AIAssistant.jsx';
+import AISettings from './views/AISettings.jsx';
 import Finance from './views/Finance.jsx';
 import HomeView from './views/Home.jsx';
 import IdleScreen from './views/IdleScreen.jsx';
@@ -71,6 +76,11 @@ const navItems = [
 export default function App() {
   const [activeView, setActiveView] = useState('home');
   const [isIdleScreen, setIsIdleScreen] = useState(true);
+  // The Pulse assistant overlay: 'closed' | 'menu' (chat/voice chooser) |
+  // 'chat' (compact popover) | 'voice'. Expanding the popover routes to the
+  // full 'ai' page with the same conversation.
+  const [pulseMode, setPulseMode] = useState('closed');
+  const [showAiSettings, setShowAiSettings] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [now, setNow] = useState(() => new Date());
   const [boot, setBoot] = useState({ progress: 0, label: '', done: false, exiting: false });
@@ -106,14 +116,53 @@ export default function App() {
     [activeView],
   );
 
-  const openAssistantWithPrompt = useCallback((prompt) => {
-    setPendingPrompt(prompt);
-    setActiveView('ai');
-    setIsIdleScreen(false);
-  }, []);
+  // A text conversation that's sat idle for over an hour is stale — the next time
+  // it's opened, start fresh instead of resuming a cold thread. A ref keeps the
+  // check reading the latest conversation without churning the callbacks below.
+  const CHAT_STALE_MS = 60 * 60 * 1000;
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const rotateIfStale = useCallback(() => {
+    const conv = activeRef.current;
+    if (conv?.updatedAt && conv.messages.length > 1 && Date.now() - conv.updatedAt > CHAT_STALE_MS) {
+      newConversation();
+    }
+  }, [CHAT_STALE_MS, newConversation]);
+
+  const openAssistantWithPrompt = useCallback(
+    (prompt) => {
+      rotateIfStale();
+      setPendingPrompt(prompt);
+      setActiveView('ai');
+      setIsIdleScreen(false);
+      setPulseMode('closed');
+    },
+    [rotateIfStale],
+  );
 
   const handlePromptConsumed = useCallback(() => {
     setPendingPrompt('');
+  }, []);
+
+  // Pulse launcher/popover controls. Tapping the dock orb toggles the chooser;
+  // expanding the popover hands the conversation to the full 'ai' page.
+  const togglePulseMenu = useCallback(() => {
+    setIsIdleScreen(false);
+    setPulseMode((mode) => (mode === 'closed' ? 'menu' : 'closed'));
+  }, []);
+  const openPulseChat = useCallback(() => {
+    rotateIfStale();
+    setPulseMode('chat');
+  }, [rotateIfStale]);
+  const openAiSettings = useCallback(() => {
+    setPulseMode('closed');
+    setIsIdleScreen(false);
+    setShowAiSettings(true);
+  }, []);
+  const expandPulse = useCallback(() => {
+    setPulseMode('closed');
+    setActiveView('ai');
+    setIsIdleScreen(false);
   }, []);
 
   const viewProps = {
@@ -185,6 +234,39 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleWake);
   }, [activate, isIdleScreen]);
 
+  // Double-tap Space anywhere (outside a text field / control) to open Pulse Voice.
+  useEffect(() => {
+    let lastSpace = 0;
+    const isTyping = (el) => {
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      const tag = el.tagName;
+      return (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        tag === 'BUTTON' ||
+        tag === 'A' ||
+        Boolean(el.closest?.('[role="button"]'))
+      );
+    };
+    const onKeyDown = (event) => {
+      if (event.code !== 'Space' && event.key !== ' ') return;
+      if (event.repeat || isTyping(event.target)) return;
+      const now = Date.now();
+      if (now - lastSpace < 400) {
+        lastSpace = 0;
+        event.preventDefault();
+        setIsIdleScreen(false);
+        setPulseMode('voice');
+      } else {
+        lastSpace = now;
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const views = {
     home: <HomeView {...viewProps} />,
     life: <LifeHub />,
@@ -203,6 +285,7 @@ export default function App() {
         onDeleteConversation={deleteConversation}
         initialPrompt={pendingPrompt}
         onPromptConsumed={handlePromptConsumed}
+        onOpenAiSettings={openAiSettings}
       />
     ),
   };
@@ -246,8 +329,33 @@ export default function App() {
       <Dock
         items={navItems}
         activeView={activeItem.id}
-        onChange={(view) => activate(view)}
+        onChange={(view) => (view === 'ai' ? togglePulseMenu() : activate(view))}
       />
+
+      {pulseMode === 'menu' && (
+        <PulseLauncher
+          onChat={openPulseChat}
+          onVoice={() => setPulseMode('voice')}
+          onSettings={openAiSettings}
+          onClose={() => setPulseMode('closed')}
+        />
+      )}
+
+      {showAiSettings && <AISettings onClose={() => setShowAiSettings(false)} />}
+      {pulseMode === 'chat' && (
+        <ChatPopover
+          messages={active.messages}
+          setMessages={setActiveMessages}
+          onClose={() => setPulseMode('closed')}
+          onExpand={expandPulse}
+          onVoice={() => setPulseMode('voice')}
+          onNewChat={newConversation}
+        />
+      )}
+      {pulseMode === 'voice' && <VoiceAssistant onClose={() => setPulseMode('closed')} />}
+
+      {/* Floating controller — on every view except the full Music player + idle. */}
+      {!isIdleScreen && activeView !== 'music' && <MiniPlayer />}
 
       {!boot.done && <LoadingScreen progress={boot.progress} label={boot.label} exiting={boot.exiting} />}
     </div>

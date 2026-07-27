@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../services/api/backendClient.js';
 
 const SDK_SRC = 'https://sdk.scdn.co/spotify-player.js';
@@ -30,116 +30,250 @@ function mapState(state) {
   };
 }
 
-/**
- * Drives the in-tab Spotify player.
- *
- * status: 'loading' | 'needs-auth' | 'not-premium' | 'error' | 'ready'
- */
-export function useSpotifyPlayer() {
-  const [status, setStatus] = useState('loading');
-  const [deviceId, setDeviceId] = useState(null);
-  const [state, setState] = useState(null);
-  const [position, setPosition] = useState(0);
-  const playerRef = useRef(null);
-  const tickRef = useRef(null);
+// ── Module-level singleton ─────────────────────────────────────────────────
+// One SDK player for the whole app, shared by the Music view, the floating
+// mini-player, and the AI tools — so playback is continuous across tabs and
+// controllable from anywhere. State is published to subscribers React-style.
+//
+// status: 'loading' | 'needs-auth' | 'not-premium' | 'error' | 'ready'
+let store = { status: 'loading', deviceId: null, state: null, position: 0, playbackError: '' };
+const subscribers = new Set();
+function setStore(patch) {
+  store = { ...store, ...patch };
+  subscribers.forEach((fn) => fn(store));
+}
 
-  const init = useCallback(async () => {
-    // Verify we're connected before pulling in the SDK.
+let player = null;
+let ticker = null;
+let initStarted = false;
+let errorTimer = null;
+
+// Playback errors are transient — a one-off SDK blip or an autoplay block. Show
+// the message briefly, then clear it so it doesn't stay pinned under Now Playing
+// long after the moment has passed. Persistent problems live in `status` instead.
+function setPlaybackError(msg) {
+  if (errorTimer) {
+    window.clearTimeout(errorTimer);
+    errorTimer = null;
+  }
+  setStore({ playbackError: msg || '' });
+  if (msg) {
+    errorTimer = window.setTimeout(() => {
+      errorTimer = null;
+      setStore({ playbackError: '' });
+    }, 6000);
+  }
+}
+
+function stopTicker() {
+  if (ticker) {
+    window.clearInterval(ticker);
+    ticker = null;
+  }
+}
+
+// Smoothly advance the progress bar between the SDK's state pushes.
+function startTicker() {
+  stopTicker();
+  if (!store.state || store.state.paused) return;
+  ticker = window.setInterval(() => {
+    const cur = store.state;
+    if (!cur) return;
+    setStore({ position: Math.min(store.position + 1000, cur.durationMs) });
+  }, 1000);
+}
+
+function reportPlaybackError(err, fallback = 'Spotify playback failed.') {
+  setPlaybackError(err?.message ?? fallback);
+}
+
+async function init() {
+  // Verify we're connected before pulling in the SDK.
+  try {
+    await api.music.token();
+  } catch (err) {
+    setStore({ status: err.status === 401 ? 'needs-auth' : 'error' });
+    return;
+  }
+
+  const Spotify = await loadSdk();
+  if (player) return; // already initialised
+
+  player = new Spotify.Player({
+    name: 'Pulse OS',
+    volume: 0.6,
+    getOAuthToken: async (cb) => {
+      try {
+        const { accessToken } = await api.music.token();
+        cb(accessToken);
+      } catch {
+        setStore({ status: 'needs-auth' });
+      }
+    },
+  });
+
+  player.addListener('ready', ({ device_id }) =>
+    setStore({ deviceId: device_id, status: 'ready', playbackError: '' }),
+  );
+  player.addListener('not_ready', () => {
+    setStore({ deviceId: null, status: 'loading' });
+    setPlaybackError('Spotify player disconnected. Reconnecting…');
+  });
+  player.addListener('player_state_changed', (s) => {
+    const mapped = mapState(s);
+    setStore({ state: mapped, position: mapped?.positionMs ?? 0 });
+    if (mapped && !mapped.paused) setPlaybackError(''); // playing again — clear any stale error
+    startTicker();
+  });
+  player.addListener('autoplay_failed', () =>
+    setPlaybackError('Browser blocked Spotify playback. Press play again.'),
+  );
+  player.addListener('playback_error', ({ message } = {}) =>
+    setPlaybackError(message || 'Spotify playback failed.'),
+  );
+  player.addListener('authentication_error', ({ message } = {}) => {
+    setStore({ status: 'needs-auth' });
+    setPlaybackError(message || 'Spotify needs reconnecting.');
+  });
+  player.addListener('account_error', ({ message } = {}) => {
+    setStore({ status: 'not-premium' });
+    setPlaybackError(message || 'Spotify Premium is required for web playback.');
+  });
+  player.addListener('initialization_error', ({ message } = {}) => {
+    setStore({ status: 'error' });
+    setPlaybackError(message || 'Spotify player failed to start.');
+  });
+
+  player.connect();
+}
+
+// Kick off initialisation exactly once, on first use (a mounted hook or an AI tool).
+function ensureInit() {
+  if (initStarted) return;
+  initStarted = true;
+  init();
+}
+
+// Open the Spotify consent screen, then poll until the backend has tokens.
+async function authorize() {
+  const { url } = await api.music.authUrl();
+  const popup = window.open(url, 'spotify-auth', 'width=520,height=680');
+  const poll = window.setInterval(async () => {
     try {
       await api.music.token();
-    } catch (err) {
-      setStatus(err.status === 401 ? 'needs-auth' : 'error');
+      window.clearInterval(poll);
+      popup?.close();
+      setStore({ status: 'loading' });
+      init();
+    } catch {
+      /* keep waiting */
+    }
+  }, 1500);
+}
+
+const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+async function playContext({ contextUri, uris }) {
+  setPlaybackError('');
+  try {
+    // Must be invoked from the click/gesture path so browser autoplay policy
+    // allows audio once Spotify transfers playback into this tab.
+    await player?.activateElement?.();
+
+    if (!store.deviceId) {
+      await player?.connect?.();
+      setPlaybackError('Spotify player is reconnecting. Try again in a moment.');
       return;
     }
 
-    const Spotify = await loadSdk();
-    if (playerRef.current) return; // already initialised
+    await api.music.transfer(store.deviceId, false);
+    await api.music.play({ deviceId: store.deviceId, contextUri, uris });
+  } catch (err) {
+    // Most failures here are the device still waking up right after transfer —
+    // give it a beat and retry the play once before surfacing an error.
+    try {
+      await delay(700);
+      if (!store.deviceId) throw err;
+      await api.music.play({ deviceId: store.deviceId, contextUri, uris });
+    } catch {
+      reportPlaybackError(err);
+    }
+  }
+}
 
-    const player = new Spotify.Player({
-      name: 'Pulse OS',
-      volume: 0.6,
-      getOAuthToken: async (cb) => {
-        try {
-          const { accessToken } = await api.music.token();
-          cb(accessToken);
-        } catch {
-          setStatus('needs-auth');
-        }
-      },
-    });
-    playerRef.current = player;
+// Transport commands (play/pause/skip/seek) error out if nothing is loaded, so
+// `needsTrack` makes them a no-op on an empty player — guarding against a stray
+// tap or an AI call when there's nothing to control.
+async function runCommand(command, needsTrack = false) {
+  if (!player) return;
+  if (needsTrack && !store.state?.track) return;
+  setPlaybackError('');
+  try {
+    await player.activateElement?.();
+    await command(player);
+  } catch (err) {
+    reportPlaybackError(err);
+  }
+}
 
-    player.addListener('ready', ({ device_id }) => {
-      setDeviceId(device_id);
-      setStatus('ready');
-    });
-    player.addListener('not_ready', () => setDeviceId(null));
-    player.addListener('player_state_changed', (s) => {
-      const mapped = mapState(s);
-      setState(mapped);
-      setPosition(mapped?.positionMs ?? 0);
-    });
-    player.addListener('authentication_error', () => setStatus('needs-auth'));
-    player.addListener('account_error', () => setStatus('not-premium'));
-    player.addListener('initialization_error', () => setStatus('error'));
+const controls = {
+  toggle: () => runCommand((p) => p.togglePlay(), true),
+  pause: () => runCommand((p) => p.pause(), true),
+  resume: () => runCommand((p) => p.resume(), true),
+  next: () => runCommand((p) => p.nextTrack(), true),
+  previous: () => runCommand((p) => p.previousTrack(), true),
+  seek: (ms) => {
+    runCommand((p) => p.seek(ms), true);
+    setStore({ position: ms });
+  },
+  playContext,
+};
 
-    player.connect();
+/** React hook: subscribe to the shared player and drive its lifecycle. */
+export function useSpotifyPlayer() {
+  const [snap, setSnap] = useState(store);
+
+  useEffect(() => {
+    subscribers.add(setSnap);
+    setSnap(store); // sync in case it changed before mount
+    ensureInit();
+    return () => subscribers.delete(setSnap);
   }, []);
 
-  useEffect(() => {
-    init();
-    return () => {
-      if (tickRef.current) window.clearInterval(tickRef.current);
-      playerRef.current?.disconnect();
-      playerRef.current = null;
-    };
-  }, [init]);
-
-  // Smoothly advance the progress bar between state pushes.
-  useEffect(() => {
-    if (tickRef.current) window.clearInterval(tickRef.current);
-    if (!state || state.paused) return undefined;
-    tickRef.current = window.setInterval(() => {
-      setPosition((p) => Math.min(p + 1000, state.durationMs));
-    }, 1000);
-    return () => window.clearInterval(tickRef.current);
-  }, [state]);
-
-  // Open the Spotify consent screen, then poll until the backend has tokens.
-  const authorize = useCallback(async () => {
-    const { url } = await api.music.authUrl();
-    const popup = window.open(url, 'spotify-auth', 'width=520,height=680');
-    const poll = window.setInterval(async () => {
-      try {
-        await api.music.token();
-        window.clearInterval(poll);
-        popup?.close();
-        setStatus('loading');
-        init();
-      } catch {
-        /* keep waiting */
-      }
-    }, 1500);
-  }, [init]);
-
-  const playContext = useCallback(
-    async ({ contextUri, uris }) => {
-      if (!deviceId) return;
-      await api.music.play({ deviceId, contextUri, uris });
-    },
-    [deviceId],
-  );
-
-  const controls = {
-    toggle: () => playerRef.current?.togglePlay(),
-    next: () => playerRef.current?.nextTrack(),
-    previous: () => playerRef.current?.previousTrack(),
-    seek: (ms) => {
-      playerRef.current?.seek(ms);
-      setPosition(ms);
-    },
-    playContext,
+  return {
+    status: snap.status,
+    deviceId: snap.deviceId,
+    state: snap.state,
+    position: snap.position,
+    playbackError: snap.playbackError,
+    controls,
+    authorize,
   };
+}
 
-  return { status, deviceId, state, position, controls, authorize };
+// Non-React handle for the AI tools — same shared player + controls.
+export const spotifyPlayer = {
+  ensureInit,
+  getSnapshot: () => store,
+  controls,
+};
+
+// Vite HMR: this module is a singleton that owns a live Spotify SDK device. On a
+// hot-reload the module re-executes with a fresh `player`, but the previous SDK
+// instance would keep its WebSocket + "Pulse OS" device alive — a zombie that
+// fights the new one over playback and can cause streaming (storage-resolve) 403s.
+// Tear the old player down cleanly before the module is replaced. (Stripped from
+// production builds, where the singleton simply lives for the session.)
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    stopTicker();
+    if (errorTimer) window.clearTimeout(errorTimer);
+    try {
+      player?.disconnect();
+    } catch {
+      /* already gone */
+    }
+    player = null;
+    initStarted = false;
+  });
 }

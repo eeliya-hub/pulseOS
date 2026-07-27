@@ -12,7 +12,7 @@ const fmt = (ms) => {
 };
 
 export default function Music() {
-  const { status, state, position, controls, authorize } = useSpotifyPlayer();
+  const { status, deviceId, state, position, playbackError, controls, authorize } = useSpotifyPlayer();
   const [playlists, setPlaylists] = useState([]);
   const [recent, setRecent] = useState([]);
   const [query, setQuery] = useState('');
@@ -84,7 +84,7 @@ export default function Music() {
       <ViewHeader
         lead="Your"
         accent="Music"
-        subtitle={status === 'ready' ? 'Playing on this device' : 'Connecting to Spotify…'}
+        subtitle={status === 'ready' && deviceId ? 'Playing on this device' : 'Connecting to Spotify…'}
       />
 
       <div className="my-auto grid max-h-[24rem] min-h-0 w-full flex-1 grid-cols-[43rem_1fr] grid-rows-[15.75rem_7.25rem] gap-4">
@@ -131,7 +131,7 @@ export default function Music() {
                 {state?.track || 'Nothing playing'}
               </h1>
               <p className="mt-1 truncate text-sm font-light text-white/58">
-                {state?.artists || 'Pick a playlist or track to start'}
+                {playbackError || state?.artists || 'Pick a playlist or track to start'}
               </p>
 
               <div className="mt-4">

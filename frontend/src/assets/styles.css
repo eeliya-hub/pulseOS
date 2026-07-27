@@ -476,6 +476,84 @@ h3,
   }
 }
 
+/* ---------------------------------- */
+/* Voice assistant                     */
+/* ---------------------------------- */
+
+/* Stage the visualisers live in — keeps every state centred. */
+.voice-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 13.5rem;
+}
+
+/* Soft coloured glow behind the stage; the tint crossfades with the mode. */
+.voice-halo {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 12rem;
+  height: 12rem;
+  border-radius: 999px;
+  filter: blur(42px);
+  opacity: 0.6;
+  transition:
+    background 700ms ease,
+    opacity 700ms ease;
+  will-change: opacity;
+}
+
+/* Canvas that hosts the reactive listening waveform / speaking ring. */
+.voice-canvas {
+  position: relative;
+  z-index: 1;
+  width: 13.5rem;
+  height: 13.5rem;
+}
+
+/* Searching / connecting — a comet of dots orbiting a still centre. */
+.dot-orbit {
+  position: relative;
+  z-index: 1;
+  width: 5.5rem;
+  height: 5.5rem;
+  animation: orbit-spin 1.1s linear infinite;
+}
+
+.dot-orbit span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 999px;
+  background: rgba(214, 250, 255, 0.95);
+  box-shadow: 0 0 10px rgba(116, 242, 255, 0.5);
+}
+
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Gentle entrance for captions and the answer as they swap in. */
+.voice-rise {
+  animation: voice-rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes voice-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -41,6 +41,11 @@ export const config = {
 
   weather: {
     openWeatherKey: get('OPENWEATHER_API_KEY'),
+    // When a location is typed without a country (e.g. "Kent"), OpenWeather often
+    // resolves it to the most populous match worldwide (Kent, WA in the US). Bias
+    // bare place names to this ISO country code so local names resolve at home.
+    // Set to '' to disable the bias.
+    defaultCountry: get('WEATHER_DEFAULT_COUNTRY', 'GB'),
   },
   stocks: {
     finnhubKey: get('FINNHUB_API_KEY'),
@@ -65,6 +70,12 @@ export const config = {
     provider: get('AI_PROVIDER', 'gemini'),
     geminiKey: get('GEMINI_API_KEY'),
     geminiModel: get('GEMINI_MODEL', 'gemini-3-flash-preview'),
+    // Real-time voice (Gemini Live API, streamed over WebSocket). Native-audio
+    // Live model — override with GEMINI_LIVE_MODEL as new previews ship.
+    geminiLiveModel: get('GEMINI_LIVE_MODEL', 'gemini-3.1-flash-live-preview'),
+    // Text-to-speech model for voice previews (one-shot). Override if the default
+    // preview model isn't available on your key.
+    geminiTtsModel: get('GEMINI_TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
     openaiKey: get('OPENAI_API_KEY'),
     openaiModel: get('OPENAI_MODEL', 'gpt-4o-mini'),
     claudeKey: get('ANTHROPIC_API_KEY'),
@@ -72,7 +83,7 @@ export const config = {
 
     // Ceiling on `maxTokens` a request may ask for — a client can't ask the
     // model for a 100k-token answer and run the token budget down in one call.
-    maxTokensCap: num('AI_MAX_TOKENS_CAP', 2048),
+    maxTokensCap: num('AI_MAX_TOKENS_CAP', 4096),
 
     /**
      * Hard usage caps, enforced against persisted counters in services/ai/quota.js.
@@ -127,6 +138,17 @@ export const config = {
     redirectUri: get('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:4000/api/music/callback'),
   },
 };
+
+/**
+ * Whether a browser Origin may talk to us. Allows the configured origins, plus
+ * any localhost/127.0.0.1 port in development. Shared by the CORS middleware and
+ * the WebSocket upgrade check so both gates stay in sync.
+ */
+export function isAllowedOrigin(origin) {
+  if (!origin) return true; // curl, same-origin, server-to-server
+  if (config.corsOrigins.includes(origin)) return true;
+  return config.env !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
 
 /**
  * Reports which integrations have the credentials they need. The frontend can

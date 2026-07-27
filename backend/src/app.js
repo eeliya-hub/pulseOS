@@ -1,6 +1,6 @@
 import cors from 'cors';
 import express from 'express';
-import { config } from './config/env.js';
+import { isAllowedOrigin } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import { apiLimiter } from './middleware/rateLimit.js';
@@ -15,14 +15,10 @@ import { apiRouter } from './routes/index.js';
  * changes to any route or service.
  */
 // Allow the configured origins, plus ANY localhost/127.0.0.1 port in development
-// (Vite hops to the next free port, e.g. 5176+, when the default is taken).
+// (Vite hops to the next free port, e.g. 5176+, when the default is taken). The
+// predicate is shared with the WebSocket gateway via isAllowedOrigin().
 function corsOrigin(origin, callback) {
-  if (!origin) return callback(null, true); // curl, same-origin, server-to-server
-  if (config.corsOrigins.includes(origin)) return callback(null, true);
-  if (config.env !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-    return callback(null, true);
-  }
-  return callback(null, false);
+  callback(null, isAllowedOrigin(origin));
 }
 
 export function createApp() {
