@@ -88,6 +88,35 @@ async function apiWrite(path, { method = 'PUT', body } = {}, user) {
   });
 }
 
+const PAGE_SIZE = 10; // hard cap while the app is in Spotify Development mode
+const SEARCH_RESULTS = 12; // how many unique songs to hand back
+
+// Reissue noise: the same recording listed again under a different release.
+// Deliberately NOT here — live, acoustic, remix, instrumental, demo — those are
+// different renditions, and collapsing them would hide music you searched for.
+const REISSUE =
+  /\b(remaster(?:ed)?|re-?master|mono|stereo|explicit|clean|bonus track|deluxe|expanded|anniversary edition|radio edit|single version|album version)\b/i;
+
+/**
+ * An identity for "the same song", so one track listed across an album, a
+ * single, and three compilations collapses to one row. Keyed on the title (with
+ * release noise and featured-artist billing stripped, since those vary per
+ * release) plus the lead artist — which keeps genuine covers by other artists.
+ */
+export function songKey(name, artists = []) {
+  const title = (name || '')
+    // "(2011 Remaster)", "[Deluxe Edition]" → gone
+    .replace(/\s*[([][^)\]]*[)\]]/g, (m) => (REISSUE.test(m) ? '' : m))
+    // "- 2011 Remaster", "- Radio Edit" trailing off the end → gone
+    .replace(/\s*[-–]\s*[^-–]*$/, (m) => (REISSUE.test(m) ? '' : m))
+    // Featured artists get billed inconsistently between releases.
+    .replace(/\s*[([]?\s*(?:feat|ft)\.?\s[^)\]]*[)\]]?/gi, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  const lead = (artists[0] || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return `${title}|${lead}`;
+}
+
 export const spotifyProvider = {
   getAuthUrl() {
     requireCreds();
@@ -144,6 +173,75 @@ export const spotifyProvider = {
     return { playing: true };
   },
 
+  /**
+   * Spotify's own analysis of a track: tempo, time signature, and the beat, bar,
+   * section, tatum and segment timelines.
+   *
+   * Spotify restricted /audio-analysis and /audio-features in November 2024 —
+   * apps in Development mode get 403, regardless of scopes (a token that 403s
+   * here still returns 200 from /me). So a failure is reported as
+   * `{ available: false }` rather than thrown: the visualiser is expected to run
+   * without it, and lights up automatically if access is ever granted.
+   */
+  async audioAnalysis(trackId, user) {
+    if (!trackId) throw ApiError.badRequest('Provide a Spotify track id.');
+    try {
+      const data = await api(`/audio-analysis/${trackId}`, user);
+      return {
+        available: true,
+        tempo: data.track?.tempo ?? 0,
+        tempoConfidence: data.track?.tempo_confidence ?? 0,
+        timeSignature: data.track?.time_signature ?? 4,
+        key: data.track?.key ?? -1,
+        mode: data.track?.mode ?? -1,
+        loudness: data.track?.loudness ?? 0,
+        duration: data.track?.duration ?? 0,
+        // Trimmed to what a visualiser can use: full segment data is megabytes
+        // and most of it is spectral detail the live FFT already provides.
+        beats: (data.beats ?? []).map((b) => ({ start: b.start, duration: b.duration, confidence: b.confidence })),
+        bars: (data.bars ?? []).map((b) => ({ start: b.start, duration: b.duration, confidence: b.confidence })),
+        tatums: (data.tatums ?? []).map((b) => ({ start: b.start, duration: b.duration })),
+        sections: (data.sections ?? []).map((x) => ({
+          start: x.start,
+          duration: x.duration,
+          loudness: x.loudness,
+          tempo: x.tempo,
+          key: x.key,
+          mode: x.mode,
+          timeSignature: x.time_signature,
+          confidence: x.confidence,
+        })),
+      };
+    } catch (err) {
+      return { available: false, reason: err?.message ?? 'Audio analysis is not available for this app.' };
+    }
+  },
+
+  /** Track-level features: danceability, energy, valence and friends. */
+  async audioFeatures(trackId, user) {
+    if (!trackId) throw ApiError.badRequest('Provide a Spotify track id.');
+    try {
+      const d = await api(`/audio-features/${trackId}`, user);
+      return {
+        available: true,
+        tempo: d.tempo,
+        timeSignature: d.time_signature,
+        key: d.key,
+        mode: d.mode,
+        loudness: d.loudness,
+        energy: d.energy,
+        valence: d.valence,
+        danceability: d.danceability,
+        acousticness: d.acousticness,
+        instrumentalness: d.instrumentalness,
+        speechiness: d.speechiness,
+        durationMs: d.duration_ms,
+      };
+    } catch (err) {
+      return { available: false, reason: err?.message ?? 'Audio features are not available for this app.' };
+    }
+  },
+
   async nowPlaying(user) {
     const data = await api('/me/player/currently-playing', user);
     if (!data?.item) return { playing: false };
@@ -172,29 +270,63 @@ export const spotifyProvider = {
 
   async recentlyPlayed(user) {
     const data = await api('/me/player/recently-played?limit=20', user);
-    return (data.items ?? []).map((i) => ({
-      track: i.track?.name,
-      uri: i.track?.uri,
-      artists: i.track?.artists?.map((a) => a.name),
-      image: i.track?.album?.images?.[0]?.url,
-      durationMs: i.track?.duration_ms,
-      playedAt: i.played_at,
-    }));
+    // Play a song three times and Spotify lists it three times. Keep the most
+    // recent play of each (the list is newest-first) so this reads as "what
+    // you've been listening to" rather than a repetitive log.
+    const seen = new Set();
+    return (data.items ?? [])
+      .filter((i) => {
+        const key = i.track?.uri;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((i) => ({
+        track: i.track?.name,
+        uri: i.track?.uri,
+        artists: i.track?.artists?.map((a) => a.name),
+        album: i.track?.album?.name,
+        image: i.track?.album?.images?.[0]?.url,
+        durationMs: i.track?.duration_ms,
+        playedAt: i.played_at,
+      }));
   },
 
   // Search the whole Spotify catalogue (tracks). Needs only a valid token.
   async search(query, user) {
     if (!query?.trim()) return [];
-    // Note: apps in Spotify "Development mode" cap the search `limit` low — 10 is safe,
-    // 20 returns "Invalid limit". Raise this after requesting extended quota.
-    const data = await api(`/search?q=${encodeURIComponent(query)}&type=track&limit=10`, user);
-    return (data.tracks?.items ?? []).map((t) => ({
-      track: t.name,
-      uri: t.uri,
-      artists: t.artists?.map((a) => a.name),
-      album: t.album?.name,
-      image: t.album?.images?.[0]?.url,
-      durationMs: t.duration_ms,
-    }));
+    // Apps in Spotify "Development mode" cap the search `limit` at 10 — 20 returns
+    // "Invalid limit" — but `offset` still pages, so ask for two pages at once.
+    // Deduping throws a good share of them away, and this keeps enough to show.
+    const pages = await Promise.all(
+      [0, PAGE_SIZE].map((offset) =>
+        api(`/search?q=${encodeURIComponent(query)}&type=track&limit=${PAGE_SIZE}&offset=${offset}`, user).catch(
+          () => null,
+        ),
+      ),
+    );
+
+    const items = pages.flatMap((page) => page?.tracks?.items ?? []);
+    const seen = new Set();
+    const out = [];
+
+    for (const t of items) {
+      const artists = t.artists?.map((a) => a.name) ?? [];
+      const key = songKey(t.name, artists);
+      if (!t.uri || seen.has(key) || seen.has(t.uri)) continue;
+      seen.add(key);
+      seen.add(t.uri);
+      out.push({
+        track: t.name,
+        uri: t.uri,
+        artists,
+        album: t.album?.name,
+        image: t.album?.images?.[0]?.url,
+        durationMs: t.duration_ms,
+      });
+      if (out.length >= SEARCH_RESULTS) break;
+    }
+
+    return out;
   },
 };

@@ -27,7 +27,7 @@ export default function LoadingScreen({ progress = 0, label = '', exiting = fals
               style={{ width: `${pct}%` }}
             />
           </div>
-          <div className="mt-2.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.2em] text-white/45">
+          <div className="mt-2.5 flex items-center justify-between text-[0.625rem] font-medium uppercase tracking-[0.2em] text-white/45">
             <span className="truncate">{label || 'Loading'}</span>
             <span className="clock-figures shrink-0 text-white/60">{pct}%</span>
           </div>

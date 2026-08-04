@@ -159,7 +159,13 @@ export function ChatThread({ messages, isLoading, toolActivity, userInitial = 'E
                 isUser ? 'rounded-2xl rounded-tr-md bg-white/16' : 'rounded-2xl rounded-tl-md bg-white/6'
               }`}
             >
-              {isUser ? <p>{message.text}</p> : formatText(message.text)}
+              {isUser ? (
+                // A quick prompt shows its title; the full instruction still
+                // went to Pulse and is there on hover.
+                <p title={message.label ? message.text : undefined}>{message.label || message.text}</p>
+              ) : (
+                formatText(message.text)
+              )}
             </div>
 
             {isUser ? (

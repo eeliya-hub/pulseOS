@@ -35,11 +35,11 @@ export default function AIAssistant({
   const prompts = (customPrompts.length ? customPrompts : DEFAULT_PROMPTS).map(toPromptChip).filter((c) => c.text);
 
   const submit = useCallback(
-    (text) => {
+    (text, label) => {
       const value = (text ?? inputText).trim();
       if (!value) return;
       setInputText('');
-      send(value);
+      send(value, label);
     },
     [inputText, send],
   );
@@ -60,7 +60,7 @@ export default function AIAssistant({
       <GlassCard className="relative flex min-h-0 flex-1 flex-row overflow-hidden" noPadding>
         <aside className="hidden w-52 shrink-0 flex-col border-r border-white/10 bg-white/[0.03] md:flex">
           <div className="flex shrink-0 items-center justify-between gap-2 px-3.5 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
               Chats
             </p>
             <button
@@ -115,7 +115,7 @@ export default function AIAssistant({
               <p className="display-type truncate text-base font-normal leading-none text-white">
                 {activeTitle}
               </p>
-              <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-white/38">
+              <p className="mt-1 text-[0.625rem] font-medium uppercase tracking-[0.2em] text-white/38">
                 Current conversation
               </p>
             </div>
@@ -132,7 +132,7 @@ export default function AIAssistant({
               <button
                 type="button"
                 onClick={onNewConversation}
-                className="soft-button inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:hidden"
+                className="soft-button inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.6875rem] font-semibold text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:hidden"
               >
                 <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden="true" />
                 New
@@ -158,7 +158,7 @@ export default function AIAssistant({
                 <button
                   key={`${chip.label}-${index}`}
                   type="button"
-                  onClick={() => submit(chip.text)}
+                  onClick={() => submit(chip.text, chip.label)}
                   title={chip.text}
                   className="soft-button shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-white/72 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 >

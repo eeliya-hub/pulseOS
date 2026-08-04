@@ -12,7 +12,7 @@ const MAX_STEPS = 6;
  * @param {(name:string, args:object)=>Promise<object>} p.execute
  * @param {string} [p.userName]
  * @param {string} [p.instructions] the user's persona preferences for Pulse
- * @param {(name:string)=>void} [p.onTool] called as each tool runs
+ * @param {(name:string, args:object)=>void} [p.onTool] called as each tool runs
  * @returns {Promise<string>} the assistant's final text
  */
 export async function runAgent({ messages, execute, userName, instructions, onTool }) {
@@ -26,7 +26,7 @@ export async function runAgent({ messages, execute, userName, instructions, onTo
     if (res.toolCalls?.length) {
       convo.push({ role: 'assistant', toolCalls: res.toolCalls });
       for (const call of res.toolCalls) {
-        onTool?.(call.name);
+        onTool?.(call.name, call.args);
         const result = await execute(call.name, call.args);
         convo.push({ role: 'tool', name: call.name, content: JSON.stringify(result ?? {}) });
       }

@@ -29,12 +29,12 @@ export default function Dock({ items, activeView, onChange }) {
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
             >
-              <span className="dock-tooltip absolute -top-9 whitespace-nowrap rounded-lg border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white shadow-xl backdrop-blur-md">
+              <span className="dock-tooltip absolute -top-9 whitespace-nowrap rounded-lg border border-white/10 bg-white/10 px-2.5 py-1 text-[0.6875rem] font-medium text-white shadow-xl backdrop-blur-md">
                 {label}
               </span>
 
               <Icon
-                className={isAI ? 'h-5 w-5' : 'h-[18px] w-[18px]'}
+                className={isAI ? 'h-5 w-5' : 'h-[1.125rem] w-[1.125rem]'}
                 strokeWidth={isActive || isAI ? 2 : 1.8}
                 aria-hidden="true"
               />

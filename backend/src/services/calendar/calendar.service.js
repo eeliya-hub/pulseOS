@@ -20,6 +20,11 @@ export const calendarService = {
     return googleProvider.handleCallback(code, user);
   },
 
+  disconnectGoogle(user) {
+    cache.clear('events:');
+    return googleProvider.disconnect(user);
+  },
+
   connectApple(credentials, user) {
     return appleProvider.connect(credentials, user);
   },

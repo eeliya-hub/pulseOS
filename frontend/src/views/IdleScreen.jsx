@@ -31,7 +31,7 @@ export default function IdleScreen({ now }) {
           {formatLongDate(now)}
         </p>
 
-        <p className="mt-14 animate-pulse text-[10px] font-medium uppercase tracking-[0.4em] text-white/28">
+        <p className="mt-14 animate-pulse text-[0.625rem] font-medium uppercase tracking-[0.4em] text-white/28">
           Touch anywhere to wake
         </p>
       </div>

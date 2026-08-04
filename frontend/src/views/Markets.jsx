@@ -161,7 +161,7 @@ function NewsPanel({ scope, onPlace }) {
                 <h3 className="line-clamp-2 text-sm font-medium leading-snug text-white/88 group-hover:text-white">
                   {article.title}
                 </h3>
-                <p className="mt-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
+                <p className="mt-1.5 flex items-center gap-1.5 text-[0.625rem] font-medium uppercase tracking-[0.12em] text-white/40">
                   <span className="truncate text-cyan-100/70">{article.source}</span>
                   <span aria-hidden="true">·</span>
                   <span className="shrink-0">{relTime(article.publishedAt)}</span>
@@ -257,7 +257,7 @@ function SportsPanel({ activeId, setActiveId }) {
                 </span>
               )}
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/70">
+                <p className="text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-cyan-100/70">
                   {data.league || data.sport}
                 </p>
                 <p className="display-type truncate text-lg font-light leading-tight text-white">{data.name}</p>
@@ -313,7 +313,7 @@ function SportsStandings({ rows, variant = 'football' }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div
-        className={`grid ${STANDINGS_COLS} gap-1 px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/38`}
+        className={`grid ${STANDINGS_COLS} gap-1 px-2 pb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-white/38`}
       >
         <span>#</span>
         <span>Team</span>
@@ -386,7 +386,7 @@ function SportsF1Standings({ drivers = [], constructors = [] }) {
             type="button"
             onClick={() => setTab(key)}
             className={[
-              'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+              'rounded-full px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.1em] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
               tab === key ? 'bg-cyan-200/15 text-cyan-50 ring-1 ring-cyan-200/25' : 'text-white/40 hover:text-white/70',
             ].join(' ')}
           >
@@ -413,7 +413,7 @@ function SportsF1Standings({ drivers = [], constructors = [] }) {
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{isDrivers ? r.driverName : r.constructor}</span>
                   {isDrivers && r.team ? (
-                    <span className="block truncate text-[10px] text-white/40">{r.team}</span>
+                    <span className="block truncate text-[0.625rem] text-white/40">{r.team}</span>
                   ) : null}
                 </span>
               </span>
@@ -435,7 +435,7 @@ function SportsResults({ results }) {
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/38">Recent results</p>
+      <p className="mb-1.5 px-1 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/38">Recent results</p>
       <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         {results.map((r) => (
           <div key={r.id} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2.5 py-2 text-xs">
@@ -457,12 +457,12 @@ function SportsRaces({ races }) {
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/38">Recent races</p>
+      <p className="mb-1.5 px-1 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/38">Recent races</p>
       <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         {races.map((r) => (
           <div key={r.id} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2.5 py-2 text-xs">
             <span className="min-w-0 flex-1 truncate text-white/78">{r.name}</span>
-            <span className="clock-figures shrink-0 text-[10px] text-white/45">{fmtDate(r.date)}</span>
+            <span className="clock-figures shrink-0 text-[0.625rem] text-white/45">{fmtDate(r.date)}</span>
           </div>
         ))}
       </div>
@@ -513,7 +513,7 @@ function NewsSportsCard() {
         {/* Centered local hint */}
         <div className="flex min-w-0 flex-1 justify-center">
           {tab === 'news' && scope === 'local' ? (
-            <p className="flex min-w-0 items-center gap-1 text-[10px] text-white/45">
+            <p className="flex min-w-0 items-center gap-1 text-[0.625rem] text-white/45">
               <MapPin className="h-3 w-3 shrink-0 text-cyan-100/60" aria-hidden="true" />
               <span className="truncate">{place ?? settings.location}</span>
             </p>
@@ -528,7 +528,7 @@ function NewsSportsCard() {
                 value={scope}
                 onChange={(e) => setScope(e.target.value)}
                 aria-label="News category"
-                className="appearance-none rounded-full bg-white/8 py-1 pl-3 pr-7 text-[11px] font-medium text-white/85 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
+                className="appearance-none rounded-full bg-white/8 py-1 pl-3 pr-7 text-[0.6875rem] font-medium text-white/85 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
               >
                 {NEWS_SCOPES.map((s) => (
                   <option key={s.id} value={s.id} className="bg-[#1a2138] text-white">
@@ -547,7 +547,7 @@ function NewsSportsCard() {
                 value={activeId}
                 onChange={(e) => setActiveId(e.target.value)}
                 aria-label="Followed team"
-                className="appearance-none rounded-full bg-white/8 py-1 pl-3 pr-7 text-[11px] font-medium text-white/85 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
+                className="appearance-none rounded-full bg-white/8 py-1 pl-3 pr-7 text-[0.6875rem] font-medium text-white/85 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
               >
                 {follows.map((f) => (
                   <option key={f.id} value={f.id} className="bg-[#1a2138] text-white">
@@ -649,7 +649,7 @@ function StocksPanel() {
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="soft-row flex shrink-0 items-center justify-between rounded-2xl px-3.5 py-2.5">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100/70">Watchlist</p>
+          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-cyan-100/70">Watchlist</p>
           <p className="display-type text-lg font-light leading-tight text-white">{rows.length} instruments</p>
         </div>
         <div className="text-right">
@@ -666,7 +666,7 @@ function StocksPanel() {
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
                   {r.symbol}
-                  {r.name ? <span className="truncate text-[11px] font-normal text-white/40">{r.name}</span> : null}
+                  {r.name ? <span className="truncate text-[0.6875rem] font-normal text-white/40">{r.name}</span> : null}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -685,7 +685,7 @@ function StocksPanel() {
           );
         })}
       </div>
-      <p className="shrink-0 text-center text-[10px] text-white/30">
+      <p className="shrink-0 text-center text-[0.625rem] text-white/30">
         {isSample ? 'Sample data · add a Finnhub key for live quotes' : 'Live · Finnhub'}
       </p>
     </div>
@@ -736,7 +736,7 @@ function WeatherCard() {
         <div className="flex flex-col leading-tight">
           <span className="text-sm font-medium text-white/85">{weather.location}</span>
           <span className="text-xs text-white/55">{weather.condition}</span>
-          <span className="clock-figures mt-0.5 text-[11px] text-white/45">
+          <span className="clock-figures mt-0.5 text-[0.6875rem] text-white/45">
             H {weather.high}&deg; · L {weather.low}&deg; · Feels {weather.feelsLike}&deg;
           </span>
         </div>

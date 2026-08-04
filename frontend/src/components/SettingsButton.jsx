@@ -12,7 +12,7 @@ export default function SettingsButton({
   className = '',
   label = false,
   title = 'Settings',
-  fields = ['name', 'location', 'sports'],
+  fields = ['name', 'location', 'sports', 'afk'],
 }) {
   const [open, setOpen] = useState(false);
   const { settings, update } = useSettings();
@@ -31,7 +31,7 @@ export default function SettingsButton({
       >
         <Settings className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" />
         {label ? (
-          <span className="text-[10px] font-medium uppercase tracking-[0.2em]">Settings</span>
+          <span className="text-[0.625rem] font-medium uppercase tracking-[0.2em]">Settings</span>
         ) : null}
       </button>
 
@@ -87,6 +87,15 @@ export default function SettingsButton({
                 <StocksPicker />
               </div>
             ) : null}
+            {fields.includes('afk') ? (
+              <Toggle
+                className={fields.length > 1 ? 'mt-5' : ''}
+                label="Immersive player when idle"
+                hint="If music is playing when the screen goes idle, show the full-screen player with the time. Tap it to come back."
+                checked={settings.afkImmersive !== false}
+                onChange={(v) => update({ afkImmersive: v })}
+              />
+            ) : null}
             {fields.includes('ai') ? (
               <Textarea
                 className={fields.length > 1 ? 'mt-4' : ''}
@@ -106,10 +115,39 @@ export default function SettingsButton({
   );
 }
 
+function Toggle({ label, hint, checked, onChange, className = '' }) {
+  return (
+    <div className={`flex items-start justify-between gap-4 ${className}`}>
+      <span className="min-w-0">
+        <span className="block text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-white/45">{label}</span>
+        {hint ? <span className="mt-1 block text-xs font-light leading-snug text-white/40">{hint}</span> : null}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={[
+          'relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+          checked ? 'bg-cyan-300/80' : 'bg-white/15',
+        ].join(' ')}
+      >
+        <span
+          className={[
+            'absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all',
+            checked ? 'left-6' : 'left-1',
+          ].join(' ')}
+        />
+      </button>
+    </div>
+  );
+}
+
 function Field({ label, value, onChange, placeholder, hint, className = '' }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+      <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
         {label}
       </span>
       <input
@@ -118,7 +156,7 @@ function Field({ label, value, onChange, placeholder, hint, className = '' }) {
         placeholder={placeholder}
         className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
       />
-      {hint ? <span className="mt-1 block text-[10px] text-white/38">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-[0.625rem] text-white/38">{hint}</span> : null}
     </label>
   );
 }
@@ -126,7 +164,7 @@ function Field({ label, value, onChange, placeholder, hint, className = '' }) {
 function Textarea({ label, value, onChange, placeholder, hint, className = '' }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+      <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
         {label}
       </span>
       <textarea
@@ -136,7 +174,7 @@ function Textarea({ label, value, onChange, placeholder, hint, className = '' })
         rows={4}
         className="glass-scroll w-full resize-none rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm leading-6 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
       />
-      {hint ? <span className="mt-1 block text-[10px] text-white/38">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-[0.625rem] text-white/38">{hint}</span> : null}
     </label>
   );
 }

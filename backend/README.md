@@ -47,13 +47,65 @@ curl http://localhost:4000/api/status
 | Weather  | **OpenWeather** (1k/day)                       | `GET /api/weather?city=` · `GET /api/weather/forecast?city=` |
 | Stocks   | **Finnhub** (60/min)                           | `GET /api/stocks?symbols=AAPL,MSFT` · `GET /api/stocks/:symbol` |
 | News     | **GNews** (100/day)                            | `GET /api/news?category=` · `GET /api/news/search?q=` |
+| Search   | **Keyless** (DuckDuckGo/Google News/Wikipedia) · Brave · Tavily | `GET /api/search?q=` · `GET /api/search/status` |
 | Sports   | **TheSportsDB** (free, works with key `3`)     | `GET /api/sports/upcoming?league=epl` · `/results` · `/standings?league=&season=` |
 | AI       | **Gemini** (default, free) · OpenAI · Claude   | `POST /api/ai/chat` `{ prompt \| messages, provider?, model?, system? }` |
 | Calendar | **Google** (read+write) · **iCal** (read)      | `GET /api/calendar/google/auth` · `/events` · `POST /api/calendar/events` |
 | Music    | **Spotify** (OAuth)                            | `GET /api/music/auth` · `/now-playing` · `/playlists` · `/recently-played` |
+| Travel   | **Keyless**: adsbdb + adsb.lol/airplanes.live (flights) · Frankfurter/ECB (FX) · Nominatim + Wikipedia (places, photos) · optional **Google Places** | `GET /api/travel/destination?q=` · `/flight?code=BA117&date=` · `/fx?from=GBP&to=JPY` · `/places?q=&kind=hotel` · `/photos?q=` · `/photo?ref=` |
 
-> Travel and Finance have **no** external API — they stay fully local/manual in
-> the frontend (localStorage), as requested.
+> Finance has **no** external API — it stays fully local/manual in the frontend
+> (localStorage). Travel keeps its trips local too; only the live data
+> (flights, rates, weather, places) comes from the backend.
+
+### Travel
+
+Everything works with **no keys at all**:
+
+- **Flights** — routes (airline, both airports with coordinates) from
+  [adsbdb](https://www.adsbdb.com), live position/altitude/speed from
+  [adsb.lol](https://adsb.lol) with [airplanes.live](https://airplanes.live) as
+  fallback. Both are community ADS-B networks: an aircraft shows up as soon as
+  it's airborne and in receiver range. Gate numbers and scheduled times are the
+  one thing free feeds don't carry — those need a paid airline schedule API.
+
+  Tracking is **date-aware**: airlines reuse a flight number every day, so
+  `/flight?code=BA117&date=2026-08-20` only looks for an aircraft on the day it
+  departs (plus the morning after, for overnight long-hauls). Any other date
+  returns the route with a `scheduled`/`completed` status and `daysAway`, so a
+  trip three weeks out never shows someone else's aircraft as yours.
+
+  Airline logos and banners come from the Traverse project's public Firebase
+  Storage bucket, keyed by ICAO code (`BAW.png`, `JAL.png`). Override the base
+  with `AIRLINE_ART_BASE`, or clear it to fall back to the plane glyph.
+
+  The flight card's backdrop is one of the airline's own aircraft: Wikipedia's
+  lead image for the carrier, which is a photo of their fleet for nearly every
+  airline. No registration to type and no key.
+
+  For a specific airframe, `GET /api/travel/aircraft?registration=G-STBA` returns
+  its type and operator from adsbdb's registry plus a photo of that exact
+  aeroplane from [Planespotters](https://www.planespotters.net/photo/api) — whose
+  API wants a contact URL or email in the User-Agent (`AIRCRAFT_PHOTO_CONTACT`)
+  and a photographer credit. (adsbdb's own `url_photo` links point at
+  airport-data.com, which now 404s.)
+- **Currency** — the ECB's daily reference rates via
+  [Frankfurter](https://frankfurter.dev), with `open.er-api.com` covering the
+  currencies the ECB doesn't quote. Includes 30 days of history for the trend,
+  and a picture of the destination's banknotes: Wikipedia keeps a "Banknotes of
+  the …" article for most currencies, and `/fx` returns its lead image (cached a
+  week, since a note series doesn't change).
+- **Maps** — the frontend draws OpenStreetMap data on CARTO's dark basemap, so
+  it matches the dashboard and needs no Maps key.
+- **Places & photos** — Nominatim search plus Wikipedia imagery.
+
+Setting `GOOGLE_PLACES_API_KEY` upgrades place search to **Google Places (New)**:
+ratings, review counts, price level, open-now and real venue photos. The key
+stays server-side — photos are proxied through `GET /api/travel/photo?ref=`.
+
+`GET /api/travel/photos?q=teamLab Planets&lat=&lon=&placeId=` returns up to six
+pictures for anything on an itinerary: Google's venue photos when keyed, and a
+Wikipedia image when not, so hotels and landmarks are illustrated either way.
 
 ### Why these providers
 

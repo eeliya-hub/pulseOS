@@ -12,13 +12,13 @@ export default function TopBar({ activeLabel, now }) {
           Pulse
         </p>
         <span className="h-1 w-1 rounded-full bg-white/25" aria-hidden="true" />
-        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/40">
+        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.22em] text-white/40">
           {activeLabel}
         </p>
       </div>
 
       <div className="flex items-center gap-3 text-white/70">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">
+        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-white/40">
           {formatShortDate(now)}
         </p>
         <p className="clock-figures text-lg font-semibold text-white/90">

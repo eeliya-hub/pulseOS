@@ -263,7 +263,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-900/95" />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">Connect calendars</p>
+          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Connect calendars</p>
           <button
             type="button"
             onClick={onClose}
@@ -278,9 +278,18 @@ function CalendarConnectPopup({ calendar, onClose }) {
           <div className="space-y-1.5">
             <SectionLabel>Google Calendar</SectionLabel>
             {calendar.googleConnected ? (
-              <p className="flex items-center gap-2 text-sm text-emerald-300">
-                <Check className="h-4 w-4" aria-hidden="true" /> Connected — events sync in.
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm text-emerald-300">
+                  <Check className="h-4 w-4" aria-hidden="true" /> Connected — events sync in.
+                </p>
+                <button
+                  type="button"
+                  onClick={calendar.disconnectGoogle}
+                  className="rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-white/45 transition hover:bg-white/10 hover:text-rose-300"
+                >
+                  Disconnect
+                </button>
+              </div>
             ) : calendar.googleConfigured ? (
               <button
                 type="button"
@@ -308,7 +317,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
                 <button
                   type="button"
                   onClick={calendar.disconnectApple}
-                  className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-white/45 transition hover:bg-white/10 hover:text-rose-300"
+                  className="rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-white/45 transition hover:bg-white/10 hover:text-rose-300"
                 >
                   Disconnect
                 </button>
@@ -346,8 +355,8 @@ function CalendarConnectPopup({ calendar, onClose }) {
                     {appleBusy ? '…' : 'Connect'}
                   </button>
                 </div>
-                {appleErr && <p className="text-[11px] leading-relaxed text-rose-300/90">{appleErr}</p>}
-                <p className="text-[10px] leading-relaxed text-white/38">
+                {appleErr && <p className="text-[0.6875rem] leading-relaxed text-rose-300/90">{appleErr}</p>}
+                <p className="text-[0.625rem] leading-relaxed text-white/38">
                   Uses your Apple ID + an app-specific password (create one at{' '}
                   <span className="text-white/60">appleid.apple.com → Sign-In and Security → App-Specific Passwords</span>).
                   iCloud requires this — your normal password won&rsquo;t work.
@@ -367,7 +376,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: SOURCE_META.ical.color }} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-white/85">{f.name}</p>
-                      <p className="truncate text-[10px] text-white/35">{f.url}</p>
+                      <p className="truncate text-[0.625rem] text-white/35">{f.url}</p>
                     </div>
                     <button
                       type="button"
@@ -404,7 +413,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
                 <Plus className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            <p className="text-[10px] leading-relaxed text-white/38">
+            <p className="text-[0.625rem] leading-relaxed text-white/38">
               Paste a public .ics URL — e.g. Google Calendar&rsquo;s &ldquo;Secret address in iCal format&rdquo;, an
               Apple/Outlook share link, or a university timetable feed.
             </p>
@@ -433,7 +442,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
                       {c.source === 'google' || c.source === 'apple' ? (
                         <SourceLogo source={c.source} className="h-3.5 w-3.5" />
                       ) : (
-                        <span className="text-[9px] uppercase tracking-wide text-white/30">{c.source}</span>
+                        <span className="text-[0.5625rem] uppercase tracking-wide text-white/30">{c.source}</span>
                       )}
                       {off ? (
                         <EyeOff className="h-4 w-4 shrink-0 text-white/30" aria-hidden="true" />
@@ -477,7 +486,7 @@ function EventMap({ lat, lon, label }) {
         href={link}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center justify-center gap-1 bg-white/[0.04] py-1.5 text-[10px] font-medium text-white/55 transition hover:text-white/85"
+        className="flex items-center justify-center gap-1 bg-white/[0.04] py-1.5 text-[0.625rem] font-medium text-white/55 transition hover:text-white/85"
       >
         Open in maps <ExternalLink className="h-3 w-3" aria-hidden="true" />
       </a>
@@ -518,7 +527,7 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
           <span className="mt-1 h-10 w-1 shrink-0 rounded-full" style={{ backgroundColor: event.color }} />
           <div className="min-w-0 flex-1">
             <p className="display-type text-lg font-normal leading-tight text-white">{event.title}</p>
-            {event.calendarName && <p className="mt-0.5 truncate text-[11px] text-white/45">{event.calendarName}</p>}
+            {event.calendarName && <p className="mt-0.5 truncate text-[0.6875rem] text-white/45">{event.calendarName}</p>}
           </div>
           <IconButton onClick={onClose} label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
@@ -552,12 +561,12 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
           <div className="flex items-center gap-2 pt-1">
             <SourceLogo source={event.source} className="h-4 w-4" />
             {sourceLabel && (
-              <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45">{sourceLabel}</span>
+              <span className="text-[0.625rem] font-medium uppercase tracking-[0.12em] text-white/45">{sourceLabel}</span>
             )}
-            {event.readOnly && <span className="text-[10px] text-white/35">Read-only</span>}
+            {event.readOnly && <span className="text-[0.625rem] text-white/35">Read-only</span>}
             {confirmDelete ? (
               <div className="ml-auto flex items-center gap-1.5">
-                <span className="text-[10px] uppercase tracking-wide text-white/40">Delete</span>
+                <span className="text-[0.625rem] uppercase tracking-wide text-white/40">Delete</span>
                 <button
                   type="button"
                   onClick={() => onDelete('this')}
@@ -663,7 +672,7 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-900/95" />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
+          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
             {isNew ? 'New event' : 'Edit event'}
           </p>
           <IconButton onClick={onClose} label="Close">
@@ -678,7 +687,7 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
           </div>
           <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className={inputClass} />
           <div>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">Calendar</p>
+            <p className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">Calendar</p>
             <div className="flex flex-wrap gap-1.5">
               {writable.map((c) => (
                 <button
@@ -696,7 +705,7 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
               ))}
             </div>
           </div>
-          {err && <p className="text-[11px] leading-relaxed text-rose-300/90">{err}</p>}
+          {err && <p className="text-[0.6875rem] leading-relaxed text-rose-300/90">{err}</p>}
           <div className="flex items-center gap-2 pt-1">
             <button type="button" onClick={onClose} className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-white/55 transition hover:text-white">
               Cancel
@@ -729,7 +738,7 @@ function EventRow({ event, onClick }) {
         style={{ backgroundColor: event.color || calendarColor(event.calendar) }}
       />
       <div className="min-w-0 flex-1">
-        <p className="clock-figures flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+        <p className="clock-figures flex items-center gap-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-white/45">
           {event.time || 'All day'}
           {recurring && <Repeat className="h-3 w-3" aria-hidden="true" />}
         </p>
@@ -741,7 +750,7 @@ function EventRow({ event, onClick }) {
       {event.source === 'google' || event.source === 'apple' ? (
         <SourceLogo source={event.source} className="h-4 w-4" />
       ) : event.source === 'ical' ? (
-        <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/45">
+        <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-white/45">
           iCal
         </span>
       ) : (
@@ -784,7 +793,7 @@ function MonthCalendar({ selectedKey, events, onPick }) {
       </div>
 
       <div className="shrink-0">
-        <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-semibold uppercase tracking-wide text-white/35">
+        <div className="grid grid-cols-7 gap-1 text-center text-[0.5625rem] font-semibold uppercase tracking-wide text-white/35">
           {WEEKDAYS.map((day, i) => (
             <span key={i}>{day}</span>
           ))}
@@ -854,7 +863,7 @@ function AddEditPopup({ life, calendar, selectedKey, event, onClose }) {
       />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
+          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
             {isNew ? (type === 'task' ? 'New task' : 'New event') : 'Edit event'}
           </p>
           <IconButton onClick={onClose} label="Close">
@@ -948,7 +957,7 @@ function TaskForm({ onSave, onCancel }) {
         placeholder="Task"
         className={inputClass}
       />
-      <label className="flex items-center gap-2 text-[11px] text-white/45">
+      <label className="flex items-center gap-2 text-[0.6875rem] text-white/45">
         <Repeat className="h-3.5 w-3.5" aria-hidden="true" />
         <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${selectClass} flex-1`}>
           {REPEAT_OPTIONS.map((option) => (
@@ -1020,7 +1029,7 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
       />
 
       <div>
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">Calendar</p>
+        <p className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">Calendar</p>
         <div className="flex flex-wrap gap-1.5">
           {[...CALENDARS, ...connectedCalendars].map((cal) => (
             <button
@@ -1041,7 +1050,7 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-[11px] text-white/45">
+      <label className="flex items-center gap-2 text-[0.6875rem] text-white/45">
         <Repeat className="h-3.5 w-3.5" aria-hidden="true" />
         <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${selectClass} flex-1`}>
           {REPEAT_OPTIONS.map((option) => (
@@ -1146,7 +1155,7 @@ function ProjectItem({ project, accent, life }) {
       <div className="flex items-center justify-between gap-2">
         <p className="display-type truncate text-sm font-medium text-white">{project.name}</p>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="clock-figures text-[11px] font-medium text-white/45">
+          <span className="clock-figures text-[0.6875rem] font-medium text-white/45">
             {done}/{project.todos.length}
           </span>
           <RemoveButton onClick={() => life.removeProject(project.id)} />
@@ -1295,7 +1304,7 @@ function TodoRow({ todo, onToggle, onRemove, compact }) {
         <CheckMark done={todo.done} shape="square" />
         <span
           className={[
-            compact ? 'text-[13px]' : 'text-sm',
+            compact ? 'text-[0.8125rem]' : 'text-sm',
             'truncate font-medium',
             todo.done ? 'text-white/38 line-through' : 'text-white/75',
           ].join(' ')}
@@ -1316,7 +1325,7 @@ function CheckMark({ done, shape }) {
     <span
       className={[
         'grid shrink-0 place-items-center border transition-all',
-        shape === 'round' ? 'h-5 w-5 rounded-full' : 'h-[18px] w-[18px] rounded-md',
+        shape === 'round' ? 'h-5 w-5 rounded-full' : 'h-[1.125rem] w-[1.125rem] rounded-md',
         done ? 'glow-ring border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
       ].join(' ')}
     >
@@ -1356,7 +1365,7 @@ function IconButton({ onClick, active, label, children }) {
 
 function SectionLabel({ children }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">{children}</p>
+    <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">{children}</p>
   );
 }
 
@@ -1366,7 +1375,7 @@ function EmptyLine({ children }) {
 
 function CardLabel({ icon: Icon, label }) {
   return (
-    <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
+    <p className="flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
       {Icon ? <Icon className="h-3.5 w-3.5 text-white/55" strokeWidth={1.8} aria-hidden="true" /> : null}
       {label}
     </p>

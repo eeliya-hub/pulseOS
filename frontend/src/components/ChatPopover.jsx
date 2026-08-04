@@ -26,11 +26,11 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
     .map(toPromptChip)
     .filter((c) => c.text);
 
-  const submit = (text) => {
+  const submit = (text, label) => {
     const value = (text ?? inputText).trim();
     if (!value) return;
     setInputText('');
-    send(value);
+    send(value, label);
   };
 
   return createPortal(
@@ -46,7 +46,7 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
           </span>
           <div className="min-w-0 flex-1">
             <p className="display-type truncate text-sm font-normal leading-none text-white">Pulse</p>
-            <p className="mt-1 text-[9px] font-medium uppercase tracking-[0.22em] text-white/38">Here to help</p>
+            <p className="mt-1 text-[0.5625rem] font-medium uppercase tracking-[0.22em] text-white/38">Here to help</p>
           </div>
           <button
             type="button"
@@ -93,7 +93,7 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
                 <button
                   key={`${chip.label}-${index}`}
                   type="button"
-                  onClick={() => submit(chip.text)}
+                  onClick={() => submit(chip.text, chip.label)}
                   title={chip.text}
                   className="soft-button shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-white/72 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 >

@@ -25,6 +25,11 @@ export const calendarController = {
     );
   }),
 
+  // POST /api/calendar/google/disconnect
+  googleDisconnect: asyncHandler(async (_req, res) => {
+    res.json(calendarService.disconnectGoogle());
+  }),
+
   // GET /api/calendar/status → { google: {...}, apple: {...} }
   status: asyncHandler(async (_req, res) => {
     res.json(calendarService.status());

@@ -333,6 +333,32 @@ export function createToolExecutor(getData) {
       }
     },
 
+    async search_web({ query, recency } = {}) {
+      const q = (query || '').trim();
+      if (!q) return { error: 'Say what to search for.' };
+      // Brave-style freshness codes; the backend ignores anything else.
+      const freshness = { day: 'pd', week: 'pw', month: 'pm', year: 'py' }[recency];
+      try {
+        const res = await api.search(q, { max: 6, ...(freshness ? { freshness } : {}) });
+        return {
+          query: res.query,
+          answer: res.answer ?? undefined,
+          results: (res.results ?? []).map((r) => ({
+            title: r.title,
+            source: r.source,
+            url: r.url,
+            publishedAt: r.publishedAt ?? undefined,
+            snippet: r.snippet ? r.snippet.slice(0, 400) : undefined,
+            // Page text, when we could read it — this is what lets the model
+            // answer from the page rather than from a one-line snippet.
+            page: r.content ? r.content.slice(0, 1200) : undefined,
+          })),
+        };
+      } catch (e) {
+        return { error: e?.message || "Couldn't search the web right now." };
+      }
+    },
+
     async get_stocks() {
       const { settings } = getData();
       const symbols = settings.stocks ?? [];

@@ -9,6 +9,7 @@ calendarRouter.get('/status', calendarController.status);
 // OAuth (Google, read+write)
 calendarRouter.get('/google/auth', calendarController.googleAuth);
 calendarRouter.get('/google/callback', calendarController.googleCallback);
+calendarRouter.post('/google/disconnect', calendarController.googleDisconnect);
 
 // Apple iCloud (CalDAV) — connect with Apple ID + app-specific password
 calendarRouter.post('/apple/connect', calendarController.appleConnect);

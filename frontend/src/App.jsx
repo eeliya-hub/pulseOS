@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import bgImage from './assets/bg.jpg';
 import ChatPopover from './components/ChatPopover.jsx';
 import Dock from './components/Dock.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import MiniPlayer from './components/MiniPlayer.jsx';
 import PulseLauncher from './components/PulseLauncher.jsx';
@@ -23,6 +24,9 @@ import AISettings from './views/AISettings.jsx';
 import Finance from './views/Finance.jsx';
 import HomeView from './views/Home.jsx';
 import IdleScreen from './views/IdleScreen.jsx';
+import MusicImmersive from './components/MusicImmersive.jsx';
+import { useSettings } from './hooks/useSettings.js';
+import { useSpotifyPlayer } from './hooks/useSpotifyPlayer.js';
 import LifeHub from './views/LifeHub.jsx';
 import Markets from './views/Markets.jsx';
 import Music from './views/Music.jsx';
@@ -83,6 +87,12 @@ export default function App() {
   const [showAiSettings, setShowAiSettings] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [now, setNow] = useState(() => new Date());
+
+  // Idle + music playing + opted in = the immersive player stands in for the
+  // screensaver. Anything else falls through to the usual idle screen.
+  const { settings } = useSettings();
+  const { state: playerState } = useSpotifyPlayer();
+  const afkImmersive = settings.afkImmersive !== false && Boolean(playerState?.track) && !playerState.paused;
   const [boot, setBoot] = useState({ progress: 0, label: '', done: false, exiting: false });
   const idleTimerRef = useRef(null);
 
@@ -309,7 +319,11 @@ export default function App() {
       <div className="ambient-stars" aria-hidden="true" />
       <div className="ambient-grain" aria-hidden="true" />
 
-      {isIdleScreen ? (
+      {isIdleScreen && afkImmersive ? (
+        // Going idle with music on lands in the immersive player rather than the
+        // screensaver — a tap anywhere takes you back to Home, same as waking.
+        <MusicImmersive afk now={now} onClose={() => activate('home')} />
+      ) : isIdleScreen ? (
         <IdleScreen now={now} />
       ) : (
         <div className="relative z-10 flex h-dvh flex-col">
@@ -319,8 +333,8 @@ export default function App() {
             id="main-content"
             className="min-h-0 flex-1 px-5 pb-[6.5rem] pt-2 md:px-8"
           >
-            <div key={activeView} className="fade-in mx-auto h-full max-w-[1280px]">
-              {views[activeView]}
+            <div key={activeView} className="fade-in mx-auto h-full max-w-[80rem]">
+              <ErrorBoundary resetKey={activeView}>{views[activeView]}</ErrorBoundary>
             </div>
           </main>
         </div>

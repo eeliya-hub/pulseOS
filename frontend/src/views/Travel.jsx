@@ -1,532 +1,1368 @@
 import {
   BedDouble,
   Check,
+  ChevronDown,
   Clock,
-  CloudSun,
+  Cloud,
+  CloudRain,
   Luggage,
+  MapPin,
+  Maximize2,
   Plane,
   Plus,
-  RotateCcw,
+  Settings2,
+  Star,
+  Sun,
+  Ticket,
+  TrendingUp,
   X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import GlassCard from '../components/GlassCard.jsx';
-import ViewHeader from '../components/ViewHeader.jsx';
-import { AddRow, EditableAmount, EditableDate, EditableText, RemoveButton } from '../components/InlineEdit.jsx';
-import { useTravelStore } from '../hooks/useTravelStore.js';
+import { AddRow, EditableDate, RemoveButton } from '../components/InlineEdit.jsx';
+import ItineraryItemEditor from '../components/ItineraryItemEditor.jsx';
+import PlaceSearch from '../components/PlaceSearch.jsx';
+import TripEditor from '../components/TripEditor.jsx';
+import TripMap from '../components/TripMap.jsx';
+import { api } from '../services/api/backendClient.js';
+import { toDestination } from '../utils/destination.js';
+import { placePhotoUrl } from '../utils/places.js';
+import { useTripLive } from '../hooks/useTripLive.js';
+import { categoryOf, emptyTrip, useTravelStore } from '../hooks/useTravelStore.js';
 
-const HOME = { symbol: '£', tz: 'Europe/London' };
-const DEST = { symbol: '¥' };
 const QUICK_AMOUNTS = [20, 50, 100, 250];
+const DAY_MS = 86400000;
 
-const defaultPacking = [
-  { id: 'p1', label: 'Passport & JR Pass', done: true },
-  { id: 'p2', label: 'Power adapter (Type A)', done: false },
-  { id: 'p3', label: 'Portable charger', done: false },
-  { id: 'p4', label: 'eSIM / pocket wifi', done: false },
-  { id: 'p5', label: 'Light rain jacket', done: false },
-  { id: 'p6', label: 'Comfortable walking shoes', done: true },
-  { id: 'p7', label: 'Travel insurance printout', done: false },
-];
+/* ── Formatting helpers ───────────────────────────────────────────────────── */
 
-const uid = () => Math.random().toString(36).slice(2, 9);
+const dateFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' });
+const dayOf = (iso) => (iso ? new Date(`${iso}T00:00:00`) : null);
+const fmtDate = (iso) => (dayOf(iso) ? dateFmt.format(dayOf(iso)) : '—');
+const midnight = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-function useChecklist(storageKey, initial) {
-  const [items, setItems] = useState(() => {
-    try {
-      const raw = window.localStorage?.getItem(storageKey);
-      if (raw) return JSON.parse(raw);
-    } catch {
-      /* ignore */
-    }
-    return initial;
-  });
+/** Where the trip sits relative to today, as a short line for the header. */
+function tripPhase(trip, now) {
+  const start = dayOf(trip.start);
+  const end = dayOf(trip.end);
+  if (!start || !end) return { label: 'Dates not set', nights: 0 };
 
-  useEffect(() => {
-    try {
-      window.localStorage?.setItem(storageKey, JSON.stringify(items));
-    } catch {
-      /* ignore */
-    }
-  }, [items, storageKey]);
+  const nights = Math.max(0, Math.round((end - start) / DAY_MS));
+  const today = midnight(now);
+  const toGo = Math.round((start - today) / DAY_MS);
 
-  const toggle = (id) => setItems((list) => list.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
-  const rename = (id, label) => setItems((list) => list.map((i) => (i.id === id ? { ...i, label } : i)));
-  const add = (label) => setItems((list) => [...list, { id: uid(), label, done: false }]);
-  const remove = (id) => setItems((list) => list.filter((i) => i.id !== id));
-  return { items, toggle, rename, add, remove };
+  if (toGo > 0) return { label: `${toGo} day${toGo === 1 ? '' : 's'} to go`, nights, toGo };
+  if (today > end) return { label: 'Trip complete', nights, done: true };
+  const dayNumber = Math.round((today - start) / DAY_MS) + 1;
+  return { label: `Day ${dayNumber} of ${nights + 1}`, nights, active: true };
 }
 
-function hoursAhead(destTz, homeTz, date) {
-  const hour = (tz) =>
-    Number(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hour12: false }).format(date));
-  let diff = hour(destTz) - hour(homeTz);
-  if (diff > 12) diff -= 24;
-  if (diff < -12) diff += 24;
-  return diff;
+/**
+ * The time where the trip is. Prefers the IANA zone (correct across a daylight
+ * saving change mid-trip); falls back to the raw UTC offset when the zone lookup
+ * wasn't available.
+ */
+function destinationClock(destination, now) {
+  if (!destination) return null;
+  if (destination.timeZone) {
+    const opts = { timeZone: destination.timeZone };
+    return {
+      time: new Intl.DateTimeFormat('en-GB', { ...opts, hour: '2-digit', minute: '2-digit', hour12: false }).format(now),
+      date: new Intl.DateTimeFormat('en-GB', { ...opts, weekday: 'long', day: 'numeric', month: 'short' }).format(now),
+      offsetHours: zoneOffsetHours(destination.timeZone, now),
+    };
+  }
+  if (destination.utcOffsetSeconds == null) return null;
+  // Shift into the destination's offset and read the result as UTC.
+  const shifted = new Date(now.getTime() + destination.utcOffsetSeconds * 1000);
+  return {
+    time: shifted.toISOString().slice(11, 16),
+    date: new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'UTC',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+    }).format(shifted),
+    // getTimezoneOffset() counts minutes *behind* UTC, so adding it gives the
+    // gap between there and here.
+    offsetHours: Math.round(destination.utcOffsetSeconds / 3600 + now.getTimezoneOffset() / 60),
+  };
 }
+
+/** Hours the destination is ahead of (or behind) the machine's own clock. */
+function zoneOffsetHours(timeZone, now) {
+  try {
+    const there = new Date(now.toLocaleString('en-US', { timeZone }));
+    const here = new Date(now.toLocaleString('en-US'));
+    return Math.round((there - here) / 3600000);
+  } catch {
+    return null;
+  }
+}
+
+const weatherIcon = { rain: CloudRain, sun: Sun, cloud: Cloud };
+
+
+/* ── View ─────────────────────────────────────────────────────────────────── */
 
 export default function Travel() {
-  const { data, setField, reset } = useTravelStore();
+  const store = useTravelStore();
+  const { trip, trips } = store;
+  const live = useTripLive(trip);
+
   const [now, setNow] = useState(() => new Date());
-  const [amount, setAmount] = useState('50');
   const [activeDayId, setActiveDayId] = useState(null);
-  const packing = useChecklist('pulse.travel.packing', defaultPacking);
-
-  const activeDay = data.itinerary.find((day) => day.id === activeDayId) ?? data.itinerary[0] ?? null;
-
-  const updateDay = (dayId, patch) =>
-    setField('itinerary', data.itinerary.map((day) => (day.id === dayId ? { ...day, ...patch } : day)));
-
-  const nextDate = () => {
-    const last = data.itinerary[data.itinerary.length - 1];
-    if (last?.date) {
-      const d = new Date(`${last.date}T00:00:00`);
-      d.setDate(d.getDate() + 1);
-      // Build YYYY-MM-DD from local parts — toISOString() would shift by the UTC offset.
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${d.getFullYear()}-${mm}-${dd}`;
-    }
-    return data.start || '';
-  };
-
-  const addDay = () => {
-    const day = {
-      id: `day-${Date.now()}`,
-      label: `Day ${data.itinerary.length + 1}`,
-      date: nextDate(),
-      items: [],
-    };
-    setField('itinerary', [...data.itinerary, day]);
-    setActiveDayId(day.id);
-  };
-
-  const removeDay = (dayId) => {
-    const remaining = data.itinerary.filter((day) => day.id !== dayId);
-    setField('itinerary', remaining);
-    if (activeDay?.id === dayId) setActiveDayId(remaining[0]?.id ?? null);
-  };
-
-  const mapDay = (dayId, mapItems) =>
-    setField('itinerary', data.itinerary.map((day) => (day.id === dayId ? { ...day, items: mapItems(day.items) } : day)));
-
-  const addTask = (dayId) =>
-    mapDay(dayId, (items) => [...items, { id: `t-${Date.now()}`, time: '', title: 'New plan', done: false }]);
-  const updateTask = (dayId, taskId, patch) =>
-    mapDay(dayId, (items) => items.map((task) => (task.id === taskId ? { ...task, ...patch } : task)));
-  const removeTask = (dayId, taskId) =>
-    mapDay(dayId, (items) => items.filter((task) => task.id !== taskId));
+  const [activeFlightId, setActiveFlightId] = useState(null);
+  const [editingTrip, setEditingTrip] = useState(null); // 'new' | 'edit' | null
+  const [editingItem, setEditingItem] = useState(null); // { dayId, itemId }
+  const [pickingStay, setPickingStay] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  // Which layers the map draws. Off is remembered only for the session — it's a
+  // glance-level control, not a setting.
+  const [mapFilters, setMapFilters] = useState({
+    places: true,
+    stay: true,
+    flight: false,
+    airports: false,
+  });
+  // Which day's plans to pin — 'all', or one day's id.
+  const [mapDay, setMapDay] = useState('all');
+  const [amount, setAmount] = useState('50');
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 30000);
-    return () => window.clearInterval(id);
+    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
   }, []);
 
-  const start = new Date(`${data.start}T00:00:00`);
-  const end = new Date(`${data.end}T00:00:00`);
-  const daysToGo = Math.max(0, Math.ceil((start - now) / 86400000));
-  const nights = Math.max(0, Math.round((end - start) / 86400000));
-  const fmt = (date, opts) => new Intl.DateTimeFormat('en-GB', opts).format(date);
+  // A trip carried over from the older single-trip format knows its city but
+  // not where it is. Resolve it once, and the map, currency, clock and country
+  // facts all fill themselves in.
+  const needsCoords = Boolean(trip?.destination?.city) && trip?.destination?.lat == null;
+  useEffect(() => {
+    if (!needsCoords) return undefined;
+    let alive = true;
+    api.travel
+      .destination(trip.destination.city)
+      .then((found) => {
+        if (alive && found) store.patchTrip({ destination: { ...trip.destination, ...toDestination(found) } });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per trip that needs it
+  }, [needsCoords, trip?.id]);
 
-  const destTime = fmt(now, { timeZone: data.timeZone, hour: '2-digit', minute: '2-digit', hour12: false });
-  const destDate = fmt(now, { timeZone: data.timeZone, weekday: 'long', day: 'numeric', month: 'short' });
-  const ahead = hoursAhead(data.timeZone, HOME.tz, now);
+  const destination = trip?.destination ?? null;
+  const phase = trip ? tripPhase(trip, now) : null;
+  const clock = destinationClock(destination, now);
 
-  const rate = Number(data.rate) || 0;
-  const converted = Math.round((Number(amount) || 0) * rate);
-  const packDone = packing.items.filter((i) => i.done).length;
+  const day = trip?.itinerary.find((d) => d.id === activeDayId) ?? trip?.itinerary[0] ?? null;
+  const flight = trip?.flights.find((f) => f.id === activeFlightId) ?? trip?.flights[0] ?? null;
+  const flightLive = flight?.code ? live.flights[flight.code.trim().toUpperCase()] : null;
+
+  // Everything with coordinates goes on the map: the city, the hotel, and every
+  // planned stop that has a real place attached. Each pin carries its category's
+  // colour so the map reads the same way the itinerary does.
+  const mapPoints = useMemo(() => {
+    if (!trip) return [];
+    const points = [];
+    if (destination?.lat != null && mapFilters.places) {
+      points.push({
+        id: 'destination',
+        lat: destination.lat,
+        lon: destination.lon,
+        kind: 'destination',
+        label: destination.city,
+        sublabel: destination.country,
+      });
+    }
+    if (trip.stay?.lat != null && mapFilters.stay) {
+      points.push({
+        id: 'stay',
+        lat: trip.stay.lat,
+        lon: trip.stay.lon,
+        kind: 'stay',
+        label: trip.stay.name,
+        sublabel: 'Where you’re staying',
+      });
+    }
+    if (mapFilters.places) {
+      for (const d of trip.itinerary) {
+        if (mapDay !== 'all' && d.id !== mapDay) continue;
+        for (const item of d.items) {
+          if (item.place?.lat == null) continue;
+          points.push({
+            id: item.id,
+            lat: item.place.lat,
+            lon: item.place.lon,
+            kind: item.type,
+            color: categoryOf(store.categories, item.type).color,
+            label: item.title || item.place.name,
+            sublabel: `${d.label}${item.time ? ` · ${item.time}` : ''}`,
+          });
+        }
+      }
+    }
+    return points;
+  }, [trip, destination, mapFilters, mapDay, store.categories]);
+
+  const editedItem = editingItem
+    ? trip?.itinerary
+        .find((d) => d.id === editingItem.dayId)
+        ?.items.find((i) => i.id === editingItem.itemId) ?? null
+    : null;
+
+  if (!trip) return null;
 
   return (
     <div className="flex h-full flex-col">
-      <ViewHeader
-        lead="Upcoming"
-        accent="Travel"
-        subtitle={`${data.city} · ${daysToGo} days to go`}
-        action={
+      {/* Header — trip switcher on the left, the active trip in the middle */}
+      <header className="relative shrink-0 pb-3 pt-1 text-center">
+        <h1 className="display-type text-3xl font-extralight tracking-wide text-white/95 md:text-4xl">
+          {trip.name}
+          {destination?.city ? (
+            <>
+              {' '}
+              <span className="cyan-name font-light">{destination.city}</span>
+            </>
+          ) : null}
+        </h1>
+        <p className="mt-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.32em] text-white/36">
+          {phase?.label}
+          {trip.start ? ` · ${fmtDate(trip.start)} – ${fmtDate(trip.end)}` : ''}
+        </p>
+
+        <div className="hide-scrollbar absolute left-0 top-0 flex max-w-[45%] items-center gap-1.5 overflow-x-auto">
+          {trips.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => {
+                store.selectTrip(t.id);
+                setActiveDayId(null);
+                setActiveFlightId(null);
+              }}
+              className={[
+                'shrink-0 rounded-full px-3 py-1 text-[0.6875rem] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+                t.id === trip.id ? 'accent-pill glow-ring' : 'soft-button text-white/55',
+              ].join(' ')}
+            >
+              {t.destination?.flag ? `${t.destination.flag} ` : ''}
+              {t.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="absolute right-0 top-0 flex items-center gap-1.5">
           <button
             type="button"
-            onClick={reset}
+            onClick={() => setEditingTrip('new')}
             className="soft-button inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-            Reset
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            Trip
           </button>
-        }
-      />
+          <button
+            type="button"
+            onClick={() => setEditingTrip('edit')}
+            aria-label="Trip settings"
+            className="soft-button grid h-7 w-7 place-items-center rounded-full text-white/60 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </header>
 
-      <section className="my-auto grid max-h-[34rem] min-h-0 w-full flex-1 grid-cols-12 grid-rows-[1.1fr_1fr] gap-4">
-        {/* Trip hero */}
-        <GlassCard
-          tone="cyan"
-          className="relative col-span-8 flex min-h-0 flex-col justify-between overflow-hidden"
-        >
+      {/* Three rows of twelve: hero + map + flight, then the itinerary spanning
+          down beside the stay, currency and packing cards. 41rem is what's left
+          under the header at the design scale, so the bento fills the screen
+          without ever pushing the dock off it. */}
+      <section className="my-auto grid max-h-[41rem] min-h-0 w-full flex-1 grid-cols-12 grid-rows-[1.25fr_1fr_1fr] gap-4">
+        <TripHero destination={destination} phase={phase} clock={clock} weather={live.weather} />
+
+        <GlassCard delay={80} className="relative col-span-4 row-span-2 min-h-0 overflow-hidden" noPadding>
+          <TripMap
+            points={mapPoints}
+            flight={flightLive}
+            showRoute={mapFilters.flight}
+            showAirports={mapFilters.airports}
+            center={destination}
+            className="rounded-3xl"
+          />
+          <MapFilters
+            value={mapFilters}
+            onChange={setMapFilters}
+            days={trip.itinerary}
+            day={mapDay}
+            onDay={setMapDay}
+          />
+          <button
+            type="button"
+            onClick={() => setMapOpen(true)}
+            aria-label="Expand map"
+            className="absolute right-3 top-3 z-[500] grid h-8 w-8 place-items-center rounded-xl border border-white/12 bg-[#101630]/75 text-white/75 backdrop-blur-md transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </GlassCard>
+
+        <FlightCard
+          trip={trip}
+          flight={flight}
+          data={flightLive}
+          onSelect={setActiveFlightId}
+          onPatch={store.patchFlight}
+          onAdd={store.addFlight}
+          onRemove={store.removeFlight}
+        />
+
+        <ItineraryCard
+          trip={trip}
+          day={day}
+          categories={store.categories}
+          onSelectDay={setActiveDayId}
+          onAddDay={store.addDay}
+          onPatchDay={store.patchDay}
+          onRemoveDay={(id) => {
+            store.removeDay(id);
+            setActiveDayId(null);
+          }}
+          onAddItem={(dayId) => {
+            const item = store.addItem(dayId);
+            if (item) setEditingItem({ dayId, itemId: item.id });
+          }}
+          onPatchItem={store.patchItem}
+          onOpenItem={(dayId, itemId) => setEditingItem({ dayId, itemId })}
+        />
+
+        <StayCard trip={trip} onPick={() => setPickingStay(true)} onClear={() => store.patchTrip({ stay: null })} />
+
+        <CurrencyCard
+          trip={trip}
+          destination={destination}
+          fx={live.fx}
+          amount={amount}
+          onAmount={setAmount}
+        />
+
+        <PackingCard
+          trip={trip}
+          onToggle={(id, done) => store.patchPacking(id, { done })}
+          onAdd={store.addPacking}
+          onRemove={store.removePacking}
+        />
+      </section>
+
+      {editingTrip && (
+        <TripEditor
+          trip={editingTrip === 'new' ? emptyTrip({ homeCurrency: trip.homeCurrency }) : trip}
+          canDelete={editingTrip === 'edit' && trips.length > 1}
+          onSave={(draft) => (editingTrip === 'new' ? store.createTrip(draft) : store.patchTrip(draft))}
+          onDelete={() => store.deleteTrip(trip.id)}
+          onClose={() => setEditingTrip(null)}
+        />
+      )}
+
+      {editedItem && (
+        <ItineraryItemEditor
+          item={editedItem}
+          categories={store.categories}
+          onAddCategory={store.addCategory}
+          currency={destination?.currency?.code ?? ''}
+          near={destination}
+          onPatch={(patch) => store.patchItem(editingItem.dayId, editingItem.itemId, patch)}
+          onRemove={() => store.removeItem(editingItem.dayId, editingItem.itemId)}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
+
+      {pickingStay && (
+        <StayPicker
+          near={destination}
+          onPick={(place) => {
+            store.patchTrip({
+              stay: {
+                id: place.id,
+                name: place.name,
+                address: place.address,
+                lat: place.lat,
+                lon: place.lon,
+                rating: place.rating,
+                ratingCount: place.ratingCount,
+                photos: place.photos ?? [],
+                photo: place.photo,
+                phone: place.phone,
+                website: place.website,
+                mapsUrl: place.mapsUrl,
+              },
+            });
+            setPickingStay(false);
+          }}
+          onClose={() => setPickingStay(false)}
+        />
+      )}
+
+      {mapOpen && (
+        <ExpandedMap
+          points={mapPoints}
+          flight={flightLive}
+          center={destination}
+          filters={mapFilters}
+          onFilters={setMapFilters}
+          days={trip.itinerary}
+          day={mapDay}
+          onDay={setMapDay}
+          onClose={() => setMapOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Trip hero ────────────────────────────────────────────────────────────── */
+
+function TripHero({ destination, phase, clock, weather }) {
+  const photo = destination?.photo?.url ?? null;
+  const Icon = weatherIcon[weather?.daily?.[0]?.icon] ?? Cloud;
+
+  return (
+    <GlassCard tone="cyan" className="relative col-span-5 flex min-h-0 flex-col justify-between overflow-hidden">
+      {photo ? (
+        <>
+          <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" />
           <div
-            className="breathe pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(116,242,255,0.12), transparent 68%)' }}
+            className="absolute inset-0 bg-gradient-to-tr from-[#0b1024]/95 via-[#0b1024]/82 to-[#0b1024]/55"
             aria-hidden="true"
           />
-          <div className="relative z-10">
-            <span className="accent-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]">
-              <Plane className="h-3 w-3" aria-hidden="true" />
-              {daysToGo} days to go
+        </>
+      ) : (
+        <div
+          className="breathe pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(116,242,255,0.12), transparent 68%)' }}
+          aria-hidden="true"
+        />
+      )}
+
+      <div className="relative z-10 min-w-0">
+        <span className="accent-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.2em]">
+          <Plane className="h-3 w-3" aria-hidden="true" />
+          {phase?.label}
+        </span>
+        <h2 className="display-type mt-2 flex min-w-0 items-baseline gap-2 text-3xl font-extralight tracking-wide text-white text-glow">
+          <span className="truncate">{destination?.city ?? 'Pick a destination'}</span>
+          {destination?.flag ? <span className="shrink-0 text-xl">{destination.flag}</span> : null}
+        </h2>
+        <p className="mt-1 truncate text-sm font-light text-white/55">
+          {destination?.country ?? 'Open trip settings to search for one'}
+          {phase?.nights ? <span className="text-white/35"> · {phase.nights} nights</span> : null}
+        </p>
+        {destination?.blurb && !destination?.sockets ? (
+          <p className="mt-1 truncate text-[0.6875rem] leading-5 text-white/42">{destination.blurb}</p>
+        ) : null}
+      </div>
+
+      <div className="relative z-10 grid grid-cols-2 gap-3">
+        {/* Local time */}
+        <div className="soft-row flex items-center gap-2.5 rounded-2xl p-2.5">
+          <Clock className="h-4 w-4 shrink-0 text-cyan-100/80" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="clock-figures text-lg font-light leading-none text-white">{clock?.time ?? '--:--'}</p>
+            <p className="mt-1 truncate text-[0.625rem] text-white/45">{clock?.date ?? 'Local time'}</p>
+          </div>
+          {clock?.offsetHours != null ? (
+            <span className="ml-auto shrink-0 text-[0.625rem] font-medium text-white/40">
+              {clock.offsetHours >= 0 ? `+${clock.offsetHours}` : clock.offsetHours}h
             </span>
-            <h1 className="display-type mt-3 text-5xl font-extralight tracking-wide text-white text-glow md:text-6xl">
-              <EditableText
-                value={data.city}
-                onChange={(value) => setField('city', value)}
-                aria-label="City"
-                auto
-              />
-              {', '}
-              <EditableText
-                value={data.country}
-                onChange={(value) => setField('country', value)}
-                aria-label="Country"
-                auto
-              />
-            </h1>
-            <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-light text-white/58">
-              <EditableDate
-                value={data.start}
-                onChange={(value) => setField('start', value)}
-                aria-label="Start date"
-              />
-              <span aria-hidden="true">–</span>
-              <EditableDate
-                value={data.end}
-                onChange={(value) => setField('end', value)}
-                aria-label="End date"
-              />
-              <span>· {nights} nights</span>
-            </p>
-          </div>
+          ) : null}
+        </div>
 
-          <div className="relative z-10 grid grid-cols-2 gap-3">
-            <TripInfo
-              Icon={Plane}
-              label={
-                <span className="inline-flex items-baseline gap-1">
-                  Flight
-                  <EditableText
-                    value={data.flightCode}
-                    onChange={(value) => setField('flightCode', value)}
-                    aria-label="Flight code"
-                    auto
-                  />
-                </span>
-              }
-              value={data.flightRoute}
-              onValue={(value) => setField('flightRoute', value)}
-              sub={data.flightDetail}
-              onSub={(value) => setField('flightDetail', value)}
-            />
-            <TripInfo
-              Icon={BedDouble}
-              label="Hotel"
-              value={data.hotelName}
-              onValue={(value) => setField('hotelName', value)}
-              sub={data.hotelDetail}
-              onSub={(value) => setField('hotelDetail', value)}
-            />
-          </div>
-        </GlassCard>
-
-        {/* Destination now — local time + weather */}
-        <GlassCard tone="purple" delay={80} className="col-span-4 flex min-h-0 flex-col justify-between overflow-hidden">
-          <div>
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
-              <Clock className="h-3 w-3" aria-hidden="true" />
-              {data.city} · local time
+        {/* Weather there */}
+        <div className="soft-row flex items-center gap-2.5 rounded-2xl p-2.5">
+          <Icon className="h-5 w-5 shrink-0 text-cyan-100/80" strokeWidth={1.6} aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="clock-figures text-lg font-light leading-none text-white">
+              {weather?.temperature != null ? `${weather.temperature}°` : '—'}
             </p>
-            <p className="clock-figures mt-2 text-5xl font-extralight leading-none text-white text-glow">
-              {destTime}
-            </p>
-            <p className="mt-1.5 text-xs text-white/50">{destDate}</p>
+            <p className="mt-1 truncate text-[0.625rem] text-white/45">{weather?.condition ?? 'Weather'}</p>
           </div>
-
-          <div className="soft-row flex items-center gap-3 rounded-2xl p-3">
-            <CloudSun className="h-8 w-8 shrink-0 text-cyan-100/85" strokeWidth={1.5} aria-hidden="true" />
-            <div className="min-w-0 flex-1">
-              <p className="clock-figures flex items-baseline text-lg font-light leading-none text-white">
-                <EditableAmount
-                  value={data.weatherTemp}
-                  onChange={(value) => setField('weatherTemp', value)}
-                  aria-label="Temperature"
-                  auto
-                />
-                °
-              </p>
-              <EditableText
-                value={data.weatherCondition}
-                onChange={(value) => setField('weatherCondition', value)}
-                aria-label="Weather condition"
-                className="mt-0.5 w-full text-xs text-white/50"
-              />
-            </div>
-            <span className="ml-auto shrink-0 text-right text-[11px] font-medium text-white/45">
-              {ahead >= 0 ? `+${ahead}h` : `${ahead}h`}
-              <br />
-              vs home
+          {weather?.high != null ? (
+            <span className="clock-figures ml-auto shrink-0 text-[0.625rem] font-medium text-white/40">
+              {weather.high}° / {weather.low}°
             </span>
-          </div>
-        </GlassCard>
+          ) : null}
+        </div>
+      </div>
 
-        {/* Currency converter */}
-        <GlassCard tone="green" delay={140} className="col-span-4 flex min-h-0 flex-col overflow-hidden">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">Currency</p>
+      {/* Country facts — the small stuff you look up on the first day */}
+      {destination?.sockets ? (
+        <div className="relative z-10 mt-2.5 flex items-center gap-x-4 overflow-hidden border-t border-white/10 pt-2 text-[0.5625rem] text-white/45">
+          <Fact label="Plug" value={`Type ${destination.sockets} · ${destination.voltage}V`} />
+          <Fact label="Drives" value={destination.drivingSide} />
+          <Fact label="Dial" value={destination.callingCode} />
+          <Fact label="Emergency" value={destination.emergency} />
+        </div>
+      ) : null}
+    </GlassCard>
+  );
+}
 
-          <div className="my-auto">
-            <label className="flex items-baseline gap-2">
-              <span className="text-lg font-light text-white/45">{HOME.symbol}</span>
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))}
-                inputMode="decimal"
-                aria-label="Amount in pounds"
-                className="clock-figures w-full min-w-0 bg-transparent text-3xl font-light text-white focus:outline-none"
-              />
-            </label>
-            <div className="mt-2 flex items-baseline gap-2 border-t border-white/10 pt-2.5">
-              <span className="text-lg font-light text-cyan-100/80">{DEST.symbol}</span>
-              <span className="clock-figures truncate text-3xl font-light text-cyan-100">
-                {converted.toLocaleString('en-GB')}
-              </span>
-            </div>
-          </div>
+function Fact({ label, value }) {
+  if (!value) return null;
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="font-semibold uppercase tracking-[0.14em] text-white/32">{label}</span>
+      <span className="text-white/70">{value}</span>
+    </span>
+  );
+}
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex gap-1.5">
-              {QUICK_AMOUNTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setAmount(String(value))}
-                  className="soft-button rounded-full px-2.5 py-1 text-[11px] font-semibold text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                >
-                  {HOME.symbol}
-                  {value}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="mt-2 flex items-center gap-0.5 text-[10px] font-medium text-white/38">
-            1 {HOME.symbol} = {DEST.symbol}
-            <EditableAmount
-              value={data.rate}
-              onChange={(value) => setField('rate', value)}
-              aria-label="Exchange rate"
-              auto
-              className="text-white/55"
+/* ── Map filters ──────────────────────────────────────────────────────────── */
+
+const MAP_LAYERS = [
+  { key: 'places', label: 'Places', color: '#a78bfa' },
+  { key: 'stay', label: 'Stay', color: '#f472b6' },
+  { key: 'flight', label: 'Route', color: '#60a5fa' },
+  { key: 'airports', label: 'Airports', color: '#94a3b8' },
+];
+
+/**
+ * Which layers the map draws. Deliberately low-contrast — it sits on top of the
+ * map and shouldn't compete with it, so it only comes forward on hover.
+ */
+function MapFilters({ value, onChange, days = [], day = 'all', onDay, className = '' }) {
+  return (
+    <div
+      className={`pointer-events-auto absolute left-3 top-3 z-[500] flex flex-wrap items-center gap-1 opacity-55 transition hover:opacity-100 ${className}`}
+    >
+      {MAP_LAYERS.map((layer) => {
+        const on = value[layer.key];
+        return (
+          <button
+            key={layer.key}
+            type="button"
+            onClick={() => onChange({ ...value, [layer.key]: !on })}
+            aria-pressed={on}
+            className={[
+              'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] backdrop-blur-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+              on
+                ? 'border-white/12 bg-[#101630]/75 text-white/80'
+                : 'border-white/8 bg-[#101630]/45 text-white/35 line-through decoration-white/30',
+            ].join(' ')}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full transition"
+              style={{ backgroundColor: layer.color, opacity: on ? 1 : 0.3 }}
+              aria-hidden="true"
             />
-          </p>
-        </GlassCard>
+            {layer.label}
+          </button>
+        );
+      })}
 
-        {/* Packing checklist */}
-        <GlassCard tone="amber" delay={200} className="col-span-4 flex min-h-0 flex-col overflow-hidden">
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
-              <Luggage className="h-3.5 w-3.5" aria-hidden="true" />
-              Packing
-            </p>
-            <span className="clock-figures text-xs font-medium text-white/48">
-              {packDone}/{packing.items.length}
-            </span>
-          </div>
+      {/* Which day's plans to show — the itinerary filtered onto the map */}
+      {onDay && days.length > 1 ? (
+        <label className="relative inline-flex items-center">
+          <span className="sr-only">Show plans for</span>
+          <select
+            value={day}
+            onChange={(event) => onDay(event.target.value)}
+            className="cursor-pointer appearance-none rounded-full border border-white/12 bg-[#101630]/75 py-0.5 pl-2 pr-5 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none backdrop-blur-md focus:border-cyan-100/40"
+          >
+            <option value="all">All days</option>
+            {days.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute right-1.5 h-2.5 w-2.5 text-white/50"
+            aria-hidden="true"
+          />
+        </label>
+      ) : null}
+    </div>
+  );
+}
 
-          <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/8">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-200 to-cyan-200 transition-all duration-500"
-              style={{ width: `${packing.items.length ? (packDone / packing.items.length) * 100 : 0}%` }}
-            />
-          </div>
+/* ── Flight ───────────────────────────────────────────────────────────────── */
 
-          <div className="glass-scroll mt-2.5 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
-            {packing.items.map((item) => (
-              <div key={item.id} className="group flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 transition hover:bg-white/5">
-                <button
-                  type="button"
-                  onClick={() => packing.toggle(item.id)}
-                  className="flex shrink-0 items-center focus:outline-none"
-                  aria-label={item.done ? 'Mark not packed' : 'Mark packed'}
-                >
-                  <span
-                    className={[
-                      'grid h-[18px] w-[18px] shrink-0 place-items-center rounded-md border transition-all',
-                      item.done ? 'glow-ring border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
-                    ].join(' ')}
-                  >
-                    {item.done && <Check className="h-3 w-3 text-cyan-100" aria-hidden="true" />}
-                  </span>
-                </button>
-                <EditableText
-                  value={item.label}
-                  onChange={(value) => packing.rename(item.id, value)}
-                  aria-label="Packing item"
-                  className={`min-w-0 flex-1 text-[13px] font-medium ${item.done ? 'text-white/38 line-through' : 'text-white/78'}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => packing.remove(item.id)}
-                  aria-label="Remove"
-                  className="shrink-0 rounded-md p-1 text-white/25 opacity-0 transition hover:text-white/70 focus:opacity-100 focus:outline-none group-hover:opacity-100"
-                >
-                  <X className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-              </div>
+/**
+ * The booked flight: airline artwork behind the detail, the route across the
+ * bottom. It shows the route only — no live position — so a number that flies
+ * daily can't put someone else's aeroplane on your trip.
+ */
+function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) {
+  const airline = data?.airline ?? null;
+  const [addingLeg, setAddingLeg] = useState(false);
+  const away = data?.daysAway;
+  const when =
+    away == null
+      ? null
+      : away > 1
+        ? `In ${away} days`
+        : away === 1
+          ? 'Tomorrow'
+          : away === 0
+            ? 'Today'
+            : away === -1
+              ? 'Yesterday'
+              : `${Math.abs(away)} days ago`;
+
+  return (
+    <GlassCard delay={140} className="relative col-span-3 flex min-h-0 flex-col overflow-hidden">
+      <AircraftPhoto photo={airline?.photo} label={airline?.name} />
+
+      <div className="relative z-20 flex shrink-0 items-center gap-2">
+        <p className="flex shrink-0 items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+          <Plane className="h-3.5 w-3.5" aria-hidden="true" />
+          Flight
+        </p>
+
+        {/* Leg switcher sits on the header line — it's a label, not a control bar */}
+        {trip.flights.length > 1 ? (
+          <div className="hide-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto">
+            {trip.flights.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => onSelect(f.id)}
+                className={[
+                  'shrink-0 rounded-full px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] transition focus:outline-none',
+                  f.id === flight?.id ? 'bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-200/25' : 'text-white/35 hover:text-white/70',
+                ].join(' ')}
+              >
+                {f.label}
+              </button>
             ))}
           </div>
+        ) : null}
 
-          <PackAdd onAdd={packing.add} />
-        </GlassCard>
+        <div className="relative ml-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => setAddingLeg((open) => !open)}
+            aria-label="Add a flight"
+            aria-expanded={addingLeg}
+            className="text-white/35 transition hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
 
-        {/* Itinerary — pick a day, plan its to-do list with optional times */}
-        <GlassCard delay={260} className="col-span-4 flex min-h-0 flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">Itinerary</p>
-            {activeDay ? (
-              <span className="clock-figures text-[11px] font-medium text-white/45">
-                {activeDay.items.filter((task) => task.done).length}/{activeDay.items.length}
+          {/* Which leg this is — a return, or another hop on a multi-leg trip */}
+          {addingLeg ? (
+            <>
+              <button
+                type="button"
+                aria-label="Close leg menu"
+                onClick={() => setAddingLeg(false)}
+                className="fixed inset-0 z-20 cursor-default"
+              />
+              <div className="absolute right-0 top-5 z-30 flex w-28 flex-col gap-0.5 rounded-xl border border-white/12 bg-[#101630]/95 p-1 shadow-xl backdrop-blur-md">
+              {legOptions(trip.flights).map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    const created = onAdd({ label });
+                    if (created) onSelect(created.id);
+                    setAddingLeg(false);
+                  }}
+                  className="rounded-lg px-2 py-1 text-left text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none"
+                >
+                  {label}
+                </button>
+              ))}
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+
+      {!flight ? (
+        <div className="relative z-10 flex flex-1 items-center justify-center">
+          <AddRow label="Add a flight" onClick={() => setAddingLeg(true)} />
+        </div>
+      ) : (
+        <>
+          <div className="group relative z-10 mt-2 flex shrink-0 items-center gap-2">
+            <AirlineLogo src={airline?.logo} name={airline?.name} />
+            <input
+              value={flight.code}
+              onChange={(event) => onPatch(flight.id, { code: event.target.value.toUpperCase() })}
+              placeholder="BA117"
+              aria-label="Flight number"
+              size={6}
+              className="editable-field editable-auto clock-figures min-w-[3.5rem] max-w-[7rem] bg-transparent text-lg font-medium tracking-wide text-white outline-none placeholder:text-white/25"
+            />
+            {when ? (
+              <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-white/60 ring-1 ring-white/12">
+                {when}
               </span>
+            ) : null}
+            <RemoveButton onClick={() => onRemove(flight.id)} label="Remove flight" className="ml-auto" />
+          </div>
+
+          <div className="relative z-10 mt-0.5 flex shrink-0 items-center gap-1.5 text-[0.625rem]">
+            <EditableDate
+              value={flight.date}
+              onChange={(value) => onPatch(flight.id, { date: value })}
+              aria-label="Flight date"
+              className="text-cyan-100/60"
+            />
+            <span className="text-white/20" aria-hidden="true">
+              ·
+            </span>
+            <span className="min-w-0 truncate text-white/45">
+              {airline?.name ?? (flight.code ? 'No route on file for this number' : 'Enter a flight number')}
+            </span>
+          </div>
+
+
+          {/* The route itself */}
+          <div className="relative z-10 mt-auto shrink-0">
+            <div className="flex items-end justify-between gap-2">
+              <Airport code={data?.origin?.iata} city={data?.origin?.city} />
+              <span className="mb-2 flex flex-1 items-center gap-1.5 text-white/25" aria-hidden="true">
+                <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/30" />
+                <PlaneGlyph className="h-3 w-3 shrink-0 text-cyan-100/75" />
+                <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/30" />
+              </span>
+              <Airport code={data?.destination?.iata} city={data?.destination?.city} align="right" />
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-2 gap-1 border-t border-white/10 pt-2">
+              <Stat
+                label="Distance"
+                value={data?.distanceKm ? `${data.distanceKm.toLocaleString('en-GB')} km` : '—'}
+              />
+              <Stat label="In the air" value={flightHours(data?.distanceKm)} />
+            </div>
+          </div>
+        </>
+      )}
+    </GlassCard>
+  );
+}
+
+/**
+ * What to call the next leg. Outbound and Return cover a return trip; anything
+ * beyond that is numbered, so a multi-city itinerary keeps going.
+ */
+function legOptions(flights) {
+  const used = new Set(flights.map((f) => (f.label || '').toLowerCase()));
+  const options = [];
+  if (!used.has('outbound')) options.push('Outbound');
+  if (!used.has('return')) options.push('Return');
+  options.push(`Leg ${flights.length + 1}`);
+  return options;
+}
+
+/**
+ * A rough time in the air from the great-circle distance — cruise plus taxi and
+ * climb. Marked "≈" because free feeds carry no schedule to check it against.
+ */
+function flightHours(km) {
+  if (!km) return '—';
+  const minutes = Math.round((km / 840) * 60 + 35);
+  return `≈ ${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+}
+
+/** A plane seen from above, nose to the right — the glyph that rides a route line. */
+function PlaneGlyph({ className = '' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path
+        transform="rotate(90 12 12)"
+        d="M12 2c.7 0 1.2.9 1.2 2v5.6l7.6 4.4v1.9l-7.6-2.3v4.6l2.4 1.7v1.5L12 20.4l-3.6.9v-1.5l2.4-1.7v-4.6L3.2 15.9V14l7.6-4.4V4c0-1.1.5-2 1.2-2z"
+      />
+    </svg>
+  );
+}
+
+/**
+ * The airline's mark, small and inline with the flight number. Coverage isn't
+ * complete, so a missing file leaves the row to the number itself.
+ */
+function AirlineLogo({ src, name }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
+  return (
+    <img
+      src={src}
+      alt={name ? `${name} logo` : ''}
+      title={name ?? undefined}
+      onError={() => setFailed(true)}
+      className="h-5 w-5 shrink-0 rounded object-contain"
+    />
+  );
+}
+
+/**
+ * One of the airline's aircraft behind the card, the way the hotel photo sits
+ * behind the stay. It's whatever picture leads their Wikipedia article, so it's
+ * their livery without anyone having to type a registration.
+ */
+function AircraftPhoto({ photo, label }) {
+  const [failed, setFailed] = useState(false);
+  if (!photo?.url || failed) return null;
+  return (
+    <>
+      <img
+        src={photo.url}
+        alt={label ? `${label} aircraft` : ''}
+        onError={() => setFailed(true)}
+        className="absolute inset-0 h-full w-full object-cover opacity-[0.28]"
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-tr from-[#0b1024]/95 via-[#0b1024]/82 to-[#0b1024]/55"
+        aria-hidden="true"
+      />
+      {photo.photographer ? (
+        <a
+          href={photo.link ?? undefined}
+          target="_blank"
+          rel="noreferrer"
+          className="absolute bottom-1.5 right-2.5 z-10 text-[0.5rem] uppercase tracking-[0.1em] text-white/25 transition hover:text-white/50"
+        >
+          © {photo.photographer} · {photo.credit}
+        </a>
+      ) : null}
+    </>
+  );
+}
+
+function Airport({ code, city, align = 'left' }) {
+  return (
+    <div className={align === 'right' ? 'text-right' : ''}>
+      <p className="clock-figures text-xl font-light leading-none text-white">{code ?? '···'}</p>
+      <p className="mt-1 max-w-[6rem] truncate text-[0.625rem] text-white/40">{city ?? ''}</p>
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div>
+      <p className="text-[0.5625rem] font-semibold uppercase tracking-[0.14em] text-white/32">{label}</p>
+      <p className="clock-figures mt-0.5 text-[0.8125rem] font-medium text-white/85">{value}</p>
+    </div>
+  );
+}
+
+/* ── Itinerary ────────────────────────────────────────────────────────────── */
+
+function ItineraryCard({
+  trip,
+  day,
+  categories,
+  onSelectDay,
+  onAddDay,
+  onPatchDay,
+  onRemoveDay,
+  onAddItem,
+  onPatchItem,
+  onOpenItem,
+}) {
+  const items = day?.items ?? [];
+  const done = items.filter((item) => item.done).length;
+
+  return (
+    <GlassCard delay={200} className="col-span-5 row-span-2 flex min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between">
+        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Itinerary</p>
+        {day ? (
+          <span className="clock-figures text-[0.6875rem] font-medium text-white/45">
+            {done}/{items.length}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="hide-scrollbar mt-2.5 flex shrink-0 items-center gap-1.5 overflow-x-auto pb-0.5">
+        {trip.itinerary.map((d) => (
+          <button
+            key={d.id}
+            type="button"
+            onClick={() => onSelectDay(d.id)}
+            className={[
+              'shrink-0 rounded-full px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] transition focus:outline-none',
+              d.id === day?.id ? 'accent-pill glow-ring' : 'soft-button text-white/55',
+            ].join(' ')}
+          >
+            {d.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => onAddDay()}
+          aria-label="Add day"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-white/25 text-white/40 transition hover:border-cyan-100/55 hover:text-cyan-100/70 focus:outline-none"
+        >
+          <Plus className="h-3 w-3" aria-hidden="true" />
+        </button>
+      </div>
+
+      {day ? (
+        <>
+          <div className="mt-2.5 flex shrink-0 items-center gap-2">
+            <input
+              value={day.label}
+              onChange={(event) => onPatchDay(day.id, { label: event.target.value })}
+              aria-label="Day label"
+              className="editable-field editable-auto bg-transparent text-[0.8125rem] font-medium text-white/85 outline-none"
+            />
+            <span className="text-white/20" aria-hidden="true">
+              ·
+            </span>
+            <EditableDate
+              value={day.date}
+              onChange={(value) => onPatchDay(day.id, { date: value })}
+              aria-label="Day date"
+              className="text-[0.75rem] text-cyan-100/70"
+            />
+            {trip.itinerary.length > 1 ? (
+              <RemoveButton onClick={() => onRemoveDay(day.id)} label="Remove day" className="ml-auto" />
             ) : null}
           </div>
 
-          {/* Day toggle */}
-          <div className="hide-scrollbar mt-2.5 flex shrink-0 items-center gap-1.5 overflow-x-auto pb-0.5">
-            {data.itinerary.map((day) => {
-              const active = activeDay?.id === day.id;
-              return (
-                <button
-                  key={day.id}
-                  type="button"
-                  onClick={() => setActiveDayId(day.id)}
-                  className={[
-                    'shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] transition focus:outline-none',
-                    active ? 'accent-pill glow-ring' : 'soft-button text-white/55',
-                  ].join(' ')}
-                >
-                  {day.label}
-                </button>
-              );
-            })}
+          <div className="glass-scroll mt-1.5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+            {items.map((item) => (
+              <ItineraryRow
+                key={item.id}
+                item={item}
+                category={categoryOf(categories, item.type)}
+                onToggle={() => onPatchItem(day.id, item.id, { done: !item.done })}
+                onOpen={() => onOpenItem(day.id, item.id)}
+              />
+            ))}
+            <AddRow label="Add a plan" onClick={() => onAddItem(day.id)} />
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-1 items-center justify-center">
+          <AddRow label="Add your first day" onClick={() => onAddDay()} />
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
+function ItineraryRow({ item, category, onToggle, onOpen }) {
+  const meta = category;
+  return (
+    <div className="group flex items-center gap-2 rounded-xl px-1 py-1.5 transition hover:bg-white/[0.05]">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={item.done ? 'Mark not done' : 'Mark done'}
+        className="shrink-0 focus:outline-none"
+      >
+        <span
+          className={[
+            'grid h-4 w-4 place-items-center rounded-md border transition-all',
+            item.done ? 'border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
+          ].join(' ')}
+        >
+          {item.done && <Check className="h-2.5 w-2.5 text-cyan-100" aria-hidden="true" />}
+        </span>
+      </button>
+
+      <span
+        className="h-6 w-0.5 shrink-0 rounded-full"
+        style={{ backgroundColor: meta.color, opacity: item.done ? 0.3 : 0.9 }}
+        aria-hidden="true"
+      />
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+      >
+        <span className="clock-figures w-11 shrink-0 text-[0.6875rem] text-cyan-100/65">{item.time || '—'}</span>
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block truncate text-[0.8125rem] ${item.done ? 'text-white/35 line-through' : 'text-white/85'}`}
+          >
+            {item.title || 'Untitled plan'}
+          </span>
+          {item.place?.name || item.note ? (
+            <span className="mt-0.5 flex items-center gap-1 truncate text-[0.625rem] text-white/38">
+              {item.place?.name ? (
+                <>
+                  <MapPin className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{item.place.name}</span>
+                </>
+              ) : (
+                <span className="truncate">{item.note}</span>
+              )}
+            </span>
+          ) : null}
+        </span>
+        {item.cost ? (
+          <span className="clock-figures shrink-0 text-[0.6875rem] font-medium text-white/45">{item.cost}</span>
+        ) : null}
+        {item.booked ? (
+          <Ticket className="h-3 w-3 shrink-0 text-emerald-300/80" aria-hidden="true" />
+        ) : null}
+      </button>
+    </div>
+  );
+}
+
+/* ── Stay ─────────────────────────────────────────────────────────────────── */
+
+function StayCard({ trip, onPick, onClear }) {
+  const stay = trip.stay;
+  const photo = placePhotoUrl(stay?.photos?.[0] ?? stay?.photo, 480);
+
+  return (
+    <GlassCard tone="pink" delay={260} className="relative col-span-3 flex min-h-0 flex-col overflow-hidden">
+      {photo ? (
+        <>
+          <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1024]/92 to-[#0b1024]/45" aria-hidden="true" />
+        </>
+      ) : null}
+
+      <div className="relative z-10 flex shrink-0 items-center justify-between">
+        <p className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+          <BedDouble className="h-3.5 w-3.5" aria-hidden="true" />
+          Stay
+        </p>
+        <button
+          type="button"
+          onClick={onPick}
+          aria-label="Find a hotel"
+          className="text-white/35 transition hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        >
+          <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
+
+      {stay ? (
+        <div className="relative z-10 mt-auto min-w-0">
+          <p className="display-type truncate text-base font-normal text-white">{stay.name}</p>
+          <p className="mt-0.5 line-clamp-2 text-[0.625rem] leading-4 text-white/45">{stay.address}</p>
+          <div className="mt-2 flex items-center gap-3">
+            {stay.rating ? (
+              <span className="flex items-center gap-1 text-[0.6875rem] font-semibold text-amber-200/90">
+                <Star className="h-3 w-3 fill-amber-200/90" aria-hidden="true" />
+                {stay.rating.toFixed(1)}
+                {stay.ratingCount ? <span className="text-white/35">({stay.ratingCount})</span> : null}
+              </span>
+            ) : null}
             <button
               type="button"
-              onClick={addDay}
-              aria-label="Add day"
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-white/25 text-white/40 transition hover:border-cyan-100/55 hover:text-cyan-100/70 focus:outline-none"
+              onClick={onClear}
+              className="ml-auto text-[0.625rem] font-medium text-white/30 transition hover:text-rose-300/80 focus:outline-none"
             >
-              <Plus className="h-3 w-3" aria-hidden="true" />
+              Clear
             </button>
           </div>
-
-          {activeDay ? (
-            <>
-              <div className="mt-2.5 flex shrink-0 items-center gap-2">
-                <EditableText
-                  value={activeDay.label}
-                  onChange={(value) => updateDay(activeDay.id, { label: value })}
-                  aria-label="Day label"
-                  auto
-                  className="text-[13px] font-medium text-white/85"
-                />
-                <span className="text-white/20" aria-hidden="true">
-                  ·
-                </span>
-                <EditableDate
-                  value={activeDay.date}
-                  onChange={(value) => updateDay(activeDay.id, { date: value })}
-                  aria-label="Day date"
-                  className="text-[12px] text-cyan-100/70"
-                />
-                {data.itinerary.length > 1 ? (
-                  <RemoveButton onClick={() => removeDay(activeDay.id)} label="Remove day" className="ml-auto" />
-                ) : null}
-              </div>
-
-              <div className="glass-scroll mt-1.5 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
-                {activeDay.items.map((task) => (
-                  <div
-                    key={task.id}
-                    className="group flex items-center gap-2 rounded-lg px-1 py-1.5 transition hover:bg-white/5"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => updateTask(activeDay.id, task.id, { done: !task.done })}
-                      aria-label={task.done ? 'Mark not done' : 'Mark done'}
-                      className="shrink-0 focus:outline-none"
-                    >
-                      <span
-                        className={[
-                          'grid h-[16px] w-[16px] place-items-center rounded-md border transition-all',
-                          task.done ? 'glow-ring border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
-                        ].join(' ')}
-                      >
-                        {task.done && <Check className="h-2.5 w-2.5 text-cyan-100" aria-hidden="true" />}
-                      </span>
-                    </button>
-                    <input
-                      type="time"
-                      value={task.time ?? ''}
-                      onChange={(event) => updateTask(activeDay.id, task.id, { time: event.target.value })}
-                      aria-label="Time (optional)"
-                      className="editable-field editable-date clock-figures w-[4.4rem] shrink-0 bg-transparent text-[11px] text-cyan-100/70 outline-none"
-                    />
-                    <EditableText
-                      value={task.title}
-                      onChange={(value) => updateTask(activeDay.id, task.id, { title: value })}
-                      aria-label="Plan"
-                      className={`min-w-0 flex-1 text-[13px] ${task.done ? 'text-white/35 line-through' : 'text-white/82'}`}
-                    />
-                    <RemoveButton onClick={() => removeTask(activeDay.id, task.id)} />
-                  </div>
-                ))}
-                <AddRow label="Plan" onClick={() => addTask(activeDay.id)} />
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-1 items-center justify-center">
-              <AddRow label="Add your first day" onClick={addDay} />
-            </div>
-          )}
-        </GlassCard>
-      </section>
-    </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onPick}
+          className="relative z-10 m-auto flex flex-col items-center gap-1.5 rounded-2xl px-4 py-3 text-white/40 transition hover:text-white/75 focus:outline-none"
+        >
+          <BedDouble className="h-5 w-5" aria-hidden="true" />
+          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.12em]">Find a hotel</span>
+        </button>
+      )}
+    </GlassCard>
   );
 }
 
-function TripInfo({ Icon, label, value, onValue, sub, onSub }) {
-  return (
-    <div className="soft-row flex items-center gap-3 rounded-2xl p-3">
-      <span className="glow-ring grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/6">
-        <Icon className="h-4 w-4 text-cyan-100" aria-hidden="true" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">{label}</p>
-        <EditableText value={value} onChange={onValue} aria-label="Detail" className="w-full text-sm font-medium text-white/90" />
-        <EditableText value={sub} onChange={onSub} aria-label="Note" className="w-full text-[11px] text-white/45" />
+function StayPicker({ near, onPick, onClose }) {
+  return createPortal(
+    <div
+      data-settings=""
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="absolute inset-0 bg-[#070b18]/70 backdrop-blur-sm" aria-hidden="true" />
+      <div className="theme-card fade-in relative z-10 flex h-[min(32rem,calc(100dvh-4rem))] w-full max-w-lg flex-col rounded-3xl p-5">
+        <div className="mb-3 flex shrink-0 items-center justify-between">
+          <div>
+            <h2 className="display-type text-lg font-light text-white text-glow">Where are you staying?</h2>
+            <p className="mt-0.5 text-[0.625rem] font-medium uppercase tracking-[0.22em] text-white/38">
+              Hotels near {near?.city ?? 'your destination'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <PlaceSearch kind="hotel" near={near} onPick={onPick} autoFocus className="min-h-0 flex-1" />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
-function PackAdd({ onAdd }) {
-  const [text, setText] = useState('');
-  const submit = (e) => {
-    e.preventDefault();
-    const value = text.trim();
-    if (!value) return;
-    onAdd(value);
-    setText('');
-  };
+/* ── Currency ─────────────────────────────────────────────────────────────── */
+
+function CurrencyCard({ trip, destination, fx, amount, onAmount }) {
+  const homeCode = trip.homeCurrency || 'GBP';
+  const destCode = destination?.currency?.code ?? null;
+  const destSymbol = destination?.currency?.symbol ?? '';
+  const rate = fx?.rate ?? null;
+  const value = Number(amount) || 0;
+  const converted = rate ? value * rate : null;
+
   return (
-    <form onSubmit={submit} className="mt-2 flex shrink-0 items-center gap-1.5 border-t border-white/8 pt-2 pl-1">
-      <Plus className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden="true" />
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Add item"
-        className="w-full bg-transparent text-xs text-white placeholder:text-white/35 focus:outline-none"
+    <GlassCard tone="green" delay={320} className="relative col-span-4 flex min-h-0 flex-col overflow-hidden">
+      <BanknotePhoto photo={fx?.photo} label={destCode} />
+
+      <div className="relative z-10 flex shrink-0 items-center justify-between">
+        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/60">Currency</p>
+        {fx?.series?.length ? <Sparkline series={fx.series} /> : null}
+      </div>
+
+      {destCode ? (
+        <>
+          <div className="relative z-10 my-auto grid grid-cols-2 items-center gap-3">
+            <label className="flex items-baseline gap-1.5">
+              <span className="text-base font-light text-white/55">{homeCode}</span>
+              <input
+                value={amount}
+                onChange={(event) => onAmount(event.target.value.replace(/[^\d.]/g, ''))}
+                inputMode="decimal"
+                aria-label={`Amount in ${homeCode}`}
+                className="clock-figures w-full min-w-0 bg-transparent text-2xl font-light text-white focus:outline-none"
+              />
+            </label>
+            <div className="flex items-baseline gap-1.5 border-l border-white/10 pl-3">
+              <span className="text-base font-light text-cyan-100/70">{destSymbol || destCode}</span>
+              <span className="clock-figures truncate text-2xl font-light text-cyan-100">
+                {converted != null
+                  ? converted.toLocaleString('en-GB', { maximumFractionDigits: converted > 100 ? 0 : 2 })
+                  : '—'}
+              </span>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex shrink-0 items-center justify-between gap-2">
+            <div className="flex gap-1.5">
+              {QUICK_AMOUNTS.map((quick) => (
+                <button
+                  key={quick}
+                  type="button"
+                  onClick={() => onAmount(String(quick))}
+                  className="soft-button rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                >
+                  {quick}
+                </button>
+              ))}
+            </div>
+            <p className="clock-figures truncate text-[0.625rem] font-medium text-white/65">
+              {rate ? `1 ${homeCode} = ${rate.toFixed(rate > 20 ? 2 : 4)} ${destCode}` : 'Rate unavailable'}
+            </p>
+          </div>
+          {fx?.date ? (
+            <p className="relative z-10 mt-1 shrink-0 truncate text-[0.5625rem] uppercase tracking-[0.14em] text-white/45">
+              {fx.source} · {fx.date}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <p className="relative z-10 m-auto max-w-[16rem] text-center text-xs text-white/38">
+          Set a destination and Pulse pulls its currency and the live rate.
+        </p>
+      )}
+    </GlassCard>
+  );
+}
+
+/**
+ * The destination's banknotes behind the converter — Wikipedia's picture of the
+ * current series, so the money you'll be handling is the money on the card.
+ */
+function BanknotePhoto({ photo, label }) {
+  const [failed, setFailed] = useState(false);
+  if (!photo?.url || failed) return null;
+  return (
+    <>
+      <img
+        src={photo.url}
+        alt={label ? `${label} banknotes` : ''}
+        onError={() => setFailed(true)}
+        className="absolute inset-0 h-full w-full object-cover opacity-[0.45]"
       />
-    </form>
+      <div
+        className="absolute inset-0 bg-gradient-to-tr from-[#0b1024]/88 via-[#0b1024]/68 to-[#0b1024]/40"
+        aria-hidden="true"
+      />
+    </>
+  );
+}
+
+/** 30 days of the pair, drawn small — the shape matters, not the numbers. */
+function Sparkline({ series }) {
+  const points = series.filter((p) => Number.isFinite(p.rate));
+  if (points.length < 3) return null;
+
+  const values = points.map((p) => p.rate);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const path = values
+    .map((rate, index) => `${(index / (values.length - 1)) * 100},${28 - ((rate - min) / span) * 24}`)
+    .join(' ');
+  const rising = values[values.length - 1] >= values[0];
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <TrendingUp
+        className={`h-3 w-3 ${rising ? 'text-emerald-300/80' : 'rotate-180 text-rose-300/80'}`}
+        aria-hidden="true"
+      />
+      <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="h-4 w-16" aria-hidden="true">
+        <polyline
+          points={path}
+          fill="none"
+          stroke={rising ? 'rgba(110,231,183,0.8)' : 'rgba(253,164,175,0.8)'}
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </span>
+  );
+}
+
+/* ── Packing ──────────────────────────────────────────────────────────────── */
+
+function PackingCard({ trip, onToggle, onAdd, onRemove }) {
+  const [text, setText] = useState('');
+  const items = trip.packing;
+  const done = items.filter((item) => item.done).length;
+
+  return (
+    <GlassCard tone="amber" delay={380} className="col-span-3 flex min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between">
+        <p className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+          <Luggage className="h-3.5 w-3.5" aria-hidden="true" />
+          Packing
+        </p>
+        <span className="clock-figures text-[0.6875rem] font-medium text-white/48">
+          {done}/{items.length}
+        </span>
+      </div>
+
+      <div className="mt-2 h-1 shrink-0 overflow-hidden rounded-full bg-white/8">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-amber-200 to-cyan-200 transition-all duration-500"
+          style={{ width: `${items.length ? (done / items.length) * 100 : 0}%` }}
+        />
+      </div>
+
+      <div className="glass-scroll mt-2 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
+        {items.map((item) => (
+          <div key={item.id} className="group flex items-center gap-2 rounded-lg px-1 py-1 transition hover:bg-white/5">
+            <button
+              type="button"
+              onClick={() => onToggle(item.id, !item.done)}
+              aria-label={item.done ? 'Mark not packed' : 'Mark packed'}
+              className="shrink-0 focus:outline-none"
+            >
+              <span
+                className={[
+                  'grid h-4 w-4 place-items-center rounded-md border transition-all',
+                  item.done ? 'border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
+                ].join(' ')}
+              >
+                {item.done && <Check className="h-2.5 w-2.5 text-cyan-100" aria-hidden="true" />}
+              </span>
+            </button>
+            <span
+              className={`min-w-0 flex-1 truncate text-[0.75rem] ${item.done ? 'text-white/35 line-through' : 'text-white/78'}`}
+            >
+              {item.label}
+            </span>
+            <RemoveButton onClick={() => onRemove(item.id)} />
+          </div>
+        ))}
+      </div>
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = text.trim();
+          if (!value) return;
+          onAdd(value);
+          setText('');
+        }}
+        className="mt-2 flex shrink-0 items-center gap-1.5 border-t border-white/8 pl-1 pt-2"
+      >
+        <Plus className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden="true" />
+        <input
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          placeholder="Add item"
+          className="w-full bg-transparent text-xs text-white placeholder:text-white/35 focus:outline-none"
+        />
+      </form>
+    </GlassCard>
+  );
+}
+
+/* ── Expanded map ─────────────────────────────────────────────────────────── */
+
+function ExpandedMap({ points, flight, center, filters, onFilters, days, day, onDay, onClose }) {
+  useEffect(() => {
+    const onKey = (event) => event.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div data-settings="" className="fixed inset-0 z-[70] p-4">
+      <div className="absolute inset-0 bg-[#070b18]/80 backdrop-blur-sm" aria-hidden="true" />
+      <div className="theme-card fade-in relative z-10 flex h-full w-full flex-col overflow-hidden rounded-3xl p-3">
+        <div className="mb-2 flex shrink-0 items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-cyan-100/80" aria-hidden="true" />
+            <p className="display-type text-base font-light text-white">{center?.city ?? 'Trip map'}</p>
+            <span className="text-[0.625rem] uppercase tracking-[0.18em] text-white/35">
+              {points.length} pin{points.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close map"
+            className="grid h-8 w-8 place-items-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="relative min-h-0 flex-1">
+          <TripMap
+            points={points}
+            flight={flight}
+            showRoute={filters?.flight ?? true}
+            showAirports={filters?.airports ?? true}
+            center={center}
+            className="h-full"
+            interactive
+          />
+          {filters ? (
+            <MapFilters value={filters} onChange={onFilters} days={days} day={day} onDay={onDay} />
+          ) : null}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

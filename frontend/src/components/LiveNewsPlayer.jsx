@@ -209,7 +209,7 @@ export default function LiveNewsPlayer() {
         </button>
         <div className="flex items-center gap-1.5 px-1.5">
           <span className="glow-dot h-1.5 w-1.5 rounded-full bg-rose-400 text-rose-400" aria-hidden="true" />
-          <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">
+          <span className="whitespace-nowrap text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/90">
             Live · {active.label}
           </span>
         </div>
@@ -227,7 +227,7 @@ export default function LiveNewsPlayer() {
         href={active.site}
         target="_blank"
         rel="noreferrer"
-        className="absolute right-3 top-3 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/85 backdrop-blur-md transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        className="absolute right-3 top-3 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-white/85 backdrop-blur-md transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
       >
         Open site
         <ExternalLink className="h-3 w-3" aria-hidden="true" />

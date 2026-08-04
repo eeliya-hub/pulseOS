@@ -1,6 +1,10 @@
+import { lyricsService } from './lyrics.service.js';
 import { spotifyProvider } from './spotify.provider.js';
 
 export const musicService = {
+  // Lyrics come from LRCLIB, not Spotify — see lyrics.service.js.
+  lyrics: (params) => lyricsService.lookup(params),
+
   getAuthUrl: () => ({ url: spotifyProvider.getAuthUrl() }),
   connect: (code, user) => spotifyProvider.handleCallback(code, user),
   token: (user) => spotifyProvider.token(user),
@@ -10,4 +14,6 @@ export const musicService = {
   playlists: (user) => spotifyProvider.playlists(user),
   recentlyPlayed: (user) => spotifyProvider.recentlyPlayed(user),
   search: (query, user) => spotifyProvider.search(query, user),
+  audioAnalysis: (trackId, user) => spotifyProvider.audioAnalysis(trackId, user),
+  audioFeatures: (trackId, user) => spotifyProvider.audioFeatures(trackId, user),
 };

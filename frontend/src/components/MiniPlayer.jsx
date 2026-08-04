@@ -124,7 +124,7 @@ export default function MiniPlayer() {
       {/* Meta */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-white/90">{state.track}</p>
-        <p className="truncate text-[11px] text-white/45">{playbackError || state.artists || '—'}</p>
+        <p className="truncate text-[0.6875rem] text-white/45">{playbackError || state.artists || '—'}</p>
       </div>
 
       {/* Controls */}

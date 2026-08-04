@@ -13,6 +13,7 @@ export const TOOL_LABELS = {
   get_today: 'Reading your day',
   get_weather: 'Checking the weather',
   get_news: 'Reading the news',
+  search_web: 'Searching the internet',
   get_sports: 'Checking the scores',
   get_stocks: 'Pulling your watchlist',
   list_calendars: 'Checking your calendars',
@@ -33,6 +34,35 @@ export const TOOL_LABELS = {
   previous_track: 'Going back a track',
   get_now_playing: 'Checking what’s playing',
 };
+
+const quote = (text, max = 40) => {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  return `“${clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean}”`;
+};
+
+/**
+ * The caption shown while a tool runs. Where the tool took a subject (a search
+ * query, a place, an app), it goes in the caption — so the status says what
+ * Pulse is actually doing rather than a generic stand-in.
+ */
+export function toolCaption(name, args = {}) {
+  const base = TOOL_LABELS[name] || 'Working';
+  const query = (args?.query || '').trim();
+  switch (name) {
+    case 'search_web':
+      return query ? `Searching the internet for ${quote(query)}` : base;
+    case 'get_news':
+      return query ? `Reading the news on ${quote(query)}` : args?.scope === 'local' ? 'Reading local news' : base;
+    case 'get_weather':
+      return args?.location ? `Checking the weather in ${args.location}` : base;
+    case 'play_music':
+      return query ? `Putting on ${quote(query)}` : base;
+    case 'open_app':
+      return args?.name ? `Opening ${args.name}` : base;
+    default:
+      return base;
+  }
+}
 
 // Normalize a quick prompt (a plain string default, or a { title, prompt } custom
 // entry) into { label, text }: what the chip shows vs. what it sends.
@@ -65,12 +95,20 @@ export function usePulseChat({ messages, setMessages }) {
   const executorRef = useRef(null);
   if (!executorRef.current) executorRef.current = createToolExecutor(() => dataRef.current);
 
+  /**
+   * Send a message. `label` is what the bubble shows when it differs from what
+   * gets sent — a quick prompt reads as its title ("Daily brief") while Pulse
+   * still receives the full instruction behind it.
+   */
   const send = useCallback(
-    async (text) => {
+    async (text, label) => {
       const value = (text ?? '').trim();
       if (!value || isLoading) return;
 
-      const nextMessages = [...messages, { role: 'user', text: value }];
+      const shown = (label ?? '').trim();
+      const userMessage = { role: 'user', text: value };
+      if (shown && shown !== value) userMessage.label = shown;
+      const nextMessages = [...messages, userMessage];
       setMessages(nextMessages);
       setIsLoading(true);
       setToolActivity(null);
@@ -84,7 +122,7 @@ export function usePulseChat({ messages, setMessages }) {
           execute: (name, args) => executorRef.current.execute(name, args),
           userName: dataRef.current.settings.name,
           instructions: buildAiInstructions(dataRef.current.settings),
-          onTool: (name) => setToolActivity(TOOL_LABELS[name] || 'Working'),
+          onTool: (name, args) => setToolActivity(toolCaption(name, args)),
         });
         setMessages((current) => [...current, { role: 'model', text: reply }]);
       } catch (error) {

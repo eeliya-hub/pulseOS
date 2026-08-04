@@ -2,7 +2,8 @@
 // frontend talks to real integrations — swap the existing mock services
 // (weather.js, markets.js, …) over to these calls one view at a time.
 //
-// Travel and Finance intentionally have NO backend calls — they stay local.
+// Finance intentionally has NO backend calls — it stays local. Travel keeps its
+// trips local too; only its live data (flights, rates, places) comes from here.
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 
@@ -32,6 +33,8 @@ async function request(path, { method = 'GET', body, params } = {}) {
 
 export const api = {
   status: () => request('/status'),
+  // How much of each AI provider's usage cap is spent, and when it resets.
+  usage: () => request('/usage'),
 
   weather: {
     current: (params) => request('/weather', { params }),
@@ -48,6 +51,10 @@ export const api = {
     search: (q) => request('/news/search', { params: { q } }),
     local: (q) => request('/news/local', { params: { q } }),
   },
+  // Live web search (keyless by default — see backend/src/services/search).
+  search: Object.assign((q, params) => request('/search', { params: { q, ...params } }), {
+    status: () => request('/search/status'),
+  }),
   sports: {
     // Unified card data for a followed team/constructor.
     team: (name, sport, league, leagueLabel) =>
@@ -95,6 +102,7 @@ export const api = {
     status: () => request('/calendar/status'),
     calendars: () => request('/calendar/calendars'),
     googleAuthUrl: () => request('/calendar/google/auth'),
+    googleDisconnect: () => request('/calendar/google/disconnect', { method: 'POST' }),
     appleConnect: (appleId, appPassword) =>
       request('/calendar/apple/connect', { method: 'POST', body: { appleId, appPassword } }),
     appleDisconnect: () => request('/calendar/apple/disconnect', { method: 'POST' }),
@@ -104,6 +112,26 @@ export const api = {
     deleteEvent: (event) => request('/calendar/events', { method: 'DELETE', body: event }),
   },
   geo: (q) => request('/geo', { params: { q } }),
+  travel: {
+    // Typed place → coordinates, time zone, currency, country facts and a photo.
+    destination: (q) => request('/travel/destination', { params: { q } }),
+    // A flight's route: airline, both airports, distance. `live` is off by
+    // default — the dashboard shows the booked route, not whichever aircraft
+    // happens to be flying that number today.
+    flight: (code, date, live = false) =>
+      request('/travel/flight', { params: { code, date, live: live ? '1' : '0' } }),
+    aircraft: (registration) => request('/travel/aircraft', { params: { registration } }),
+    // Live rate + 30 days of history for the converter's trend line.
+    fx: (from, to, amount) => request('/travel/fx', { params: { from, to, amount } }),
+    // Hotels, food and sights — Google Places when keyed, OpenStreetMap otherwise.
+    places: (params) => request('/travel/places', { params }),
+    place: (id) => request(`/travel/places/${encodeURIComponent(id)}`),
+    // Pictures for a place or landmark — Google photos when keyed, Wikipedia otherwise.
+    photos: (params) => request('/travel/photos', { params }),
+    // Google photos are proxied so the API key never reaches the browser.
+    photoUrl: (ref, width = 640) =>
+      `${BASE_URL}/travel/photo?ref=${encodeURIComponent(ref)}&w=${width}`,
+  },
   music: {
     authUrl: () => request('/music/auth'),
     token: () => request('/music/token'),
@@ -114,5 +142,10 @@ export const api = {
     playlists: () => request('/music/playlists'),
     recentlyPlayed: () => request('/music/recently-played'),
     search: (q) => request('/music/search', { params: { q } }),
+    // Time-synced lyrics for the immersive player → { found, synced, lines[] }
+    lyrics: (params) => request('/music/lyrics', { params }),
+    // Spotify's own musical timeline; { available:false } when Spotify withholds it.
+    analysis: (trackId) => request(`/music/analysis/${trackId}`),
+    features: (trackId) => request(`/music/features/${trackId}`),
   },
 };

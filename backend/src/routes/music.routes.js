@@ -17,3 +17,9 @@ musicRouter.get('/now-playing', musicController.nowPlaying);
 musicRouter.get('/playlists', musicController.playlists);
 musicRouter.get('/recently-played', musicController.recentlyPlayed);
 musicRouter.get('/search', musicController.search);
+// Spotify's own musical timeline. Returns { available:false } rather than an
+// error when Spotify withholds it, so the visualiser can degrade gracefully.
+musicRouter.get('/analysis/:trackId', musicController.analysis);
+musicRouter.get('/features/:trackId', musicController.features);
+// Time-synced lyrics for the immersive player (LRCLIB — keyless)
+musicRouter.get('/lyrics', musicController.lyrics);

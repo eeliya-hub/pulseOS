@@ -24,7 +24,7 @@ export default function SportsFollowPicker() {
 
   return (
     <div>
-      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+      <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
         Sports &amp; teams
       </span>
 
@@ -33,7 +33,7 @@ export default function SportsFollowPicker() {
           {follows.map((f) => (
             <span
               key={f.id}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/8 py-1 pl-2.5 pr-1 text-[11px] text-white/85 ring-1 ring-white/12"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/8 py-1 pl-2.5 pr-1 text-[0.6875rem] text-white/85 ring-1 ring-white/12"
             >
               <span className="font-medium">{f.team}</span>
               <span className="text-white/35">· {f.leagueLabel}</span>
@@ -49,7 +49,7 @@ export default function SportsFollowPicker() {
           ))}
         </div>
       ) : (
-        <p className="mb-2 text-[11px] text-white/40">Tap a league below, then tap teams to follow them.</p>
+        <p className="mb-2 text-[0.6875rem] text-white/40">Tap a league below, then tap teams to follow them.</p>
       )}
 
       <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
@@ -79,7 +79,7 @@ export default function SportsFollowPicker() {
                           type="button"
                           onClick={() => toggle(s.sport, l, team)}
                           className={[
-                            'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                            'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[0.6875rem] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
                             active
                               ? 'bg-cyan-200/15 text-cyan-50 ring-1 ring-cyan-200/25'
                               : 'text-white/60 hover:bg-white/[0.06] hover:text-white/85',
@@ -104,7 +104,7 @@ export default function SportsFollowPicker() {
           }),
         )}
       </div>
-      <span className="mt-1.5 block text-[10px] text-white/38">Used for the Sports card.</span>
+      <span className="mt-1.5 block text-[0.625rem] text-white/38">Used for the Sports card.</span>
     </div>
   );
 }

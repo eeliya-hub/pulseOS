@@ -110,7 +110,7 @@ function GlowBar({ ratio }) {
 
 function CardLabel({ label }) {
   return (
-    <p className="mb-2.5 shrink-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
+    <p className="mb-2.5 shrink-0 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
       {label}
     </p>
   );
@@ -193,7 +193,7 @@ export default function Finance() {
           className="col-span-12 flex flex-wrap items-center gap-x-6 gap-y-3 overflow-hidden"
         >
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
               Liquid balance
             </p>
             <EditableAmount
@@ -217,7 +217,7 @@ export default function Finance() {
                   <metric.Icon className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-white/40">
                     {metric.label}
                   </p>
                   {metric.derived ? (
@@ -263,14 +263,14 @@ export default function Finance() {
                   format={gbp}
                   align="center"
                   aria-label={`${point.label} spend`}
-                  className="clock-figures w-full text-[11px] font-medium text-white/80"
+                  className="clock-figures w-full text-[0.6875rem] font-medium text-white/80"
                 />
                 <EditableText
                   value={point.label}
                   onChange={(value) => updateTrend(index, { label: value })}
                   align="center"
                   aria-label={`Month ${index + 1} label`}
-                  className="w-full text-[10px] uppercase tracking-[0.12em] text-white/40"
+                  className="w-full text-[0.625rem] uppercase tracking-[0.12em] text-white/40"
                 />
               </div>
             ))}
@@ -308,7 +308,7 @@ export default function Finance() {
                     value={account.type}
                     onChange={(value) => updateItem('accounts', account.id, { type: value })}
                     aria-label="Account type"
-                    className="w-full text-[10px] text-white/38"
+                    className="w-full text-[0.625rem] text-white/38"
                   />
                 </div>
                 <EditableAmount
@@ -350,7 +350,7 @@ export default function Finance() {
                     value={bill.due}
                     onChange={(value) => updateItem('upcomingBills', bill.id, { due: value })}
                     aria-label="Bill due date"
-                    className="w-full text-[10px] text-white/38"
+                    className="w-full text-[0.625rem] text-white/38"
                   />
                 </div>
                 <EditableAmount
@@ -403,7 +403,7 @@ export default function Finance() {
                   <RemoveButton onClick={() => removeItem('savingsGoals', goal.id)} />
                 </div>
                 <GlowBar ratio={goal.target ? goal.current / goal.target : 0} />
-                <div className="mt-1 flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] text-white/32">
+                <div className="mt-1 flex items-center gap-1 text-[0.625rem] uppercase tracking-[0.14em] text-white/32">
                   <span>Target</span>
                   <EditableText
                     value={goal.due}

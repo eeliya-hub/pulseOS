@@ -20,7 +20,9 @@ function createConversation() {
 function deriveTitle(messages) {
   const firstUser = messages.find((message) => message.role === 'user');
   if (!firstUser) return 'New chat';
-  const trimmed = firstUser.text.trim().replace(/\s+/g, ' ');
+  // Quick prompts carry a short label — a far better thread title than the long
+  // instruction they actually send.
+  const trimmed = (firstUser.label || firstUser.text).trim().replace(/\s+/g, ' ');
   return trimmed.length > 42 ? `${trimmed.slice(0, 42)}…` : trimmed;
 }
 

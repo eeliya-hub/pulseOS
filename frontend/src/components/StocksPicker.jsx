@@ -22,7 +22,7 @@ export default function StocksPicker() {
 
   return (
     <div>
-      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+      <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
         Stocks &amp; tickers
       </span>
 
@@ -31,7 +31,7 @@ export default function StocksPicker() {
           {symbols.map((s) => (
             <span
               key={s}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/8 py-1 pl-2.5 pr-1 text-[11px] font-medium text-white/85 ring-1 ring-white/12"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/8 py-1 pl-2.5 pr-1 text-[0.6875rem] font-medium text-white/85 ring-1 ring-white/12"
             >
               {s}
               <button
@@ -46,7 +46,7 @@ export default function StocksPicker() {
           ))}
         </div>
       ) : (
-        <p className="mb-2 text-[11px] text-white/40">No tickers yet — add one below.</p>
+        <p className="mb-2 text-[0.6875rem] text-white/40">No tickers yet — add one below.</p>
       )}
 
       <div className="flex items-center gap-1.5">
@@ -72,7 +72,7 @@ export default function StocksPicker() {
           <Plus className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-      <span className="mt-1.5 block text-[10px] text-white/38">Ticker symbols (e.g. AAPL, MSFT). Needs a Finnhub key.</span>
+      <span className="mt-1.5 block text-[0.625rem] text-white/38">Ticker symbols (e.g. AAPL, MSFT). Needs a Finnhub key.</span>
     </div>
   );
 }

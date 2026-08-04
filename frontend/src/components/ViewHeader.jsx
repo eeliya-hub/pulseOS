@@ -11,7 +11,7 @@ export default function ViewHeader({ lead, accent, subtitle, action }) {
         ) : null}
       </h1>
       {subtitle ? (
-        <p className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.32em] text-white/36">
+        <p className="mt-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.32em] text-white/36">
           {subtitle}
         </p>
       ) : null}

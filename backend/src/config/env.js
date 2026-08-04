@@ -53,6 +53,13 @@ export const config = {
   news: {
     gnewsKey: get('GNEWS_API_KEY'),
   },
+  search: {
+    // Live web search for the assistant. Both keys are optional — without them
+    // search falls back to keyless sources (DuckDuckGo, Google News, Wikipedia),
+    // so searching the internet always works; a key just improves the results.
+    braveKey: get('BRAVE_SEARCH_API_KEY'),
+    tavilyKey: get('TAVILY_API_KEY'),
+  },
   sports: {
     // TheSportsDB works with the free shared key "3" for testing.
     sportsDbKey: get('THESPORTSDB_API_KEY', '3'),
@@ -127,6 +134,27 @@ export const config = {
     clientSecret: get('GOOGLE_CLIENT_SECRET'),
     redirectUri: get('GOOGLE_REDIRECT_URI', 'http://localhost:4000/api/calendar/google/callback'),
   },
+  travel: {
+    // Google Places (New) — hotel/restaurant/sight lookup with ratings and real
+    // photos. Optional: without it, place search falls back to OpenStreetMap
+    // (Nominatim) and photos come from Wikipedia, so Travel still works fully.
+    // Enable "Places API (New)" on the key: https://console.cloud.google.com/apis
+    placesKey: get('GOOGLE_PLACES_API_KEY') || get('GOOGLE_MAPS_API_KEY'),
+    // Flight tracking (adsbdb routes + adsb.lol/OpenSky live positions) and
+    // currency (Frankfurter/ECB) need no keys at all.
+
+    // Airline logos + banners, keyed by ICAO code, served from the Traverse
+    // project's public Firebase Storage bucket. Point this elsewhere (or clear
+    // it) and the flight card falls back to its plane glyph.
+    airlineArtBase: get(
+      'AIRLINE_ART_BASE',
+      'https://firebasestorage.googleapis.com/v0/b/traverse-4c4a4.firebasestorage.app/o/assets%2Fimages%2Fairline-logos-main',
+    ),
+    // Planespotters serves aircraft photos free, but requires a contact URL or
+    // email in the User-Agent so they can reach whoever is calling. Point this
+    // at your own repo or address.
+    photoContact: get('AIRCRAFT_PHOTO_CONTACT', 'https://github.com/eeliya/pulseOS'),
+  },
   ical: {
     // Optional default .ics feed URL to read when none is supplied per-request.
     defaultFeedUrl: get('ICAL_FEED_URL'),
@@ -159,6 +187,12 @@ export function integrationStatus() {
     weather: Boolean(config.weather.openWeatherKey),
     stocks: Boolean(config.stocks.finnhubKey),
     news: Boolean(config.news.gnewsKey),
+    // Always true — the keyless provider needs no credentials.
+    search: {
+      enabled: true,
+      brave: Boolean(config.search.braveKey),
+      tavily: Boolean(config.search.tavilyKey),
+    },
     sports: {
       football: Boolean(config.sports.footballDataKey),
       nba: Boolean(config.sports.balldontlieKey),
@@ -176,5 +210,12 @@ export function integrationStatus() {
       ical: Boolean(config.ical.defaultFeedUrl) || 'per-request',
     },
     music: Boolean(config.spotify.clientId && config.spotify.clientSecret),
+    travel: {
+      // Always true — flights, currency, maps and OSM place search are keyless.
+      enabled: true,
+      places: Boolean(config.travel.placesKey) ? 'google' : 'openstreetmap',
+      flights: true,
+      currency: true,
+    },
   };
 }

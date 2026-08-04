@@ -147,7 +147,7 @@ export function AddRow({ onClick, label, className = '' }) {
       <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-dashed border-white/25 transition group-hover/add:border-cyan-100/55">
         <Plus className="h-2.5 w-2.5" aria-hidden="true" />
       </span>
-      <span className="text-[11px] font-medium uppercase tracking-[0.12em]">{label}</span>
+      <span className="text-[0.6875rem] font-medium uppercase tracking-[0.12em]">{label}</span>
     </button>
   );
 }

@@ -21,6 +21,9 @@ function mapState(state) {
   if (!state) return null;
   const track = state.track_window?.current_track;
   return {
+    // Track identity, needed to ask Spotify for its analysis of this song.
+    id: track?.id ?? null,
+    uri: track?.uri ?? null,
     track: track?.name ?? '',
     artists: (track?.artists ?? []).map((a) => a.name).join(', '),
     image: track?.album?.images?.[0]?.url,
@@ -258,22 +261,35 @@ export const spotifyPlayer = {
   controls,
 };
 
-// Vite HMR: this module is a singleton that owns a live Spotify SDK device. On a
-// hot-reload the module re-executes with a fresh `player`, but the previous SDK
-// instance would keep its WebSocket + "Pulse OS" device alive — a zombie that
-// fights the new one over playback and can cause streaming (storage-resolve) 403s.
-// Tear the old player down cleanly before the module is replaced. (Stripped from
+// Tear the SDK player down cleanly. Each live player registers a "Pulse OS"
+// device with Spotify; if one is left connected it lingers as a zombie device
+// that competes with the next one for the playback session, which can break
+// audio streaming (storage-resolve 403s).
+function disposePlayer() {
+  stopTicker();
+  if (errorTimer) {
+    window.clearTimeout(errorTimer);
+    errorTimer = null;
+  }
+  try {
+    player?.disconnect();
+  } catch {
+    /* already gone */
+  }
+  player = null;
+  initStarted = false;
+}
+
+// Disconnect when the page goes away (reload, navigation, tab close) so devices
+// don't pile up across reloads. `pagehide` fires reliably where `beforeunload`
+// doesn't (bfcache, mobile Safari).
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', disposePlayer);
+}
+
+// Vite HMR: the module re-executes with a fresh `player` on hot-reload, so the
+// previous instance must be disposed or it becomes a zombie. (Stripped from
 // production builds, where the singleton simply lives for the session.)
 if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    stopTicker();
-    if (errorTimer) window.clearTimeout(errorTimer);
-    try {
-      player?.disconnect();
-    } catch {
-      /* already gone */
-    }
-    player = null;
-    initStarted = false;
-  });
+  import.meta.hot.dispose(disposePlayer);
 }

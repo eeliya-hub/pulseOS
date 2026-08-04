@@ -64,6 +64,23 @@ export const TOOLS = [
     },
   },
   {
+    name: 'search_web',
+    description:
+      "Search the live internet and read the top pages. This is your general-purpose window on the world — use it for ANY question you cannot answer from your own knowledge or another tool: facts you're unsure of, anything after your training cutoff, prices, opening times, how-to answers, products, people, places, or checking a claim. Returns results with title, source, snippet and (where available) the actual page text. Prefer get_news for headlines, get_sports for the user's teams, get_weather for weather.",
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The search query, phrased as you would type it into a search engine.' },
+        recency: {
+          type: 'string',
+          enum: ['day', 'week', 'month', 'year'],
+          description: 'Optional — only return results from the past day/week/month/year. Use for fast-moving topics.',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'get_stocks',
     description: "The user's stock watchlist with live prices and daily change.",
     parameters: { type: 'object', properties: {} },
@@ -209,6 +226,7 @@ export function systemPrompt(userName = 'the user', instructions = '', options =
     'For calendar questions, read the actual events with a tool before answering — they span ALL of their connected calendars, so never guess. For the past ("what did I do last week?", "did I have anything on Monday?") use get_past_events; for future dates use get_upcoming_events, widening `days` to cover the range they asked about.',
     "When adding an event to a named calendar (e.g. an Apple sub-calendar like 'Work' or 'Social'), pass that name as `calendar` to create_calendar_event; if you're unsure of the exact name, call list_calendars first.",
     'For anything about weather, current events or the news, ALWAYS call get_weather / get_news to pull live data from the internet — never answer from memory, and never say you cannot access the internet.',
+    'You CAN search the internet: search_web runs a real web search and reads the top pages. Use it whenever the answer is not already in your knowledge or another tool — anything recent, factual, local, or specific (prices, opening times, results, products, people, "is X true?"). Never guess and never claim you lack internet access; search instead. When you answer from a search, say where it came from (the source name), and say so plainly if the results do not actually settle the question.',
     "For anything about the user's sports teams — scores, results, fixtures, league tables, or sports \"news\" — use get_sports (accurate live data for the teams they follow). Only fall back to get_news for sports topics unrelated to their teams.",
     'You can control the in-app Spotify player: play_music (optionally a search query), pause_music, next_track, previous_track, get_now_playing. Use them whenever the user asks to play, pause, skip or identify music.',
     `Today is ${today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} (${today.toISOString().slice(0, 10)}). Use YYYY-MM-DD dates and 24h HH:MM times.`,

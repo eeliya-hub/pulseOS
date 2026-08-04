@@ -22,6 +22,9 @@ const DEFAULTS = {
   customPrompts: [],
   // Which Gemini Live prebuilt voice Pulse speaks with (see services/ai/voices.js).
   voiceName: 'Puck',
+  // When the screen goes idle while music is playing, show the immersive player
+  // instead of the plain screensaver. Off means the usual idle screen.
+  afkImmersive: true,
   // Long-term memory: durable facts Pulse has learned about the user, recalled in
   // every future conversation. Each is { id, text, at }.
   memories: [],

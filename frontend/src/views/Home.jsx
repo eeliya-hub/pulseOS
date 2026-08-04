@@ -191,10 +191,6 @@ const HOME_GRID_ROWS = '1.6fr 1fr';
 // Bar height scaled to the visible range of daily highs.
 const barHeight = (temp, min, max) => 28 + (72 * (temp - min)) / ((max - min) || 1);
 
-// Brief prompt that nudges the assistant to read today's schedule, tasks + weather.
-const TODAY_BRIEF_PROMPT =
-  "Give me a brief of my day — what's on my calendar, my open tasks, and the weather. Keep it short and warm.";
-
 export default function Home({ onAskPulse }) {
   const { weather } = useWeather();
   const { settings, update } = useSettings();
@@ -252,44 +248,34 @@ export default function Home({ onAskPulse }) {
         <h1 className="display-type text-3xl font-extralight tracking-wide text-white/95 md:text-[2.65rem]">
           {getGreeting(now)}, <span className="cyan-name font-light">{settings.name}</span>
         </h1>
-        <p className="mt-2.5 text-[10px] font-medium uppercase tracking-[0.32em] text-white/36">
+        <p className="mt-2.5 text-[0.625rem] font-medium uppercase tracking-[0.32em] text-white/36">
           A calm start · {upcoming.filter((e) => e.offset === 0).length} today
         </p>
 
         {onAskPulse && (
-          <div className="mx-auto mt-4 flex w-full max-w-xl items-center gap-2">
-            <form
-              className="group relative flex-1"
-              onSubmit={(event) => {
-                event.preventDefault();
-                askPulse();
-              }}
-            >
-              <label htmlFor="home-ask-pulse" className="sr-only">
-                Ask Pulse
-              </label>
-              <Sparkles
-                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/60"
-                aria-hidden="true"
-              />
-              <input
-                id="home-ask-pulse"
-                type="text"
-                value={askText}
-                onChange={(event) => setAskText(event.target.value)}
-                placeholder="Ask Pulse anything…"
-                className="w-full rounded-full border border-white/12 bg-white/7 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-cyan-100/30 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(116,242,255,0.08)]"
-              />
-            </form>
-            <button
-              type="button"
-              onClick={() => askPulse(TODAY_BRIEF_PROMPT)}
-              className="soft-button inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-semibold text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-cyan-100/80" aria-hidden="true" />
-              Today’s brief
-            </button>
-          </div>
+          <form
+            className="group relative mx-auto mt-4 w-full max-w-xl"
+            onSubmit={(event) => {
+              event.preventDefault();
+              askPulse();
+            }}
+          >
+            <label htmlFor="home-ask-pulse" className="sr-only">
+              Ask Pulse
+            </label>
+            <Sparkles
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/60"
+              aria-hidden="true"
+            />
+            <input
+              id="home-ask-pulse"
+              type="text"
+              value={askText}
+              onChange={(event) => setAskText(event.target.value)}
+              placeholder="Ask Pulse anything…"
+              className="w-full rounded-full border border-white/12 bg-white/7 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-cyan-100/30 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(116,242,255,0.08)]"
+            />
+          </form>
         )}
 
         <SettingsButton className="absolute right-0 top-5" />
@@ -303,7 +289,7 @@ export default function Home({ onAskPulse }) {
         <GlassCard tone="cyan" className="col-span-7 flex min-h-0 flex-col overflow-hidden">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
                 Weather · {weather?.location ?? 'London'}
               </p>
               <div className="mt-2 flex items-end gap-4">
@@ -347,9 +333,9 @@ export default function Home({ onAskPulse }) {
                       style={{ height: `${barHeight(slot.hi, dailyMin, dailyMax)}%` }}
                     />
                   </div>
-                  <span className="clock-figures text-[11px] font-medium text-white/45">{slot.lo}°</span>
+                  <span className="clock-figures text-[0.6875rem] font-medium text-white/45">{slot.lo}°</span>
                   <Icon className="h-4 w-4 text-white/60" strokeWidth={1.7} aria-hidden="true" />
-                  <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/40">
+                  <span className="text-[0.625rem] font-medium uppercase tracking-[0.12em] text-white/40">
                     {index === 0 ? 'Today' : slot.day}
                   </span>
                 </div>
@@ -367,7 +353,7 @@ export default function Home({ onAskPulse }) {
 
         <GlassCard delay={120} className="col-span-5 row-span-2 flex min-h-0 flex-col overflow-hidden">
           <div className="mb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">Upcoming</p>
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Upcoming</p>
           </div>
 
           <div className="relative min-h-0 flex-1 pr-1">
@@ -389,12 +375,12 @@ export default function Home({ onAskPulse }) {
                       {event.allDay ? (
                         <>
                           <p className="text-sm font-semibold text-white/85">{relDay(event.offset, event.key)}</p>
-                          <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-white/35">all day</p>
+                          <p className="text-[0.625rem] font-medium uppercase tracking-[0.08em] text-white/35">all day</p>
                         </>
                       ) : (
                         <>
                           <p className="clock-figures text-sm font-semibold text-white/85">{event.time}</p>
-                          <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-cyan-100/45">
+                          <p className="text-[0.625rem] font-medium uppercase tracking-[0.08em] text-cyan-100/45">
                             {relDay(event.offset, event.key)}
                           </p>
                         </>
@@ -422,7 +408,7 @@ export default function Home({ onAskPulse }) {
 
           <div className="mt-3 shrink-0 border-t border-white/10 pt-3">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">{pinned.label}</p>
+              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">{pinned.label}</p>
               <button
                 type="button"
                 onClick={() => setShowPinnedConfig(true)}
@@ -496,7 +482,7 @@ export default function Home({ onAskPulse }) {
 
         <GlassCard delay={200} className="col-span-7 flex min-h-0 flex-col overflow-hidden">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/42">Launchpad</p>
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Launchpad</p>
             <button
               type="button"
               onClick={() => setShowLaunchpad(true)}
@@ -531,7 +517,7 @@ export default function Home({ onAskPulse }) {
                       aria-label={`Open ${label}`}
                     >
                       {isSite(item) ? <SiteIcon url={item.url} /> : <AppIcon app={item} />}
-                      <span className="w-full truncate text-center text-[10px] font-medium text-white/45 transition group-hover:text-white/80">
+                      <span className="w-full truncate text-center text-[0.625rem] font-medium text-white/45 transition group-hover:text-white/80">
                         {label}
                       </span>
                     </button>
@@ -554,7 +540,7 @@ export default function Home({ onAskPulse }) {
 function WeatherStat({ label, value }) {
   return (
     <div className="px-3 first:pl-0">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">
+      <p className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-white/38">
         {label}
       </p>
       <p className="weather-metric clock-figures mt-0.5 text-base font-medium">{value}</p>
@@ -621,7 +607,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
           {/* Left — the tracker config */}
           <div className="space-y-3">
             <label className="block">
-              <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
                 Category
               </span>
               <input
@@ -633,7 +619,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
                 Display title
               </span>
               <input
@@ -645,7 +631,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
             </label>
 
             <div>
-              <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
                 Image
               </span>
               <div className="flex items-center gap-3">
@@ -665,7 +651,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
                     <button
                       type="button"
                       onClick={() => patch({ image: '' })}
-                      className="text-[11px] font-medium text-rose-300/80 transition hover:text-rose-300"
+                      className="text-[0.6875rem] font-medium text-rose-300/80 transition hover:text-rose-300"
                     >
                       Remove
                     </button>
@@ -675,7 +661,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
             </div>
 
             <label className="block">
-              <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
                 Match title
               </span>
               <input
@@ -694,7 +680,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
             >
               <span className="min-w-0">
                 <span className="block text-sm font-medium text-white/82">Hide from Upcoming</span>
-                <span className="mt-0.5 block text-[11px] text-white/42">Hides every occurrence from the list.</span>
+                <span className="mt-0.5 block text-[0.6875rem] text-white/42">Hides every occurrence from the list.</span>
               </span>
               <span
                 className={[
@@ -715,7 +701,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
 
           {/* Right — pick from your calendar events */}
           <div className="flex min-h-0 flex-col">
-            <span className="mb-1.5 block shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+            <span className="mb-1.5 block shrink-0 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
               Events
             </span>
             <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
@@ -745,7 +731,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{event.title}</span>
-                        <span className="mt-0.5 block truncate text-[11px] text-white/45">
+                        <span className="mt-0.5 block truncate text-[0.6875rem] text-white/45">
                           {event.time || 'all day'} · {relDay(event.offset, event.key)}
                           {event.meta ? ` · ${event.meta}` : ''}
                         </span>
@@ -890,7 +876,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="display-type text-lg font-light text-white text-glow">Launchpad</h2>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-medium text-white/40">{selected.length}/10</span>
+            <span className="text-[0.6875rem] font-medium text-white/40">{selected.length}/10</span>
             <button
               type="button"
               onClick={onClose}
@@ -962,7 +948,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
               )}
             </div>
 
-            <p className="mt-3 shrink-0 text-[10px] text-white/38">
+            <p className="mt-3 shrink-0 text-[0.625rem] text-white/38">
               Pick up to 10 items. Icons come straight from each app; tap a launchpad tile to open it.
             </p>
           </>
@@ -1001,7 +987,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                   Add
                 </button>
               </div>
-              {siteError && <p className="text-[11px] font-medium text-rose-300/80">{siteError}</p>}
+              {siteError && <p className="text-[0.6875rem] font-medium text-rose-300/80">{siteError}</p>}
             </div>
 
             <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
@@ -1021,7 +1007,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                         <span className="block truncate text-xs font-medium text-white">
                           {site.name || hostOf(site.url)}
                         </span>
-                        <span className="block truncate text-[11px] text-white/40">{hostOf(site.url)}</span>
+                        <span className="block truncate text-[0.6875rem] text-white/40">{hostOf(site.url)}</span>
                       </span>
                       <button
                         type="button"
@@ -1037,7 +1023,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
               )}
             </div>
 
-            <p className="mt-3 shrink-0 text-[10px] text-white/38">
+            <p className="mt-3 shrink-0 text-[0.625rem] text-white/38">
               Pick up to 10 items total. Websites open in your default browser.
             </p>
           </>

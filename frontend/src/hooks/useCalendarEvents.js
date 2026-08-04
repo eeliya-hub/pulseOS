@@ -225,6 +225,11 @@ export function useCalendarEvents() {
     [feedUrls],
   );
 
+  const disconnectGoogle = useCallback(async () => {
+    await api.calendar.googleDisconnect();
+    await fetchAll(feedUrls);
+  }, [feedUrls]);
+
   const disconnectApple = useCallback(async () => {
     await api.calendar.appleDisconnect();
     await fetchAll(feedUrls);
@@ -297,6 +302,7 @@ export function useCalendarEvents() {
     refresh,
     connectGoogle,
     connectApple,
+    disconnectGoogle,
     disconnectApple,
     createEvent,
     updateEvent,

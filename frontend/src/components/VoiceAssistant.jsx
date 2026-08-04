@@ -10,6 +10,7 @@ const TOOL_LABELS = {
   get_today: 'Checking your day',
   get_weather: 'Checking the weather',
   get_news: 'Reading the news',
+  search_web: 'Searching the internet',
   get_sports: 'Checking the scores',
   get_stocks: 'Checking the markets',
   list_calendars: 'Checking your calendars',
@@ -33,13 +34,16 @@ const TOOL_LABELS = {
 const DEFAULT_TASK = 'Putting together your brief';
 
 // Halo tint per state — violet-cyan while you talk, blue while Pulse talks, a
-// calm indigo while it works/connects, a soft rose on error.
+// calm indigo while it works/connects, a soft rose on error. `scale` sizes the
+// glow: it swells while Pulse speaks, so the room lights up as it answers. The
+// halo is a blurred DIV rather than canvas paint precisely because it has no
+// bounds to clip against — it stays perfectly round however far it spreads.
 const HALO = {
-  listening: 'radial-gradient(circle, rgba(139,156,255,0.5), transparent 68%)',
-  speaking: 'radial-gradient(circle, rgba(90,168,255,0.5), transparent 68%)',
-  searching: 'radial-gradient(circle, rgba(150,160,255,0.32), transparent 68%)',
-  error: 'radial-gradient(circle, rgba(251,113,133,0.32), transparent 68%)',
-  idle: 'radial-gradient(circle, rgba(150,160,255,0.26), transparent 68%)',
+  listening: { bg: 'radial-gradient(circle, rgba(139,156,255,0.5), transparent 68%)', scale: 0.72 },
+  speaking: { bg: 'radial-gradient(circle, rgba(90,168,255,0.5), transparent 68%)', scale: 1 },
+  searching: { bg: 'radial-gradient(circle, rgba(150,160,255,0.32), transparent 68%)', scale: 0.7 },
+  error: { bg: 'radial-gradient(circle, rgba(251,113,133,0.32), transparent 68%)', scale: 0.68 },
+  idle: { bg: 'radial-gradient(circle, rgba(150,160,255,0.26), transparent 68%)', scale: 0.68 },
 };
 
 /**
@@ -141,7 +145,7 @@ export default function VoiceAssistant({ onClose }) {
         <div className="mb-1 flex w-full items-center justify-between">
           <div>
             <h2 className="display-type text-lg font-light text-white text-glow">Pulse Voice</h2>
-            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.24em] text-white/38">
+            <p className="mt-0.5 text-[0.625rem] font-medium uppercase tracking-[0.24em] text-white/38">
               Real-time · Gemini Live
             </p>
           </div>
@@ -157,7 +161,11 @@ export default function VoiceAssistant({ onClose }) {
 
         {/* Visualiser stage — one reactive design per state */}
         <div className="voice-stage">
-          <span className="voice-halo" style={{ background: HALO[mode] }} aria-hidden="true" />
+          <span
+            className="voice-halo"
+            style={{ background: HALO[mode].bg, transform: `scale(${HALO[mode].scale})` }}
+            aria-hidden="true"
+          />
           {mode === 'listening' && <ListeningWave getLevel={getMicLevel} />}
           {mode === 'speaking' && <SpeakingOrb getLevel={getAiLevel} />}
           {(mode === 'searching' || mode === 'idle') && <SearchingDots />}
@@ -286,6 +294,30 @@ const ORB_FILAMENTS = [
   { rgb: '150,235,255', off: 0.33, amp: 0.24, freq: 1.9, speed: -0.55, w: 1.9 },
 ];
 
+/**
+ * Fade whatever has been drawn to nothing before it reaches the canvas edge.
+ *
+ * A canvas is a rectangle, so a glow wide enough to reach its sides gets sliced
+ * off square — you see the element's box outlined in its own light. This masks
+ * the frame with a radial falloff (destination-in), so light always dies out in
+ * a circle and the box it lives in never shows.
+ */
+function featherEdges(ctx, W, H) {
+  const min = Math.min(W, H);
+  const mask = ctx.createRadialGradient(W / 2, H / 2, min * 0.4, W / 2, H / 2, min * 0.49);
+  mask.addColorStop(0, 'rgba(0,0,0,1)');
+  mask.addColorStop(1, 'rgba(0,0,0,0)');
+  // The mask must be drawn with NO shadow: a shadow left set from earlier
+  // strokes gets composited into the mask and knocks ~40% off the alpha of
+  // everything underneath, quietly greying out the whole sphere.
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = mask;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 // A soft radial glow — the building block of the aura. Stacked with additive
 // ('lighter') blending, these accumulate into a bright, ethereal core with a soft
 // falloff instead of a flat fill.
@@ -327,9 +359,10 @@ function SpeakingOrb({ getLevel }) {
       lvl += (Math.min(1, getLevel() * ORB_LEVEL_GAIN) - lvl) * 0.18;
       const R = Math.min(W, H) * 0.32 * (1 + lvl * 0.12);
 
-      // Halo behind the sphere.
+      // Halo behind the sphere. Kept inside the frame so it can fall off on its
+      // own terms — the wide ambient glow is the CSS halo's job, not the canvas'.
       ctx.globalCompositeOperation = 'lighter';
-      softGlow(ctx, cx, cy, R * 1.7, '120,130,240', 0.1 + lvl * 0.16);
+      softGlow(ctx, cx, cy, Math.min(R * 1.6, Math.min(W, H) * 0.46), '120,130,240', 0.1 + lvl * 0.16);
 
       // Translucent glass body, lit from the top-left.
       ctx.globalCompositeOperation = 'source-over';
@@ -385,6 +418,7 @@ function SpeakingOrb({ getLevel }) {
       ctx.stroke();
       softGlow(ctx, cx - R * 0.34, cy - R * 0.4, R * 0.32, '255,255,255', 0.22 + lvl * 0.15);
       ctx.globalCompositeOperation = 'source-over';
+      featherEdges(ctx, W, H);
 
       raf = requestAnimationFrame(draw);
     };
@@ -449,7 +483,7 @@ function SpokenTranscript({ text, speaking, getProgress }) {
 
   return (
     <div className="glass-scroll mt-3 max-h-[26vh] w-full overflow-y-auto px-1">
-      <p className="voice-rise text-center text-[15px] leading-7">
+      <p className="voice-rise text-center text-[0.9375rem] leading-7">
         {segments.map((seg, index) => {
           const cls = !speaking
             ? 'text-white/85'

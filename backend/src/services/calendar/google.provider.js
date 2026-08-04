@@ -100,6 +100,18 @@ export const googleProvider = {
 
   isConnected: (user) => tokenStore.has('google', user),
 
+  /**
+   * Drop the stored tokens. Needed as its own action because a refresh token can
+   * die while still sitting in the store (Google expires them for OAuth clients
+   * in Testing mode, and a user can revoke access at any time) — at which point
+   * reconnecting is the only fix, and you can't reconnect what still claims to
+   * be connected.
+   */
+  disconnect(user) {
+    tokenStore.clear('google', user);
+    return { connected: false };
+  },
+
   async listCalendars(user) {
     const client = await authedCalendar(user);
     return (await calendarMeta(client)).map((c) => ({ ...c, source: 'google' }));
