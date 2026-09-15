@@ -5,8 +5,10 @@ import { googleProvider } from './google.provider.js';
 import { icalProvider } from './ical.provider.js';
 
 // LifeHub calendar. Google + Apple are read+write; iCal feeds are read-only.
-// Read results are cached briefly; writes clear the cache.
-const cache = createCache(10 * 60 * 1000);
+// Read results are cached briefly; writes clear the cache. A minute, not ten: a
+// change made on a phone never reaches this app, so the cache is the only thing
+// standing between an edit in Apple Calendar and it showing up here.
+const cache = createCache(60 * 1000);
 
 export const calendarService = {
   google: googleProvider,
@@ -59,15 +61,45 @@ export const calendarService = {
    * `calendarId`, `color`, `source` and (where writable) provider references.
    */
   async listEvents({ source = 'all', url, timeMin, timeMax, user } = {}) {
-    const key = `events:${source}:${url ?? ''}:${timeMin ?? ''}:${timeMax ?? ''}:${user ?? ''}`;
-    return cache.wrap(key, async () => {
+    // Only the END of the window is bucketed to its day. The caller sends "now +
+    // 75 days", which differs on every single call — so the key never repeated,
+    // the cache never hit once, and every refresh went live to Google and iCloud
+    // while leaving behind an entry nothing would ever read again.
+    //
+    // The start stays exact on purpose: callers like "what's on today" trust the
+    // range they asked for rather than filtering it, so two different windows
+    // must never share an entry. Same start plus same end-day is the same query.
+    const endDay = timeMax ? String(timeMax).slice(0, 10) : '';
+    const key = `events:${source}:${url ?? ''}:${timeMin ?? ''}:${endDay}:${user ?? ''}`;
+    const result = await cache.wrap(key, async () => {
       const jobs = [];
+      // Which sources answered, so the caller can tell "nothing on" from "that
+      // account failed". Swallowing every error into an empty list made a lapsed
+      // sign-in look exactly like an empty week.
+      const sources = {};
+      const track = (name, promise) =>
+        promise.then(
+          (events) => {
+            sources[name] = { ok: true, count: events.length };
+            return events;
+          },
+          (error) => {
+            sources[name] = {
+              ok: false,
+              // 401 here means the account needs reconnecting, not that the
+              // request was malformed — worth saying so.
+              reason: error?.status === 401 ? 'auth' : 'error',
+              message: error?.message ?? 'Failed',
+            };
+            return [];
+          },
+        );
 
       if ((source === 'all' || source === 'google') && googleProvider.isConnected(user)) {
-        jobs.push(googleProvider.listEvents({ timeMin, timeMax, user }).catch(() => []));
+        jobs.push(track('google', googleProvider.listEvents({ timeMin, timeMax, user })));
       }
       if ((source === 'all' || source === 'apple') && appleProvider.isConnected(user)) {
-        jobs.push(appleProvider.listEvents({ timeMin, timeMax, user }).catch(() => []));
+        jobs.push(track('apple', appleProvider.listEvents({ timeMin, timeMax, user })));
       }
       if (source === 'all' || source === 'ical') {
         const urls = (url || config.ical.defaultFeedUrl || '')
@@ -85,8 +117,15 @@ export const calendarService = {
       }
 
       const results = await Promise.all(jobs);
-      return { events: results.flat().sort((a, b) => new Date(a.start) - new Date(b.start)) };
+      return {
+        events: results.flat().sort((a, b) => new Date(a.start) - new Date(b.start)),
+        sources,
+      };
     });
+    // Don't hold a partial answer for the cache's full life: if a source failed,
+    // the next request should try it again rather than serve the gap for minutes.
+    if (Object.values(result.sources ?? {}).some((s) => !s.ok)) cache.clear(key);
+    return result;
   },
 
   async createEvent(payload) {

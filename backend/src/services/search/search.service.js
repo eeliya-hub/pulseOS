@@ -18,11 +18,11 @@ const cache = createCache(10 * 60 * 1000);
 // How many thin results get their page fetched, and how much text we keep. Two
 // pages in parallel costs ~1–2s and is the difference between the model quoting
 // a search snippet and it actually knowing what the page says.
-const ENRICH_COUNT = 2;
-const ENRICH_CHARS = 1200;
+const ENRICH_COUNT = 4;
+const ENRICH_CHARS = 2500;
 // Search snippets top out around 200 characters — rarely enough to answer from,
 // so anything under this counts as thin and gets its page read.
-const THIN_SNIPPET = 320;
+const THIN_SNIPPET = 500;
 
 /**
  * Fetch the readable text of the first few results whose snippet is too thin to
@@ -65,7 +65,7 @@ export const searchService = {
    * @param {'pd'|'pw'|'pm'|'py'} [p.freshness]  restrict to the past day/week/month/year
    * @param {boolean} [p.readPages] fetch page text for thin results (default true)
    */
-  async search({ query, max = 6, freshness, readPages = true } = {}) {
+  async search({ query, max = 8, freshness, readPages = true } = {}) {
     const q = (query || '').trim();
     if (!q) throw ApiError.badRequest('Provide a `q` query parameter to search the web.');
 
@@ -88,7 +88,17 @@ export const searchService = {
         }
       }
 
-      throw ApiError.upstream('Web search', lastError?.message ?? 'no provider returned results');
+      // Everything came back empty. That's an answer in itself — "I searched and
+      // found nothing" is far more useful to the assistant than an exception it
+      // has to interpret, which is how "I can't access the internet" slips out.
+      logger.warn(`Search found nothing for "${q}": ${lastError?.message ?? 'no results'}`);
+      return {
+        query: q,
+        provider: 'none',
+        answer: null,
+        results: [],
+        note: 'No results came back — the keyless search engines are rate-limiting. Say you could not find anything rather than guessing, and suggest trying again shortly.',
+      };
     });
   },
 };

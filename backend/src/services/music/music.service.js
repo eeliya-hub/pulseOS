@@ -11,6 +11,10 @@ export const musicService = {
   transfer: (payload, user) => spotifyProvider.transfer(payload, user),
   play: (payload, user) => spotifyProvider.play(payload, user),
   nowPlaying: (user) => spotifyProvider.nowPlaying(user),
+  // Spotify Connect: what can play, what is playing, and controlling it there.
+  devices: (user) => spotifyProvider.devices(user),
+  playerState: (user) => spotifyProvider.playerState(user),
+  command: (action, options, user) => spotifyProvider.command(action, options, user),
   playlists: (user) => spotifyProvider.playlists(user),
   recentlyPlayed: (user) => spotifyProvider.recentlyPlayed(user),
   search: (query, user) => spotifyProvider.search(query, user),

@@ -143,6 +143,13 @@ export const config = {
     // Flight tracking (adsbdb routes + adsb.lol/OpenSky live positions) and
     // currency (Frankfurter/ECB) need no keys at all.
 
+    // Scheduled departure/arrival times (AeroDataBox via RapidAPI). Optional:
+    // none of the keyless flight sources carry a timetable, so without this you
+    // type the departure off your booking and the arrival is worked out from the
+    // distance and the airports' time zones.
+    // Key: https://rapidapi.com/aedbx-aedbx/api/aerodatabox
+    scheduleKey: get('AERODATABOX_KEY') || get('RAPIDAPI_KEY'),
+
     // Airline logos + banners, keyed by ICAO code, served from the Traverse
     // project's public Firebase Storage bucket. Point this elsewhere (or clear
     // it) and the flight card falls back to its plane glyph.
@@ -215,6 +222,8 @@ export function integrationStatus() {
       enabled: true,
       places: Boolean(config.travel.placesKey) ? 'google' : 'openstreetmap',
       flights: true,
+      // Real timetable when keyed; typed departure + computed arrival when not.
+      schedules: Boolean(config.travel.scheduleKey) ? 'aerodatabox' : 'manual',
       currency: true,
     },
   };

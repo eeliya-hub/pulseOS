@@ -1,50 +1,21 @@
 import Hls from 'hls.js';
-import { ChevronLeft, ChevronRight, ExternalLink, RotateCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Minimize2, RotateCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { api } from '../services/api/backendClient.js';
+import { NEWS_CHANNELS, useLiveNews } from '../services/news/liveChannels.js';
 
-// UK 24/7 news channels that play inline via hls.js — every URL below was verified
-// HTTPS, CORS-enabled and DRM-free from a UK connection. Sky News and Euronews come
-// off Samsung TV Plus (Xumo / Rakuten) through matthuisman's stable jmp2.uk
-// redirector; BBC News is the BBC's own adaptive Akamai feed (note: it carries a
-// BSL signer during the BBC's scheduled signed zones); GB News (Amagi) and TalkTV
-// (Wurl) stream openly on FAST platforms. These are UK-geo feeds — the tile is meant
-// to be watched from the UK. Use the ‹ › controls to switch channels.
-const SOURCES = [
-  {
-    label: 'Sky News',
-    url: 'https://jmp2.uk/stvp-GB3300002NF',
-    site: 'https://news.sky.com/watch-live',
-  },
-  {
-    label: 'BBC News',
-    url: 'https://vs-hls-push-uk-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/iptv_hd_abr_v1.m3u8',
-    site: 'https://www.bbc.co.uk/iplayer/live/bbcnews',
-  },
-  {
-    label: 'GB News',
-    url: 'https://amg01076-lightningintern-gbnewsau-samsungau-et7fz.amagi.tv/playlist/amg01076-lightningintern-gbnewsau-samsungau/playlist.m3u8',
-    site: 'https://www.gbnews.com/watch-live',
-  },
-  {
-    label: 'TalkTV',
-    url: 'https://488f4ce4.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfVGFsa19ITFM/playlist.m3u8',
-    site: 'https://www.talk.tv/watch',
-  },
-  {
-    label: 'Euronews',
-    url: 'https://jmp2.uk/stvp-GB2600019ON',
-    site: 'https://www.euronews.com/live',
-  },
-];
-
-const STORAGE_KEY = 'pulse.newsChannel';
-
-export default function LiveNewsPlayer() {
+/**
+ * The live news tile — and, when it has been given the screen, the full-screen
+ * player. Which channel is on lives in the shared store so the assistant can put
+ * one on by name; this component just plays whatever is selected.
+ */
+export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
   const videoRef = useRef(null);
-  const [index, setIndex] = useState(() => {
-    const saved = Number(window.localStorage?.getItem(STORAGE_KEY));
-    return Number.isInteger(saved) && saved >= 0 && saved < SOURCES.length ? saved : 0;
-  });
+  const { index, setChannelIndex, immersive: playingFullScreen } = useLiveNews();
+  // Only one copy of a live stream at a time: when the full-screen player has
+  // the channel, the dashboard tile stands down rather than pulling the same
+  // feed twice.
+  const standby = !immersive && playingFullScreen;
   // Bumped by the Retry button to re-run the load effect for the same channel.
   const [reloadKey, setReloadKey] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -58,29 +29,20 @@ export default function LiveNewsPlayer() {
     autoRetryRef.current = 0;
   }, [index]);
 
-  // Move to the previous/next channel, wrapping around, and remember the choice.
-  const go = useCallback((dir) => {
-    setIndex((i) => {
-      const next = (i + dir + SOURCES.length) % SOURCES.length;
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, String(next));
-      } catch {
-        /* private mode / storage disabled — non-fatal */
-      }
-      return next;
-    });
-  }, []);
+  // Move to the previous/next channel, wrapping around.
+  const go = useCallback((dir) => setChannelIndex(index + dir), [index, setChannelIndex]);
 
   useEffect(() => {
     const video = videoRef.current;
-    const source = SOURCES[index];
-    if (!video || !source) return undefined;
+    const source = NEWS_CHANNELS[index];
+    if (!video || !source || standby) return undefined;
 
     // A fresh attempt on this channel: clear any previous failure.
     setFailed(false);
 
     let hls;
     let done = false;
+    let cancelled = false;
     let recovered = 0;
 
     // Some open restreams answer at the network level but never actually render
@@ -133,12 +95,19 @@ export default function LiveNewsPlayer() {
       });
     };
 
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari / iOS: native HLS (follows the jmp2.uk redirect transparently)
-      video.src = source.url;
-      video.addEventListener('error', markFailed);
-      play();
-    } else if (Hls.isSupported()) {
+    // Redirector channels get resolved to their real playlist first; everything
+    // else is already a direct URL and starts immediately.
+    const streamUrl = (source.viaRedirect
+      ? api.news.stream(source.url).then((d) => d.url)
+      : Promise.resolve(source.url)
+    ).then((url) => (source.viaProxy ? api.news.hlsUrl(url) : url));
+
+    // hls.js FIRST, native HLS only as the fallback. Chrome answers
+    // canPlayType('application/vnd.apple.mpegurl') with "maybe" — truthy, but it
+    // has no real HLS support, so testing that first sent every desktop session
+    // down the native path and hls.js was never used. Whether a channel played
+    // then came down to what the browser could stumble through on its own.
+    if (Hls.isSupported()) {
       hls = new Hls({
         enableWorker: true,
         // Never downscale the rendition just because the tile is small — we always
@@ -154,8 +123,8 @@ export default function LiveNewsPlayer() {
         liveSyncDurationCount: 3,
         startFragPrefetch: true,
       });
-      hls.loadSource(source.url);
       hls.attachMedia(video);
+      streamUrl.then((url) => !cancelled && hls.loadSource(url), markFailed);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         // Pin to the top rendition for the best possible picture, then let ABR take
         // back over so a genuine bandwidth drop still protects against stalls.
@@ -180,20 +149,29 @@ export default function LiveNewsPlayer() {
           markFailed();
         }
       });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari / iOS: native HLS.
+      video.addEventListener('error', markFailed);
+      streamUrl.then((url) => {
+        if (cancelled) return;
+        video.src = url;
+        play();
+      }, markFailed);
     } else {
       markFailed();
     }
 
     return () => {
+      cancelled = true;
       window.clearTimeout(watchdog);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('error', markFailed);
       GESTURES.forEach((e) => window.removeEventListener(e, unmute));
       if (hls) hls.destroy();
     };
-  }, [index, reloadKey]);
+  }, [index, reloadKey, standby]);
 
-  const active = SOURCES[index];
+  const active = NEWS_CHANNELS[index];
 
   return (
     <>
@@ -223,23 +201,43 @@ export default function LiveNewsPlayer() {
         </button>
       </div>
 
-      <a
-        href={active.site}
-        target="_blank"
-        rel="noreferrer"
-        className="absolute right-3 top-3 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-white/85 backdrop-blur-md transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-      >
-        Open site
-        <ExternalLink className="h-3 w-3" aria-hidden="true" />
-      </a>
+      <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+        <a
+          href={active.site}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-white/85 backdrop-blur-md transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        >
+          Open site
+          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        </a>
+        {immersive && onExit ? (
+          <button
+            type="button"
+            onClick={onExit}
+            aria-label="Leave full screen"
+            className="grid h-7 w-7 place-items-center rounded-full bg-black/50 text-white/85 backdrop-blur-md transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
 
       <video
         ref={videoRef}
-        className="h-full w-full bg-black object-cover"
+        className={`h-full w-full bg-black ${immersive ? 'object-contain' : 'object-cover'}`}
         autoPlay
         playsInline
         controls
       />
+
+      {standby && (
+        <div className="absolute inset-0 z-20 grid place-items-center bg-black/80 px-4 text-center backdrop-blur-sm">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/55">
+            {active.label} · playing full screen
+          </p>
+        </div>
+      )}
 
       {failed && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/70 px-4 text-center backdrop-blur-sm">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Local, persistent planner state for the Life Hub. There's no backend, so
 // everything lives in localStorage. Events and todos are date-anchored and can
@@ -36,6 +36,24 @@ export function dateKey(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+// The day an all-day event falls on, as a `YYYY-MM-DD` key. The backend sends
+// all-day starts as bare days, but a stale cache (or a provider quirk) can hand
+// over a full instant — reading that with local fields keeps it on the right day
+// instead of slicing the UTC text and losing one.
+export function allDayKey(value) {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}(?:T00:00(?::00)?)?$/.test(value.trim())) {
+    return value.trim().slice(0, 10);
+  }
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const atUtcMidnight =
+    d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0 && d.getUTCMilliseconds() === 0;
+  return atUtcMidnight
+    ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+    : dateKey(d);
 }
 
 export function keyToDate(key) {
@@ -105,146 +123,168 @@ function seed() {
   };
 }
 
-export function useLifeData() {
-  const [data, setData] = useState(() => {
+/* ── Shared store ─────────────────────────────────────────────────────────── */
+
+// One planner for the whole app.
+//
+// This used to be component state, so every caller — Home, the Life Hub, the
+// chat assistant, voice mode — held its OWN copy and wrote the whole thing back
+// to the same storage key. A task added by voice went into voice mode's copy,
+// never reached the dashboard's, and was then erased the next time anything on
+// the dashboard saved over it. Now there is one copy, and every view subscribes.
+
+function loadLife() {
+  try {
+    const raw = window.localStorage?.getItem(STORAGE_KEY);
+    if (raw) return { ...seed(), ...JSON.parse(raw) };
+  } catch {
+    /* corrupt or unavailable — fall back to seed */
+  }
+  return seed();
+}
+
+let lifeState = loadLife();
+const lifeSubscribers = new Set();
+
+/** Apply a change computed from the planner as it is at this instant. */
+function patch(updater) {
+  lifeState = { ...lifeState, ...updater(lifeState) };
+  try {
+    window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(lifeState));
+  } catch {
+    /* storage disabled — non-fatal */
+  }
+  lifeSubscribers.forEach((fn) => fn(lifeState));
+}
+
+// Another tab saved: follow it, rather than overwrite it with our next change.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key !== STORAGE_KEY || !event.newValue) return;
     try {
-      const raw = window.localStorage?.getItem(STORAGE_KEY);
-      if (raw) return { ...seed(), ...JSON.parse(raw) };
+      lifeState = { ...seed(), ...JSON.parse(event.newValue) };
+      lifeSubscribers.forEach((fn) => fn(lifeState));
     } catch {
-      /* corrupt or unavailable — fall back to seed */
+      /* unreadable — keep what we have */
     }
-    return seed();
   });
+}
 
-  useEffect(() => {
-    try {
-      window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch {
-      /* storage disabled — non-fatal */
-    }
-  }, [data]);
+/** The planner as it is right now, for code outside React (the assistant's tools). */
+export const getLifeData = () => lifeState;
 
-  const patch = useCallback((updater) => setData((current) => ({ ...current, ...updater(current) })), []);
-
+/**
+ * Every change the planner supports. Plain functions over the shared store, so
+ * they are the same from a component, the chat assistant or voice mode — and
+ * several made back to back each build on the last rather than on a stale copy.
+ * Creators return what they created.
+ */
+export const lifeActions = {
   // --- events + todos -------------------------------------------------------
-  const addEvent = useCallback(
-    ({ title, time, place, date, repeat, calendar }) =>
-      patch((c) => ({
-        events: [
-          ...c.events,
-          {
-            id: uid(),
-            title,
-            time,
-            place: place || '',
-            date,
-            repeat: repeat || 'none',
-            calendar: calendar || 'personal',
-          },
-        ],
-      })),
-    [patch],
-  );
+  addEvent({ title, time, place, date, repeat, calendar }) {
+    const event = {
+      id: uid(),
+      title,
+      time,
+      place: place || '',
+      date,
+      repeat: repeat || 'none',
+      calendar: calendar || 'personal',
+    };
+    patch((c) => ({ events: [...c.events, event] }));
+    return event;
+  },
 
-  const updateEvent = useCallback(
-    (id, changes) =>
-      patch((c) => ({ events: c.events.map((e) => (e.id === id ? { ...e, ...changes } : e)) })),
-    [patch],
-  );
+  updateEvent(id, changes) {
+    patch((c) => ({ events: c.events.map((e) => (e.id === id ? { ...e, ...changes } : e)) }));
+  },
 
-  const addTodo = useCallback(
-    ({ label, date, repeat }) =>
-      patch((c) => ({
-        todos: [...c.todos, { id: uid(), label, date, repeat: repeat || 'none', done: false }],
-      })),
-    [patch],
-  );
+  removeEvent(id) {
+    patch((c) => ({ events: c.events.filter((e) => e.id !== id) }));
+  },
 
-  const toggleTodo = useCallback(
-    (id) =>
-      patch((c) => ({ todos: c.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) })),
-    [patch],
-  );
+  addTodo({ label, date, repeat }) {
+    const todo = { id: uid(), label, date, repeat: repeat || 'none', done: false };
+    patch((c) => ({ todos: [...c.todos, todo] }));
+    return todo;
+  },
 
-  const removeTodo = useCallback(
-    (id) => patch((c) => ({ todos: c.todos.filter((t) => t.id !== id) })),
-    [patch],
-  );
+  toggleTodo(id) {
+    patch((c) => ({ todos: c.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) }));
+  },
 
-  const removeEvent = useCallback(
-    (id) => patch((c) => ({ events: c.events.filter((e) => e.id !== id) })),
-    [patch],
-  );
+  /** Set rather than flip — "mark it done" must not undo one that already is. */
+  setTodoDone(id, done) {
+    patch((c) => ({ todos: c.todos.map((t) => (t.id === id ? { ...t, done } : t)) }));
+  },
+
+  removeTodo(id) {
+    patch((c) => ({ todos: c.todos.filter((t) => t.id !== id) }));
+  },
 
   // --- habits (daily) -------------------------------------------------------
-  const addHabit = useCallback(
-    (label) => patch((c) => ({ habits: [...c.habits, { id: uid(), label }] })),
-    [patch],
-  );
+  addHabit(label) {
+    const habit = { id: uid(), label };
+    patch((c) => ({ habits: [...c.habits, habit] }));
+    return habit;
+  },
 
-  const removeHabit = useCallback(
-    (id) => patch((c) => ({ habits: c.habits.filter((h) => h.id !== id) })),
-    [patch],
-  );
+  removeHabit(id) {
+    patch((c) => ({ habits: c.habits.filter((h) => h.id !== id) }));
+  },
 
-  const toggleHabit = useCallback(
-    (id, dayKey) =>
-      patch((c) => {
-        const day = c.habitLog[dayKey] ?? [];
-        const next = day.includes(id) ? day.filter((x) => x !== id) : [...day, id];
-        return { habitLog: { ...c.habitLog, [dayKey]: next } };
-      }),
-    [patch],
-  );
+  toggleHabit(id, dayKey) {
+    patch((c) => {
+      const day = c.habitLog[dayKey] ?? [];
+      const next = day.includes(id) ? day.filter((x) => x !== id) : [...day, id];
+      return { habitLog: { ...c.habitLog, [dayKey]: next } };
+    });
+  },
+
+  /** Set rather than flip, for the same reason as setTodoDone. */
+  setHabitDone(id, dayKey, done) {
+    patch((c) => {
+      const day = (c.habitLog[dayKey] ?? []).filter((x) => x !== id);
+      return { habitLog: { ...c.habitLog, [dayKey]: done ? [...day, id] : day } };
+    });
+  },
 
   // --- projects -------------------------------------------------------------
-  const addProject = useCallback(
-    (name, due = null) =>
-      patch((c) => ({ projects: [...c.projects, { id: uid(), name, due, todos: [] }] })),
-    [patch],
-  );
+  addProject(name, due = null) {
+    patch((c) => ({ projects: [...c.projects, { id: uid(), name, due, todos: [] }] }));
+  },
 
-  const removeProject = useCallback(
-    (id) => patch((c) => ({ projects: c.projects.filter((p) => p.id !== id) })),
-    [patch],
-  );
+  removeProject(id) {
+    patch((c) => ({ projects: c.projects.filter((p) => p.id !== id) }));
+  },
 
-  const addProjectTodo = useCallback(
-    (projectId, label) =>
-      patch((c) => ({
-        projects: c.projects.map((p) =>
-          p.id === projectId ? { ...p, todos: [...p.todos, { id: uid(), label, done: false }] } : p,
-        ),
-      })),
-    [patch],
-  );
+  addProjectTodo(projectId, label) {
+    patch((c) => ({
+      projects: c.projects.map((p) =>
+        p.id === projectId ? { ...p, todos: [...p.todos, { id: uid(), label, done: false }] } : p,
+      ),
+    }));
+  },
 
-  const toggleProjectTodo = useCallback(
-    (projectId, todoId) =>
-      patch((c) => ({
-        projects: c.projects.map((p) =>
-          p.id === projectId
-            ? { ...p, todos: p.todos.map((t) => (t.id === todoId ? { ...t, done: !t.done } : t)) }
-            : p,
-        ),
-      })),
-    [patch],
-  );
+  toggleProjectTodo(projectId, todoId) {
+    patch((c) => ({
+      projects: c.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, todos: p.todos.map((t) => (t.id === todoId ? { ...t, done: !t.done } : t)) }
+          : p,
+      ),
+    }));
+  },
+};
 
-  return {
-    ...data,
-    addEvent,
-    updateEvent,
-    addTodo,
-    toggleTodo,
-    removeTodo,
-    removeEvent,
-    addHabit,
-    removeHabit,
-    toggleHabit,
-    addProject,
-    removeProject,
-    addProjectTodo,
-    toggleProjectTodo,
-  };
+export function useLifeData() {
+  const [data, setData] = useState(lifeState);
+
+  useEffect(() => {
+    lifeSubscribers.add(setData);
+    setData(lifeState); // sync in case it changed before mount
+    return () => lifeSubscribers.delete(setData);
+  }, []);
+
+  return { ...data, ...lifeActions };
 }

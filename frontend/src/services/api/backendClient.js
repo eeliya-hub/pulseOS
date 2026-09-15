@@ -2,12 +2,24 @@
 // frontend talks to real integrations — swap the existing mock services
 // (weather.js, markets.js, …) over to these calls one view at a time.
 //
-// Finance intentionally has NO backend calls — it stays local. Travel keeps its
-// trips local too; only its live data (flights, rates, places) comes from here.
+// Travel keeps its trips local; only its live data (flights, rates, places)
+// comes from here.
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api';
 
-async function request(path, { method = 'GET', body, params } = {}) {
+// The backend is a local process that gets restarted, redeployed and briefly
+// paused. A single blip used to surface as a hard failure at every call site,
+// and callers turned that into "nothing is connected" — so a two-second restart
+// read as "your calendars are gone". Reads are retried and time-limited instead.
+const TIMEOUT_MS = 12_000;
+const RETRY_DELAYS = [250, 900]; // reads only, and only when nothing answered
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** True when the request never reached the server — as opposed to being refused. */
+export const isOffline = (error) => Boolean(error?.offline);
+
+async function request(path, { method = 'GET', body, params, retries } = {}) {
   const url = new URL(`${BASE_URL}${path}`);
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
@@ -15,20 +27,46 @@ async function request(path, { method = 'GET', body, params } = {}) {
     });
   }
 
-  const res = await fetch(url, {
-    method,
-    headers: body ? { 'content-type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  // Only reads are replayed: retrying a POST could create the same event twice.
+  const attempts = retries ?? (method === 'GET' ? RETRY_DELAYS.length : 0);
+  let lastError;
 
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
+  for (let attempt = 0; attempt <= attempts; attempt += 1) {
+    let res;
+    try {
+      res = await fetch(url, {
+        method,
+        headers: body ? { 'content-type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    } catch (cause) {
+      // Never reached the server: no response, so nothing was acted on.
+      lastError = new Error('Could not reach the Pulse backend.');
+      lastError.offline = true;
+      lastError.cause = cause;
+      if (attempt < attempts) {
+        await sleep(RETRY_DELAYS[attempt]);
+        continue;
+      }
+      throw lastError;
+    }
+
+    const data = await res.json().catch(() => null);
+    if (res.ok) return data;
+
     const err = new Error(data?.error?.message ?? `Request failed (${res.status})`);
     err.status = res.status;
     err.code = data?.error?.code;
+    // A server that is still starting up answers 502/503 for a moment.
+    if (res.status >= 500 && attempt < attempts) {
+      lastError = err;
+      await sleep(RETRY_DELAYS[attempt]);
+      continue;
+    }
     throw err;
   }
-  return data;
+  throw lastError;
 }
 
 export const api = {
@@ -50,6 +88,11 @@ export const api = {
     headlines: (params) => request('/news', { params }),
     search: (q) => request('/news/search', { params: { q } }),
     local: (q) => request('/news/local', { params: { q } }),
+    // Follow a live-TV redirector the browser can't (its 302 carries no CORS).
+    stream: (url) => request('/news/stream', { params: { url } }),
+    // Play a channel through the backend, for the ones whose segments carry no
+    // CORS header of their own. Returns a URL for hls.js, not a request.
+    hlsUrl: (url) => `${BASE_URL}/news/hls?url=${encodeURIComponent(url)}`,
   },
   // Live web search (keyless by default — see backend/src/services/search).
   search: Object.assign((q, params) => request('/search', { params: { q, ...params } }), {
@@ -81,18 +124,10 @@ export const api = {
     chat: (payload) => request('/ai/chat', { method: 'POST', body: payload }),
     // One-shot spoken sample of a prebuilt voice → { audio (base64 wav), mimeType }.
     voicePreview: (voice) => request('/ai/voice-preview', { method: 'POST', body: { voice } }),
-    // WebSocket endpoint for the real-time Gemini Live voice session. `name` and
-    // the user's persona `instructions` personalize the system prompt; `voice`
-    // pins which prebuilt Gemini voice speaks.
-    voiceWsUrl: (name, instructions, voice) => {
-      const base = BASE_URL.replace(/^http/i, 'ws');
-      const params = new URLSearchParams();
-      if (name) params.set('name', name);
-      if (instructions) params.set('instructions', instructions);
-      if (voice) params.set('voice', voice);
-      const qs = params.toString();
-      return `${base}/voice${qs ? `?${qs}` : ''}`;
-    },
+    // WebSocket endpoint for the real-time Gemini Live voice session. The name,
+    // instructions and voice go in the first message on the socket, not here —
+    // a long instruction set overflowed the upgrade request's header limit.
+    voiceWsUrl: () => `${BASE_URL.replace(/^http/i, 'ws')}/voice`,
   },
   launch: Object.assign((app, url) => request('/launch', { method: 'POST', body: { app, url } }), {
     apps: () => request('/launch/apps'),
@@ -137,6 +172,11 @@ export const api = {
     token: () => request('/music/token'),
     transfer: (deviceId, play = true) =>
       request('/music/transfer', { method: 'PUT', body: { deviceId, play } }),
+    // Spotify Connect: what can play, what is playing, and controlling whichever
+    // device holds the music.
+    devices: () => request('/music/devices'),
+    player: () => request('/music/player'),
+    command: (body) => request('/music/command', { method: 'PUT', body }),
     play: (payload) => request('/music/play', { method: 'PUT', body: payload }),
     nowPlaying: () => request('/music/now-playing'),
     playlists: () => request('/music/playlists'),

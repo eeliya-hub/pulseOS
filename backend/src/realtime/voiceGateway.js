@@ -1,4 +1,10 @@
+import { appendFileSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
+
+// TEMPORARY: capture what a real voice session receives and decides.
+const trace = (line) => {
+  try { appendFileSync('/tmp/pulse-voice-trace.log', `${new Date().toISOString()} ${line}\n`); } catch { /* diagnostic */ }
+};
 import { isAllowedOrigin } from '../config/env.js';
 import { createLiveSession } from '../services/ai/liveVoice.service.js';
 import { logger } from '../utils/logger.js';
@@ -12,7 +18,13 @@ import { logger } from '../utils/logger.js';
 //   • text frames     = JSON control messages
 // Down to the browser: { type: 'ready' | 'transcript' | 'interrupted'
 //                        | 'turn_complete' | 'tool_call' | 'error', ... }
-// Up from the browser: { type: 'tool_response', responses } | { type: 'text', text }
+// Up from the browser: { type: 'start', name, instructions, voice }
+//                     | { type: 'tool_response', responses } | { type: 'text', text }
+//
+// The session opens on 'start', not on connect: the user's instructions, saved
+// prompts and remembered facts can run to thousands of characters, and carrying
+// them in the URL made the upgrade request fail with a 431 once they did. A
+// first message has no such ceiling.
 const WS_PATH = '/api/voice';
 const PING_INTERVAL_MS = 30_000;
 
@@ -25,12 +37,15 @@ export function attachVoiceGateway(server) {
   });
 
   wss.on('connection', async (ws, req) => {
+    // Query params remain as a fallback for older clients; the browser now sends
+    // these in its first message instead.
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const userName = params.get('name') || undefined;
-    const instructions = params.get('instructions') || undefined;
-    const voiceName = params.get('voice') || undefined;
+    let userName = params.get('name') || undefined;
+    let instructions = params.get('instructions') || undefined;
+    let voiceName = params.get('voice') || undefined;
     let live = null;
     let closed = false;
+    let starting = null;
 
     const sendJson = (obj) => ws.readyState === ws.OPEN && ws.send(JSON.stringify(obj));
 
@@ -43,9 +58,8 @@ export function attachVoiceGateway(server) {
 
     // Browser → Gemini. Audio arrives as binary; everything else is JSON control.
     ws.on('message', (data, isBinary) => {
-      if (!live) return; // pre-ready frames are dropped; the client starts the mic after 'ready'
       if (isBinary) {
-        live.sendAudio(data);
+        live?.sendAudio(data); // pre-ready audio is dropped; the mic starts after 'ready'
         return;
       }
       let msg;
@@ -54,6 +68,22 @@ export function attachVoiceGateway(server) {
       } catch {
         return;
       }
+
+      if (msg.type === 'start') {
+        // Worth a line in the log: a voice session that starts with 0 characters
+        // of instructions is one that has no memory of the user.
+        logger.info(
+          `Voice start: ${msg.name ?? 'anon'}, ${(msg.instructions || '').length} chars of context, voice=${msg.voice ?? 'default'}`,
+        );
+        trace(`START name=${msg.name} chars=${(msg.instructions || '').length} hasDrivingMemory=${/driving lesson/i.test(msg.instructions || '')} hasAddress=${/flaxpond/i.test(msg.instructions || '')}`);
+        if (starting || live) return; // already opening or open
+        if (msg.name) userName = msg.name;
+        if (msg.instructions) instructions = msg.instructions;
+        if (msg.voice) voiceName = msg.voice;
+        starting = openSession();
+        return;
+      }
+      if (!live) return;
       if (msg.type === 'tool_response' && Array.isArray(msg.responses)) live.sendToolResponse(msg.responses);
       else if (msg.type === 'text' && msg.text) live.sendText(msg.text);
     });
@@ -70,6 +100,7 @@ export function attachVoiceGateway(server) {
       ws.isAlive = true;
     });
 
+    async function openSession() {
     try {
       live = await createLiveSession({
         userName,
@@ -77,6 +108,13 @@ export function attachVoiceGateway(server) {
         voiceName,
         onEvent: (event) => {
           if (closed) return;
+          if (event.type === 'tool_call') {
+            for (const call of event.calls ?? []) trace(`TOOL ${call.name} ${JSON.stringify(call.args)}`);
+          }
+          if (event.type === 'tool_cancel') trace(`CANCELLED ${(event.ids ?? []).join(',')}`);
+          if (event.type === 'transcript' && event.role === 'user' && event.text?.trim()) {
+            trace(`HEARD "${event.text.trim()}"`);
+          }
           if (event.type === 'audio') {
             if (ws.readyState === ws.OPEN) ws.send(event.data); // 24 kHz PCM, binary
             return;
@@ -109,6 +147,17 @@ export function attachVoiceGateway(server) {
       });
       ws.close();
     }
+    }
+
+    // A client that never sends 'start' (or an older one passing the URL params)
+    // still gets a session — after a beat, so the handshake wins the race.
+    setTimeout(() => {
+      if (!starting && !live && !closed) {
+        logger.warn('Voice: no start message arrived — opening with URL params only (stale client?)');
+        trace(`NO START MESSAGE (stale browser tab) urlInstructions=${(instructions || '').length}`);
+        starting = openSession();
+      }
+    }, 1500);
   });
 
   const heartbeat = setInterval(() => {

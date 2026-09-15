@@ -1,11 +1,11 @@
 import {
   Calendar,
   Home,
+  LayoutGrid,
   MapPin,
   Music as MusicIcon,
   Newspaper,
   Sparkles,
-  Wallet,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import bgImage from './assets/bg.jpg';
@@ -17,13 +17,15 @@ import MiniPlayer from './components/MiniPlayer.jsx';
 import PulseLauncher from './components/PulseLauncher.jsx';
 import TopBar from './components/TopBar.jsx';
 import VoiceAssistant from './components/VoiceAssistant.jsx';
+import LiveNewsImmersive from './components/LiveNewsImmersive.jsx';
+import { onNavigate } from './services/ui/navigation.js';
 import { useConversations } from './hooks/useConversations.js';
 import { runPreload } from './services/preload.js';
 import AIAssistant from './views/AIAssistant.jsx';
 import AISettings from './views/AISettings.jsx';
-import Finance from './views/Finance.jsx';
 import HomeView from './views/Home.jsx';
 import IdleScreen from './views/IdleScreen.jsx';
+import Launchpad from './views/Launchpad.jsx';
 import MusicImmersive from './components/MusicImmersive.jsx';
 import { useSettings } from './hooks/useSettings.js';
 import { useSpotifyPlayer } from './hooks/useSpotifyPlayer.js';
@@ -40,22 +42,28 @@ const navItems = [
     color: 'from-cyan-300/85 to-blue-500/85',
   },
   {
+    id: 'launchpad',
+    label: 'Launchpad',
+    Icon: LayoutGrid,
+    color: 'from-purple-300/85 to-pink-500/85',
+  },
+  {
     id: 'life',
     label: 'Life Hub',
     Icon: Calendar,
     color: 'from-emerald-300/85 to-cyan-500/85',
   },
   {
-    id: 'markets',
-    label: 'Markets & News',
-    Icon: Newspaper,
-    color: 'from-cyan-300/85 to-purple-500/85',
-  },
-  {
     id: 'ai',
     label: 'AI Assistant',
     Icon: Sparkles,
     color: 'from-emerald-300/85 to-purple-500/85',
+  },
+  {
+    id: 'markets',
+    label: 'Markets & News',
+    Icon: Newspaper,
+    color: 'from-cyan-300/85 to-purple-500/85',
   },
   {
     id: 'music',
@@ -69,16 +77,21 @@ const navItems = [
     Icon: MapPin,
     color: 'from-amber-300/85 to-pink-500/85',
   },
-  {
-    id: 'finance',
-    label: 'Finance',
-    Icon: Wallet,
-    color: 'from-purple-300/85 to-pink-500/85',
-  },
 ];
 
 export default function App() {
   const [activeView, setActiveView] = useState('home');
+
+  // The assistant can move the dashboard: "put BBC News on" has to be able to
+  // get to the news view before it can turn a channel on.
+  useEffect(
+    () =>
+      onNavigate((id) => {
+        setIsIdleScreen(false);
+        setActiveView((current) => (id === current ? current : id));
+      }),
+    [],
+  );
   const [isIdleScreen, setIsIdleScreen] = useState(true);
   // The Pulse assistant overlay: 'closed' | 'menu' (chat/voice chooser) |
   // 'chat' (compact popover) | 'voice'. Expanding the popover routes to the
@@ -280,7 +293,7 @@ export default function App() {
   const views = {
     home: <HomeView {...viewProps} />,
     life: <LifeHub />,
-    finance: <Finance />,
+    launchpad: <Launchpad />,
     markets: <Markets />,
     music: <Music />,
     travel: <Travel />,
@@ -367,6 +380,9 @@ export default function App() {
         />
       )}
       {pulseMode === 'voice' && <VoiceAssistant onClose={() => setPulseMode('closed')} />}
+
+      {/* A live channel given the whole screen — above everything, including voice */}
+      <LiveNewsImmersive />
 
       {/* Floating controller — on every view except the full Music player + idle. */}
       {!isIdleScreen && activeView !== 'music' && <MiniPlayer />}

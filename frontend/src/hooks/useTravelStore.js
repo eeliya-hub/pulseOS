@@ -185,18 +185,21 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      const trips = (parsed?.trips ?? []).map(normalizeTrip).filter(Boolean);
+      // Reconciled on the way in, not only on write: a stored trip can predate
+      // the flight it now carries (or a change to what gets derived), and it
+      // shouldn't take an unrelated edit before the flight appears in the plan.
+      const trips = (parsed?.trips ?? []).map(normalizeTrip).filter(Boolean).map(reconcileDerived);
       if (trips.length) {
         const activeId = trips.some((t) => t.id === parsed.activeId) ? parsed.activeId : trips[0].id;
         return { trips, activeId, categories: normalizeCategories(parsed.categories) };
       }
     }
     const migrated = migrateLegacy();
-    if (migrated) return migrated;
+    if (migrated) return { ...migrated, trips: migrated.trips.map(reconcileDerived) };
   } catch {
     // corrupt storage — fall through to a fresh trip rather than crashing the view
   }
-  const trip = starterTrip();
+  const trip = reconcileDerived(starterTrip());
   return { trips: [trip], activeId: trip.id, categories: normalizeCategories([]) };
 }
 
@@ -261,6 +264,8 @@ function normalizeTrip(trip) {
     id: trip.id ?? uid('t'),
     name: trip.name ?? 'Trip',
     flights: (trip.flights ?? []).map((f, i) => ({
+      departTime: f?.departTime ?? '',
+      arriveTime: f?.arriveTime ?? '',
       id: f?.id ?? uid('f'),
       label: f?.label ?? (i === 0 ? 'Outbound' : 'Return'),
       code: f?.code ?? '',
@@ -336,6 +341,10 @@ function reconcileDerived(trip) {
       source: { kind: 'flight', id: flight.id },
       date: flight.date,
       fields: { type: 'flight', title: `${code}${flight.label ? ` · ${flight.label}` : ''}` },
+      // The departure time belongs to the flight, so it overwrites rather than
+      // merely seeding: change the time on the flight card and the itinerary
+      // line moves with it, instead of keeping whatever it was created with.
+      derived: flight.departTime ? { time: flight.departTime } : undefined,
     });
   }
   if (stayPlace?.name) {
@@ -373,6 +382,9 @@ function reconcileDerived(trip) {
     const item = emptyItem({
       ...(previous ?? entry.defaults ?? {}),
       ...entry.fields,
+      // `defaults` only seed a brand-new line, so your own edits survive;
+      // `derived` values are owned by the flight or stay and always win.
+      ...(entry.derived ?? {}),
       id: previous?.id ?? uid('i'),
       source: entry.source,
     });
@@ -427,6 +439,28 @@ const mapDays = (trip, dayId, updater) => ({
   ...trip,
   itinerary: trip.itinerary.map((day) => (day.id === dayId ? updater(day) : day)),
 });
+
+/* ── Outside React ────────────────────────────────────────────────────────── */
+
+// The assistant works on whichever trip it was asked about, not only the one open
+// in the Travel view, so these take the trip's id instead of reading it from a
+// mounted hook.
+
+/** The travel store as it is right now. */
+export const getTravelState = () => state;
+
+export function addPackingItem(tripId, label) {
+  const item = { id: uid('p'), label, done: false };
+  withTrip(tripId, (t) => ({ ...t, packing: [...(t.packing ?? []), item] }));
+  return item;
+}
+
+export function setPackingDone(tripId, itemId, done) {
+  withTrip(tripId, (t) => ({
+    ...t,
+    packing: (t.packing ?? []).map((p) => (p.id === itemId ? { ...p, done } : p)),
+  }));
+}
 
 /* ── Hook ─────────────────────────────────────────────────────────────────── */
 
@@ -569,7 +603,7 @@ export function useTravelStore() {
   const addFlight = useCallback(
     (patch = {}) => {
       if (!tripId) return null;
-      const flight = { id: uid('f'), label: 'Outbound', code: '', date: '', ...patch };
+      const flight = { id: uid('f'), label: 'Outbound', code: '', date: '', departTime: '', arriveTime: '', ...patch };
       withTrip(tripId, (t) => ({ ...t, flights: [...t.flights, flight] }), { derive: true });
       return flight;
     },

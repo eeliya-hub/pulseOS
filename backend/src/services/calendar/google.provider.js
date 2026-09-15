@@ -1,21 +1,21 @@
 import { config } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { tokenStore } from '../../utils/tokenStore.js';
+import { addDays, allDayKey } from './dayKey.js';
 
 // Google Calendar — READ + WRITE via OAuth 2.0 across ALL of the user's calendars.
 const INTEGRATION = 'Google Calendar';
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
-const dateOnly = (d) => new Date(d).toISOString().slice(0, 10);
-
 // Build a Google start/end object. All-day uses {date}; timed uses {dateTime}.
 // Google treats all-day end.date as exclusive, so nudge it to at least the next day.
+// The day is read off the value as text — running an all-day date through
+// toISOString() applies the server's offset and lands it a day early east of UTC.
 function gTime(value, { allDay, isEnd, start } = {}) {
   if (!allDay) return { dateTime: new Date(value).toISOString() };
-  let day = dateOnly(value);
-  if (isEnd && start && day <= dateOnly(start)) {
-    day = dateOnly(new Date(new Date(start).getTime() + 86_400_000));
-  }
+  const day = allDayKey(value);
+  const startDay = start ? allDayKey(start) : null;
+  if (isEnd && startDay && day <= startDay) return { date: addDays(startDay, 1) };
   return { date: day };
 }
 
@@ -58,6 +58,46 @@ async function oauthClient() {
   return new google.auth.OAuth2(config.google.clientId, config.google.clientSecret, config.google.redirectUri);
 }
 
+/**
+ * Does this failure mean the sign-in is dead, rather than the request?
+ *
+ * `invalid_grant` is Google saying the refresh token will never work again —
+ * revoked, or expired because the OAuth client is still in Testing mode, where
+ * Google kills refresh tokens after a week. That is the usual reason a calendar
+ * "disconnects on its own".
+ */
+function isDeadGrant(error) {
+  const body = error?.response?.data ?? {};
+  const text = `${body.error ?? ''} ${body.error_description ?? ''} ${error?.message ?? ''}`;
+  return /invalid_grant|token has been expired or revoked/i.test(text);
+}
+
+const isAuthFailure = (error) =>
+  isDeadGrant(error) || [401, 403].includes(error?.status ?? error?.code ?? error?.response?.status);
+
+/**
+ * Run a Google call, and let a dead sign-in correct the state it leaves behind.
+ *
+ * Without this the token stays in the store, `isConnected` keeps answering true,
+ * and every read fails and is swallowed into an empty list — so the app shows a
+ * connected Google account with no events in it, which is worse than saying the
+ * connection has lapsed.
+ */
+async function runAuthed(user, call) {
+  try {
+    return await call();
+  } catch (error) {
+    if (isDeadGrant(error)) {
+      tokenStore.clear('google', user);
+      throw ApiError.unauthorized('Google sign-in has expired — reconnect Google Calendar.');
+    }
+    if (isAuthFailure(error)) {
+      throw ApiError.unauthorized('Google refused that request. Reconnecting usually fixes it.');
+    }
+    throw error;
+  }
+}
+
 async function authedCalendar(user) {
   const tokens = tokenStore.get('google', user);
   if (!tokens) throw ApiError.unauthorized('Google Calendar not connected. Visit /api/calendar/google/auth first.');
@@ -82,6 +122,32 @@ async function calendarMeta(client) {
   } catch {
     return [{ id: 'primary', name: 'Primary', writable: true }];
   }
+}
+
+// Google hands events back a page at a time. Only the first page was ever read —
+// a hundred events — so a busy calendar was cut off part-way through the range and
+// everything after that point simply never appeared.
+const PAGE_SIZE = 250;
+const MAX_PAGES = 20; // 5,000 events per calendar: a ceiling, not a target
+
+async function listCalendarEvents(client, cal, { timeMin, timeMax }) {
+  const events = [];
+  let pageToken;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const { data } = await client.events.list({
+      calendarId: cal.id,
+      timeMin,
+      timeMax,
+      maxResults: PAGE_SIZE,
+      singleEvents: true,
+      orderBy: 'startTime',
+      pageToken,
+    });
+    for (const e of data.items ?? []) events.push(mapGoogleEvent(e, cal));
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return events;
 }
 
 export const googleProvider = {
@@ -113,23 +179,22 @@ export const googleProvider = {
   },
 
   async listCalendars(user) {
-    const client = await authedCalendar(user);
-    return (await calendarMeta(client)).map((c) => ({ ...c, source: 'google' }));
+    return runAuthed(user, async () => {
+      const client = await authedCalendar(user);
+      return (await calendarMeta(client)).map((c) => ({ ...c, source: 'google' }));
+    });
   },
 
-  async listEvents({ timeMin, timeMax, maxResults = 100, user } = {}) {
+  async listEvents({ timeMin, timeMax, user } = {}) {
+    return runAuthed(user, async () => {
     const client = await authedCalendar(user);
     const cals = await calendarMeta(client);
     const timeMinIso = timeMin || new Date().toISOString();
     const perCalendar = await Promise.all(
-      cals.map((cal) =>
-        client.events
-          .list({ calendarId: cal.id, timeMin: timeMinIso, timeMax, maxResults, singleEvents: true, orderBy: 'startTime' })
-          .then(({ data }) => (data.items ?? []).map((e) => mapGoogleEvent(e, cal)))
-          .catch(() => []),
-      ),
+      cals.map((cal) => listCalendarEvents(client, cal, { timeMin: timeMinIso, timeMax }).catch(() => [])),
     );
     return perCalendar.flat();
+    });
   },
 
   async createEvent({ calendarId = 'primary', title, description, location, start, end, allDay, user }) {

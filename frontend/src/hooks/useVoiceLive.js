@@ -1,12 +1,17 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCalendarEvents } from './useCalendarEvents.js';
 import { useLifeData } from './useLifeData.js';
 import { useSettings } from './useSettings.js';
+import { useTravelStore } from './useTravelStore.js';
+import { spotifyPlayer } from './useSpotifyPlayer.js';
 import { api } from '../services/api/backendClient.js';
 import { createAudioPlayer } from '../services/ai/audioPlayer.js';
 import { buildAiInstructions } from '../services/ai/instructions.js';
 import { createMicRecorder } from '../services/ai/micRecorder.js';
 import { createToolExecutor } from '../services/ai/tools.js';
+import { batchCaption } from '../services/ai/toolCaptions.js';
+import { panelsFromTool, receiptsFromTool, withReceipts } from '../services/ai/voiceContext.js';
+import { clearAfterSpeech, runAfterSpeech } from '../services/ui/afterSpeech.js';
 
 // Voice session states, surfaced to the UI.
 // idle → requesting-mic → connecting → listening ⇄ speaking → (error | idle)
@@ -20,6 +25,7 @@ export const VOICE_STATUS = {
 };
 
 const MAX_RECONNECTS = 4;
+const EMPTY_PANELS = [];
 
 /**
  * Owns a full-duplex Gemini Live voice session: mic capture → backend WS → Gemini
@@ -37,13 +43,19 @@ export function useVoiceLive() {
   const [error, setError] = useState('');
   const [response, setResponse] = useState(''); // the AI's current spoken answer (ephemeral)
   const [activity, setActivity] = useState(''); // tool the AI is running, e.g. 'get_weather'
+  // Everything this turn's tools found, shaped into cards. A turn often produces
+  // several — a brief pulls the weather, the calendar, the news and the football
+  // — and the view shows them one at a time as Pulse reaches each one, so they
+  // are kept as a list rather than collapsed to whichever landed last.
+  const [panels, setPanels] = useState(EMPTY_PANELS);
 
   // Live app data for tool calls — same store the text assistant reads/writes.
   const life = useLifeData();
   const { settings, update } = useSettings();
   const calendar = useCalendarEvents();
+  const travel = useTravelStore();
   const dataRef = useRef(null);
-  dataRef.current = { life, settings, update, calendar };
+  dataRef.current = { life, settings, update, calendar, travel };
   const executorRef = useRef(null);
   if (!executorRef.current) executorRef.current = createToolExecutor(() => dataRef.current);
 
@@ -56,10 +68,31 @@ export function useVoiceLive() {
   const genRef = useRef(0); // session generation — invalidates stale async work
   const responseRef = useRef(''); // live copy of the AI answer being spoken
   const turnClosedRef = useRef(false); // answer finished; next input replaces it
+  const turnRef = useRef(0); // which turn we're on — a card belongs to the turn that fetched it
+  const panelTurnRef = useRef(-1);
 
   const setStatusSafe = useCallback((next) => {
     if (!stoppedRef.current) setStatus(next);
   }, []);
+
+  // Hold the music under the conversation: part-way down for the whole session
+  // so it doesn't compete with the mic, further down while Pulse is speaking.
+  // Driven off `status` rather than the individual transitions, so every way a
+  // session can end — stopped, errored, socket dropped — releases the music.
+  useEffect(() => {
+    const level =
+      status === VOICE_STATUS.SPEAKING
+        ? 'speaking'
+        : status === VOICE_STATUS.IDLE || status === VOICE_STATUS.ERROR
+          ? 'none'
+          : 'listening';
+    spotifyPlayer.controls.setDuckLevel(level);
+  }, [status]);
+
+  // Unmounting closes the session without another status render, so release here
+  // too — otherwise closing mid-answer would leave the music stuck under a voice
+  // that is no longer talking.
+  useEffect(() => () => spotifyPlayer.controls.setDuckLevel('none'), []);
 
   // Wipe the answer on screen to make room for the next one.
   const clearResponse = useCallback(() => {
@@ -67,15 +100,40 @@ export function useVoiceLive() {
     turnClosedRef.current = false;
     setResponse('');
     setActivity('');
+    setPanels(EMPTY_PANELS);
+    panelTurnRef.current = -1;
   }, []);
 
   const runToolCalls = useCallback(async (calls) => {
-    const responses = [];
-    for (const call of calls) {
-      const result = await executorRef.current.execute(call.name, call.args);
-      responses.push({ id: call.id, name: call.name, response: result ?? {} });
+    // Everything one request set going runs together, and is described together —
+    // four tasks read as "Adding 4 tasks", not as the first of them.
+    setActivity(batchCaption(calls));
+    const outcomes = await executorRef.current.executeBatch(calls);
+
+    // What the lookups found becomes cards, in the order the model asked for them
+    // (usually the order it goes on to talk). What the changes did becomes ONE
+    // receipt for the turn, however many calls and batches it took.
+    try {
+      const found = [];
+      const receipts = [];
+      for (const { call, result } of outcomes) {
+        found.push(...panelsFromTool(call.name, call.args ?? {}, result));
+        receipts.push(...receiptsFromTool(call.name, call.args ?? {}, result, call.id));
+      }
+      if (found.length || receipts.length) {
+        const startingTurn = panelTurnRef.current !== turnRef.current;
+        panelTurnRef.current = turnRef.current;
+        setPanels((prev) => withReceipts(startingTurn ? found : [...prev, ...found], receipts));
+      }
+    } catch (error) {
+      // Showing the work must never cost the answer. If a card can't be drawn,
+      // the results still go back below — otherwise Gemini waits forever and the
+      // conversation stalls with the changes already made and never confirmed.
+      console.warn('Voice: could not draw this turn’s cards', error);
     }
+
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const responses = outcomes.map(({ call, result }) => ({ id: call.id, name: call.name, response: result }));
       wsRef.current.send(JSON.stringify({ type: 'tool_response', responses }));
     }
   }, []);
@@ -107,8 +165,16 @@ export function useVoiceLive() {
             if (turnClosedRef.current) {
               responseRef.current = '';
               turnClosedRef.current = false;
+              // The last answer's cards go with it, but any fetched for the
+              // answer now starting have to survive — those tools ran before the
+              // first word of it arrived.
+              if (panelTurnRef.current !== turnRef.current) setPanels(EMPTY_PANELS);
             }
+            // The first words of an answer start its timeline; every chunk after
+            // pins where the voice is against the audio queued for it.
+            if (!responseRef.current) playerRef.current?.beginTurn();
             responseRef.current += msg.text;
+            playerRef.current?.markText(responseRef.current.length);
             setResponse(responseRef.current);
             setActivity(''); // the model is talking now, not tool-running
           }
@@ -116,6 +182,7 @@ export function useVoiceLive() {
           // reply stays put through the next question so there's time to read it.
           break;
         case 'interrupted': // user barged in — cut playback, keep the text until the next answer
+          clearAfterSpeech(); // the answer never finished, so neither should what followed it
           playerRef.current?.flush();
           turnClosedRef.current = true; // the next answer replaces what's on screen
           setActivity('');
@@ -123,11 +190,16 @@ export function useVoiceLive() {
           break;
         case 'turn_complete':
           turnClosedRef.current = true; // keep the answer up until the next one begins
+          turnRef.current += 1;
           setActivity('');
           break;
         case 'tool_call':
-          setActivity(msg.calls?.[0]?.name || 'working');
           runToolCalls(msg.calls || []);
+          break;
+        case 'tool_cancel':
+          // They talked over the work. The calls may still finish — a change made
+          // is made — and the receipt shows whatever actually happened.
+          setActivity('');
           break;
         case 'error':
           setError(msg.message || 'The voice assistant hit a problem.');
@@ -144,16 +216,24 @@ export function useVoiceLive() {
   // Open (or re-open) the socket. Mic + player are already running by this point.
   const connect = useCallback(() => {
     readyRef.current = false;
-    const ws = new WebSocket(
-      api.ai.voiceWsUrl(
-        dataRef.current.settings.name,
-        buildAiInstructions(dataRef.current.settings),
-        dataRef.current.settings.voiceName,
-      ),
-    );
+    const ws = new WebSocket(api.ai.voiceWsUrl());
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
     setStatusSafe(VOICE_STATUS.CONNECTING);
+
+    // Who the user is, how they want Pulse to behave, their saved prompts and
+    // everything Pulse remembers — sent as the opening message rather than in
+    // the URL, which a long memory list used to overflow (HTTP 431, no voice).
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: 'start',
+          name: dataRef.current.settings.name,
+          instructions: buildAiInstructions(dataRef.current.settings),
+          voice: dataRef.current.settings.voiceName,
+        }),
+      );
+    };
 
     ws.onmessage = handleServerMessage;
     ws.onerror = () => {
@@ -219,6 +299,9 @@ export function useVoiceLive() {
     // Player: playback state drives the listening ⇄ speaking indicator.
     const player = createAudioPlayer();
     player.setOnPlayingChange((playing) => {
+      // Whatever was waiting for Pulse to stop talking happens here — ahead of
+      // the guards below, so it still runs if the session is closing.
+      if (!playing) runAfterSpeech();
       if (stoppedRef.current || !readyRef.current) return;
       setStatusSafe(playing ? VOICE_STATUS.SPEAKING : VOICE_STATUS.LISTENING);
     });
@@ -267,19 +350,23 @@ export function useVoiceLive() {
   const getMicLevel = useCallback(() => recorderRef.current?.getLevel?.() ?? 0, []);
   const getAiLevel = useCallback(() => playerRef.current?.getLevel?.() ?? 0, []);
   const getAiBands = useCallback((count) => playerRef.current?.getBands?.(count) ?? [], []);
-  // How far through the current spoken answer the audio actually is (0..1).
-  const getSpeechProgress = useCallback(() => playerRef.current?.getSpeechProgress?.() ?? 1, []);
+  // How far into the answer's text the voice has actually reached, in characters.
+  const getSpokenChars = useCallback(
+    (totalChars) => playerRef.current?.getSpokenChars?.(totalChars) ?? totalChars ?? 0,
+    [],
+  );
 
   return {
     status,
     error,
     response,
     activity,
+    panels,
     getMicBands,
     getMicLevel,
     getAiLevel,
     getAiBands,
-    getSpeechProgress,
+    getSpokenChars,
     start,
     stop,
     isActive: status !== VOICE_STATUS.IDLE,

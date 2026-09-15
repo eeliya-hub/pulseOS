@@ -1,5 +1,6 @@
 import { ApiError } from '../../utils/ApiError.js';
 import { tokenStore } from '../../utils/tokenStore.js';
+import { allDayKey, compactDay } from './dayKey.js';
 import { buildICS } from './icalBuild.js';
 import { eventsFromParsed } from './icalParse.js';
 
@@ -74,6 +75,18 @@ async function getEventCalendars(user, fresh = false) {
   return calendars;
 }
 
+// iCloud turns away the odd request — a throttle, a dropped connection — and one
+// of several calendars read side by side is the usual casualty. Asking again a
+// beat later almost always gets it.
+async function readCalendar(client, calendar, start, end) {
+  try {
+    return await client.fetchCalendarObjects({ calendar, timeRange: { start, end } });
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return client.fetchCalendarObjects({ calendar, timeRange: { start, end } });
+  }
+}
+
 export const appleProvider = {
   isConnected: (user) => tokenStore.has('apple', user),
 
@@ -136,7 +149,7 @@ export const appleProvider = {
           };
           let objects;
           try {
-            objects = await client.fetchCalendarObjects({ calendar, timeRange: { start, end } });
+            objects = await readCalendar(client, calendar, start, end);
           } catch {
             failures += 1;
             return [];
@@ -168,9 +181,11 @@ export const appleProvider = {
         }),
       );
 
-      if (calendars.length && failures === calendars.length) {
-        throw new Error('All Apple calendar reads failed');
-      }
+      // Any calendar that couldn't be read makes the whole read a failure. Handing
+      // back the calendars that did answer, as a success, is how a calendar's events
+      // went missing: the dashboard took the partial answer as the whole truth,
+      // cached it, and showed those days empty while the phone showed them full.
+      if (failures) throw new Error(`${failures} of ${calendars.length} Apple calendars could not be read`);
       return perCalendar.flat();
     };
 
@@ -242,8 +257,11 @@ export const appleProvider = {
 };
 
 const pad2 = (n) => String(n).padStart(2, '0');
+// An all-day occurrence is a calendar day, so its EXDATE is taken from the value
+// as text — converting it to UTC first would except the wrong day east of UTC.
 function icsCompact(iso, allDay) {
+  if (allDay) return compactDay(allDayKey(iso));
   const d = new Date(iso);
   const ymd = `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}`;
-  return allDay ? ymd : `${ymd}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`;
+  return `${ymd}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`;
 }

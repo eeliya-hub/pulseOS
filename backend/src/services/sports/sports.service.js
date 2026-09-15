@@ -4,6 +4,8 @@ import { nbaService, nflService } from './balldontlie.service.js';
 import { constructorLogo } from './f1Logos.js';
 import { f1Service } from './f1.service.js';
 import { nbaLogo, nflLogo } from './teamLogos.js';
+import { PLAYOFF_LINES, teamGroup } from './teamGroups.js';
+import { espnProvider } from './providers/espn.provider.js';
 
 // Dispatcher that adapts the four per-sport services into the single shape the
 // Sports card already consumes. Keeps API-specific concerns out of the UI.
@@ -76,9 +78,42 @@ async function footballCard(name, code) {
   };
 }
 
+const espnCache = createCache(15 * 60 * 1000);
+
+// "Lakers" should find "Los Angeles Lakers", either way round.
+const sameTeam = (a, b) => {
+  const x = (a ?? '').toLowerCase().trim();
+  const y = (b ?? '').toLowerCase().trim();
+  return Boolean(x) && Boolean(y) && (x.includes(y) || y.includes(x));
+};
+
+/**
+ * The conference table, from ESPN if it answers and from our own tally of
+ * balldontlie's games if it doesn't. ESPN is preferred because it is the real
+ * table — complete, seeded and grouped — in one keyless request.
+ */
+async function ballStandings(sportKey, service, team) {
+  const mine = (name) => sameTeam(name, team);
+  try {
+    const rows = await espnCache.wrap(`espn:${sportKey}`, () => espnProvider.standings(sportKey));
+    if (rows.length) {
+      return rows.map((r) => ({ ...r, division: teamGroup(sportKey, r.team).division, me: mine(r.team) }));
+    }
+  } catch {
+    /* fall through to the tally */
+  }
+  const tallied = await service.getStandings();
+  return tallied.map((r) => ({ ...r, me: mine(r.team) }));
+}
+
 async function ballCard(service, name, sportLabel, statSport) {
-  const sum = await service.teamSummary(name);
+  const sportKey = statSport === 'basketball' ? 'nba' : 'nfl';
   const logo = service === nbaService ? nbaLogo : nflLogo;
+  const [sum, standings] = await Promise.all([
+    service.teamSummary(name),
+    ballStandings(sportKey, service, name),
+  ]);
+
   return {
     found: true,
     kind: 'team',
@@ -89,17 +124,28 @@ async function ballCard(service, name, sportLabel, statSport) {
     league: sum.league,
     fixture: fixtureCard(sum.fixture, '@'),
     results: sum.results.map(resultRow),
-    standings: sum.standings.map((r) => ({
-      rank: r.position,
+    conferences: [...new Set(standings.map((r) => r.conference).filter(Boolean))],
+    playoffs: PLAYOFF_LINES[sportKey] ?? null,
+    ties: standings.some((r) => (r.drawn ?? 0) > 0), // NFL only, and only when there are any
+    standings: standings.map((r, i) => ({
+      rank: r.position ?? i + 1,
+      seed: r.seed ?? null,
+      conference: r.conference ?? null,
+      division: r.division ?? null,
       team: r.team,
       crest: logo(r.team),
-      played: r.played,
+      played: r.played ?? (r.won ?? 0) + (r.lost ?? 0) + (r.drawn ?? 0),
       won: r.won,
       lost: r.lost,
+      drawn: r.drawn ?? 0,
+      winPct: r.winPct ?? null,
+      gamesBehind: r.gamesBehind ?? null,
+      streak: r.streak ?? null,
+      form: r.form ?? [],
       goalDiff: null,
       points: r.won,
       me: r.me,
-      record: r.record,
+      record: r.record ?? `${r.won}-${r.lost}${r.drawn ? `-${r.drawn}` : ''}`,
     })),
   };
 }

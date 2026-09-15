@@ -4,6 +4,7 @@ import { countryFacts } from './countryFacts.js';
 import { banknotePhoto, currencyProvider } from './currency.provider.js';
 import { destinationProvider } from './destination.provider.js';
 import { flightsProvider } from './flights.provider.js';
+import { scheduleProvider } from './schedule.provider.js';
 import { placesProvider } from './places.provider.js';
 
 /**
@@ -14,6 +15,7 @@ import { placesProvider } from './places.provider.js';
 const destinations = createCache(24 * 60 * 60 * 1000);
 const zones = createCache(24 * 60 * 60 * 1000);
 const flights = createCache(20 * 1000);
+const schedules = createCache(30 * 60 * 1000);
 const rates = createCache(30 * 60 * 1000);
 const placeSearches = createCache(60 * 60 * 1000);
 const photoLookups = createCache(6 * 60 * 60 * 1000);
@@ -87,7 +89,7 @@ export const travelService = {
     // A position goes stale in seconds; a route doesn't change at all, so the
     // route-only lookup is cached for hours instead.
     const ttlMs = timing.trackLive ? 20 * 1000 : 6 * 60 * 60 * 1000;
-    return flights.wrap(`flight:${input.toUpperCase()}:${timing.key}`, async () => {
+    const found = await flights.wrap(`flight:${input.toUpperCase()}:${timing.key}`, async () => {
       const candidates = callsignCandidates(input);
       if (!candidates.length) return null;
 
@@ -110,14 +112,21 @@ export const travelService = {
       if (!route && !live) return { code: input.toUpperCase(), found: false, status: 'unknown', ...timing.meta };
 
       const progress = computeProgress(route, live);
+      // Both airports get their IANA zone, which is what makes a departure time
+      // and an arrival time mean anything: a flight that leaves London at 09:15
+      // and lands at JFK does not land at 17:15 local.
+      const [origin, destination] = await Promise.all([
+        withZone(route?.origin),
+        withZone(route?.destination),
+      ]);
       return {
         code: input.toUpperCase(),
         found: true,
         callsign: live?.callsign || route?.callsignIcao || candidates[0],
         flightNumber: route?.callsignIata ?? input.toUpperCase(),
         airline: route?.airline ? { ...route.airline, photo: airlinePhoto } : null,
-        origin: route?.origin ?? null,
-        destination: route?.destination ?? null,
+        origin,
+        destination,
         live,
         status: timing.trackLive ? flightStatus(route, live, progress) : timing.status,
         ...timing.meta,
@@ -125,6 +134,13 @@ export const travelService = {
         updatedAt: Date.now(),
       };
     }, ttlMs);
+
+    // Merged in per request rather than baked into the route cache. The route is
+    // held for six hours; the timetable lookup is rate limited and can come back
+    // empty, and a flight must not keep its missing times for the rest of the day
+    // because of one throttled call.
+    if (!found?.found) return found;
+    return { ...found, schedule: await scheduleFor(input, date) };
   },
 
   /** Aircraft details for a registration, e.g. the tail on today's flight. */
@@ -253,6 +269,25 @@ function flightTiming(date, wantLive = true) {
  * lookup comes back empty, which `createCache` leaves uncached, so the next
  * request tries again rather than living with a blank clock all day.
  */
+/** An airport with its IANA zone attached; unchanged if the lookup fails. */
+async function withZone(airport) {
+  if (!airport || airport.lat == null || airport.lon == null) return airport ?? null;
+  const zone = await timeZoneFor(airport.lat, airport.lon);
+  return { ...airport, timeZone: zone?.timeZone ?? null, utcOffsetSeconds: zone?.offsetSeconds ?? null };
+}
+
+/** Scheduled times, cached only when the provider actually answered. */
+async function scheduleFor(code, date) {
+  if (!scheduleProvider.configured || !date) return null;
+  return schedules
+    .wrap(`sched:${code.toUpperCase()}:${date}`, async () => {
+      const found = await scheduleProvider.lookup(code, date);
+      if (!found) throw new Error('no schedule'); // a throw isn't cached; null would be
+      return found;
+    })
+    .catch(() => null);
+}
+
 async function timeZoneFor(lat, lon) {
   return zones
     .wrap(`tz:${lat},${lon}`, async () => {

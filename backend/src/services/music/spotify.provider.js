@@ -88,6 +88,8 @@ async function apiWrite(path, { method = 'PUT', body } = {}, user) {
   });
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const PAGE_SIZE = 10; // hard cap while the app is in Spotify Development mode
 const SEARCH_RESULTS = 12; // how many unique songs to hand back
 
@@ -158,11 +160,127 @@ export const spotifyProvider = {
     return { accessToken: access, expiresAt: tokens?.expires_at };
   },
 
-  // Make the in-tab SDK device the active playback target.
+  /**
+   * Every Spotify device this account can play on — phone, desktop app, speaker,
+   * plus the in-tab player this app registers.
+   *
+   * Playback is an account-level thing on Spotify, not a per-app one, so the
+   * dashboard can hand a track to any of these and keep the controls.
+   */
+  async devices(user) {
+    const data = await api('/me/player/devices', user);
+    return {
+      devices: (data.devices ?? []).map((d) => ({
+        id: d.id,
+        name: d.name,
+        type: d.type, // Computer | Smartphone | Speaker | TV | …
+        active: Boolean(d.is_active),
+        volume: d.volume_percent ?? null,
+        restricted: Boolean(d.is_restricted), // can't be controlled through the API
+      })),
+    };
+  },
+
+  /**
+   * What the account is playing, wherever it is playing.
+   *
+   * The Web Playback SDK only knows about its own tab, so when a speaker has
+   * the music this is the only way to keep the app's controls in step with it.
+   */
+  async playerState(user) {
+    const data = await api('/me/player', user).catch(() => null);
+    if (!data || !data.item) return { playing: false, device: null, track: null };
+    const track = data.item;
+    return {
+      playing: Boolean(data.is_playing),
+      progressMs: data.progress_ms ?? 0,
+      durationMs: track.duration_ms ?? 0,
+      shuffle: Boolean(data.shuffle_state),
+      repeat: data.repeat_state ?? 'off',
+      device: data.device
+        ? { id: data.device.id, name: data.device.name, type: data.device.type, volume: data.device.volume_percent ?? null }
+        : null,
+      track: {
+        id: track.id,
+        uri: track.uri,
+        name: track.name,
+        artists: (track.artists ?? []).map((a) => a.name).join(', '),
+        album: track.album?.name ?? null,
+        image: track.album?.images?.[0]?.url ?? null,
+      },
+    };
+  },
+
+  /**
+   * Transport for playback happening somewhere else. The in-tab player has its
+   * own SDK methods; these are for when a speaker or a phone has the music.
+   */
+  async command(action, { deviceId, positionMs, volumePercent } = {}, user) {
+    const target = deviceId ? `device_id=${encodeURIComponent(deviceId)}` : '';
+    const withDevice = (path) => `${path}${target ? (path.includes('?') ? '&' : '?') + target : ''}`;
+
+    switch (action) {
+      case 'pause':
+        await apiWrite(withDevice('/me/player/pause'), { method: 'PUT' }, user);
+        break;
+      case 'resume':
+        await apiWrite(withDevice('/me/player/play'), { method: 'PUT' }, user);
+        break;
+      case 'next':
+        await apiWrite(withDevice('/me/player/next'), { method: 'POST' }, user);
+        break;
+      case 'previous':
+        await apiWrite(withDevice('/me/player/previous'), { method: 'POST' }, user);
+        break;
+      case 'seek':
+        await apiWrite(withDevice(`/me/player/seek?position_ms=${Math.max(0, Math.round(positionMs ?? 0))}`), { method: 'PUT' }, user);
+        break;
+      case 'volume':
+        await apiWrite(
+          withDevice(`/me/player/volume?volume_percent=${Math.min(100, Math.max(0, Math.round(volumePercent ?? 50)))}`),
+          { method: 'PUT' },
+          user,
+        );
+        break;
+      default:
+        throw ApiError.badRequest(`Unknown player command "${action}".`);
+    }
+    return { ok: true, action };
+  },
+
+  /**
+   * Make a device the active playback target.
+   *
+   * Spotify answers the first attempt with 404 "Not found." more often than
+   * not: a speaker that has been idle isn't holding a connection, and Spotify
+   * only wakes it once something asks for it. Try again a moment later and the
+   * same call succeeds — which is why pressing the button twice always worked.
+   * So the wait happens here instead of being handed to the person pressing it.
+   *
+   * Only the transient shapes are retried: a 404 (device asleep or not yet
+   * registered), a 5xx, and a request that never landed. Anything Spotify has a
+   * real opinion about — 401, 403, 403 Premium-required — fails immediately.
+   */
   async transfer({ deviceId, play = true }, user) {
-    if (!deviceId) throw ApiError.badRequest('Provide the SDK `deviceId` to transfer playback.');
-    await apiWrite('/me/player', { method: 'PUT', body: { device_ids: [deviceId], play } }, user);
-    return { transferred: true };
+    if (!deviceId) throw ApiError.badRequest('Provide the `deviceId` to transfer playback to.');
+
+    const delays = [400, 900, 1500]; // ~2.8s of patience, then give up
+    let lastError;
+
+    for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+      try {
+        await apiWrite('/me/player', { method: 'PUT', body: { device_ids: [deviceId], play } }, user);
+        return { transferred: true, attempts: attempt + 1 };
+      } catch (error) {
+        const status = error?.details?.error?.status;
+        const networkFailure = error?.code === 'UPSTREAM_ERROR' && error?.details === undefined;
+        const transient = status === 404 || (status >= 500 && status < 600) || networkFailure;
+        if (!transient || attempt === delays.length) throw error;
+        lastError = error;
+        await sleep(delays[attempt]);
+      }
+    }
+    throw lastError;
   },
 
   // Start / resume playback on a device. Optionally a playlist/album (contextUri) or tracks (uris).

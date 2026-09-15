@@ -11,13 +11,31 @@ const OUTPUT_RATE = 24000;
 // barge-in bypasses it via flush(), so responsiveness is unaffected.
 const PLAY_HANGOVER_MS = 900;
 
+// Fast speech is around 15 characters a second; this leaves headroom above that
+// while still catching a transcript that has arrived well ahead of its audio.
+const MAX_CHARS_PER_SECOND = 22;
+
 export function createAudioPlayer() {
   let ctx = null;
   let analyser = null;
   let levelData = null;
   let freqData = null;
   let nextStartTime = 0;
-  let turnStart = 0; // audio-clock time the current spoken turn began
+
+  // ── Where the voice actually is in the text ──────────────────────────────
+  // Gemini emits the transcript and the audio for the same speech at roughly the
+  // same moment. So at the instant a transcript chunk lands, the audio queued up
+  // to that point is the audio for the text up to that point — one anchor pairing
+  // a character count with an audio-clock time. Interpolating between anchors
+  // gives the voice's position in the text at any moment.
+  //
+  // This replaces measuring elapsed/total against the audio queued SO FAR, which
+  // could only ever be wrong while streaming: early in an answer the total is a
+  // fraction of the real one, so the position raced to the end and snapped back
+  // every time more audio arrived.
+  let anchors = []; // { chars, audioEnd }, ascending
+  let turnStart = 0; // audio-clock time this answer's speech begins
+  let spokenChars = 0; // last reported position — never allowed to go backwards
   const active = new Set();
   let onPlayingChange = null;
   let playing = false;
@@ -25,7 +43,22 @@ export function createAudioPlayer() {
 
   const ensureCtx = () => {
     if (!ctx) {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      // Run the graph at the voice's OWN sample rate.
+      //
+      // Left at the hardware default (usually 48 kHz), every 24 kHz chunk is
+      // resampled on its own, with no history carried across the seam between
+      // one chunk and the next — which rings, and is heard as a tick or beep
+      // running under the speech. Measured on a pure tone: 893 discontinuities
+      // in three seconds at 48 kHz against 29 at 24 kHz.
+      //
+      // The conversion still happens, once, at the output device, where it is
+      // continuous instead of restarting hundreds of times a second.
+      try {
+        ctx = new AudioCtx({ sampleRate: OUTPUT_RATE });
+      } catch {
+        ctx = new AudioCtx(); // browser refused the rate — resampled beats silent
+      }
       // Everything plays through an analyser → destination, so the UI can read the
       // amplitude of the voice that's actually sounding right now (time-aligned
       // with playback, which per-chunk inspection wouldn't be).
@@ -97,7 +130,6 @@ export function createAudioPlayer() {
       nextStartTime = startAt + buffer.duration;
 
       cancelStop(); // fresh audio — stay in the speaking state
-      if (!playing) turnStart = startAt; // first chunk of a new spoken turn
       setPlaying(true);
       active.add(source);
       source.onended = () => {
@@ -116,13 +148,89 @@ export function createAudioPlayer() {
       return Math.sqrt(sum / levelData.length);
     },
 
-    // Fraction 0..1 of the current spoken turn's audio that has actually played —
-    // lets the transcript follow the voice (which lags the fast-arriving text).
-    getSpeechProgress() {
-      if (!ctx) return 1;
-      const total = nextStartTime - turnStart;
-      if (total <= 0) return playing ? 0 : 1;
-      return Math.max(0, Math.min(1, (ctx.currentTime - turnStart) / total));
+    /**
+     * Start a new spoken answer. Called when its first transcript arrives, which
+     * is also when its audio begins queueing — so the turn's audio starts either
+     * now or wherever the previous answer's audio finishes.
+     *
+     * Explicit rather than inferred: this used to be "the first chunk after the
+     * player went quiet", and since the quiet flag has a 900ms hangover, any
+     * pause longer than that mid-answer looked like a new turn, reset the clock,
+     * and threw the highlight back to the first sentence.
+     */
+    beginTurn() {
+      const audioCtx = ensureCtx();
+      anchors = [];
+      spokenChars = 0;
+      turnStart = Math.max(audioCtx.currentTime, nextStartTime);
+    },
+
+    /**
+     * Record that the answer's transcript now runs to `chars` characters. Pairs
+     * that with the audio queued so far to make one anchor on the timeline.
+     */
+    markText(chars) {
+      if (!ctx || !(chars > 0)) return;
+      const audioEnd = Math.max(nextStartTime, turnStart);
+      const last = anchors[anchors.length - 1];
+      if (last) {
+        if (chars <= last.chars) return; // nothing new said
+        // More text against audio we have already anchored: widen that anchor
+        // rather than adding a zero-length span the interpolation can't use.
+        if (audioEnd <= last.audioEnd) {
+          last.chars = chars;
+          return;
+        }
+      }
+      anchors.push({ chars, audioEnd });
+    },
+
+    /**
+     * How far into the answer's text the voice has actually got, in characters.
+     * Interpolated across the anchors on the audio clock, clamped to the audio
+     * that has actually been queued, and monotonic — the highlight may pause,
+     * never reverse.
+     */
+    getSpokenChars(totalChars = Infinity) {
+      if (!ctx || !anchors.length) return spokenChars;
+
+      // Never claim progress past audio that exists: between bursts the clock
+      // keeps running while nothing is playing.
+      const now = Math.min(ctx.currentTime, nextStartTime);
+      const last = anchors[anchors.length - 1];
+      let position;
+
+      if (now <= turnStart) {
+        position = 0;
+      } else if (now > last.audioEnd) {
+        // Past the last anchor — audio still playing out text we already have.
+        // Carry on at the rate this answer has been spoken at so far.
+        const elapsed = last.audioEnd - turnStart;
+        const rate = elapsed > 0 ? last.chars / elapsed : 0;
+        position = last.chars + (now - last.audioEnd) * rate;
+      } else {
+        let prevChars = 0;
+        let prevTime = turnStart;
+        position = last.chars;
+        for (const anchor of anchors) {
+          if (now <= anchor.audioEnd) {
+            const span = anchor.audioEnd - prevTime;
+            const t = span > 0 ? (now - prevTime) / span : 1;
+            position = prevChars + t * (anchor.chars - prevChars);
+            break;
+          }
+          prevChars = anchor.chars;
+          prevTime = anchor.audioEnd;
+        }
+      }
+
+      // A burst of transcript against very little audio makes one anchor imply an
+      // impossible speaking rate, which would run the highlight ahead and leave
+      // it stalled while the voice caught up. Nobody speaks faster than this, so
+      // cap by elapsed time as well as by the audio that exists.
+      const plausible = (now - turnStart) * MAX_CHARS_PER_SECOND;
+      spokenChars = Math.max(spokenChars, Math.min(position, plausible, totalChars));
+      return spokenChars;
     },
 
     // Spectrum split into `count` bands (0..1) — lets the speaking ring ripple per
@@ -155,6 +263,9 @@ export function createAudioPlayer() {
       }
       active.clear();
       nextStartTime = ctx ? ctx.currentTime : 0;
+      anchors = [];
+      spokenChars = 0;
+      turnStart = nextStartTime;
       setPlaying(false);
     },
 

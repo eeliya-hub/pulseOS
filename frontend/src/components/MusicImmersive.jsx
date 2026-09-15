@@ -1,5 +1,5 @@
 import { Minimize2, Music2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { activeLineIndex, useLyrics } from '../hooks/useLyrics.js';
 import { useSpotifyPlayer } from '../hooks/useSpotifyPlayer.js';
@@ -56,6 +56,9 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
 
 
 
+  // The line being sung: the frame loop breathes its glow, the lyric panel keeps
+  // it centred. One element, so neither has to touch the rest of the song.
+  const activeLineRef = useRef(null);
   const fillRef = useRef(null);
   const knobRef = useRef(null);
   const elapsedRef = useRef(null);
@@ -120,10 +123,12 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
       washRef.current.style.opacity = (0.82 + Math.sin(t * 0.057 + 1.3) * 0.12).toFixed(3);
     }
     if (backdropRef.current) {
-      // A slow Ken Burns drift, so the blurred cover behind everything is never
-      // quite the same shot twice.
+      // A slow drift, so the blurred cover behind everything is never quite the
+      // same shot twice — TRANSLATION ONLY. Animating the scale of a 64px-blurred
+      // full-screen image forces the compositor to re-rasterise that blur every
+      // frame; translating an already-rasterised layer costs nothing. The zoom is
+      // baked into the class instead.
       backdropRef.current.style.transform =
-        `scale(${(1.25 + Math.sin(t * 0.021) * 0.03).toFixed(4)}) ` +
         `translate3d(${(Math.sin(t * 0.017) * 1.1).toFixed(2)}%, ${(Math.cos(t * 0.013) * 0.9).toFixed(2)}%, 0)`;
     }
     if (shineRef.current) {
@@ -132,10 +137,12 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
       shineRef.current.style.opacity = (sweep < 34 ? 0.32 * Math.sin((sweep / 34) * Math.PI) : 0).toFixed(3);
       shineRef.current.style.transform = `translateX(${(-30 + sweep * 5).toFixed(1)}%)`;
     }
-    if (rootRef.current) {
-      // A slow breath on the sung line. Time-driven, like everything else here:
-      // it reads as alive without pretending to follow the music.
-      rootRef.current.style.setProperty('--lyric-glow', (0.5 + 0.5 * Math.sin(t * 0.5)).toFixed(3));
+    // A slow breath on the sung line. Written to that ONE line, not to the root:
+    // every line's text-shadow referenced the root variable, so each frame's
+    // write invalidated and repainted the whole song — a hundred elements, sixty
+    // times a second, for a glow only one of them shows.
+    if (activeLineRef.current) {
+      activeLineRef.current.style.setProperty('--lyric-glow', (0.5 + 0.5 * Math.sin(t * 0.5)).toFixed(3));
     }
     // Parallax: the content sits in front of the room, so it drifts against the
     // camera rather than with it.
@@ -316,7 +323,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
             </div>
           </section>
 
-          <Lyrics lyrics={lyrics} index={lineIndex} palette={palette} onSeek={seekTo} />
+          <Lyrics lyrics={lyrics} index={lineIndex} palette={palette} onSeek={seekTo} activeRef={activeLineRef} />
         </main>
       </div>
 
@@ -374,8 +381,7 @@ function useSceneFrame(artworkRef, fn) {
 
 /* ── Lyrics ──────────────────────────────────────────────────────────────── */
 
-function Lyrics({ lyrics, index, palette, onSeek }) {
-  const activeRef = useRef(null);
+function Lyrics({ lyrics, index, palette, onSeek, activeRef }) {
   const panelRef = useRef(null);
   // Keep the line being sung in the middle of the panel.
   //
@@ -384,14 +390,47 @@ function Lyrics({ lyrics, index, palette, onSeek }) {
   // hidden is still programmatically scrollable). It was dragging the whole
   // overlay up ~22px, which showed as a hard-edged strip along the bottom of
   // the screen where the backdrop and canvas no longer reached.
+  // Scrolled by hand on a rAF ease rather than `behavior: 'smooth'`. The native
+  // one restarts from scratch every time it's called, so on a fast verse each
+  // new line cancelled the previous glide mid-flight — that was the stutter.
+  // This one just retargets: the line already in motion keeps its momentum.
+  const scrollRef = useRef({ raf: 0, target: 0 });
   useEffect(() => {
     const line = activeRef.current;
     const panel = panelRef.current;
-    if (!line || !panel) return;
+    if (!line || !panel) return undefined;
+
     const offset = line.getBoundingClientRect().top - panel.getBoundingClientRect().top;
-    const target = panel.scrollTop + offset - (panel.clientHeight - line.offsetHeight) / 2;
-    panel.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-  }, [index]);
+    scrollRef.current.target = Math.max(0, panel.scrollTop + offset - (panel.clientHeight - line.offsetHeight) / 2);
+
+    // Already gliding — the new target is picked up by the running loop.
+    if (scrollRef.current.raf) return undefined;
+
+    const step = () => {
+      const distance = scrollRef.current.target - panel.scrollTop;
+      // Ease out, but with a floor on the step so the last few pixels don't
+      // crawl — a pure proportional ease takes as long to finish 2px as it does
+      // the first 200, which reads as the line never quite settling.
+      if (Math.abs(distance) < 1) {
+        panel.scrollTop = scrollRef.current.target;
+        scrollRef.current.raf = 0;
+        return;
+      }
+      const stepSize = Math.max(1.5, Math.abs(distance) * 0.22) * Math.sign(distance);
+      panel.scrollTop += Math.abs(stepSize) > Math.abs(distance) ? distance : stepSize;
+      scrollRef.current.raf = requestAnimationFrame(step);
+    };
+    scrollRef.current.raf = requestAnimationFrame(step);
+
+    return undefined;
+  }, [index, activeRef]);
+
+  useEffect(
+    () => () => {
+      if (scrollRef.current.raf) cancelAnimationFrame(scrollRef.current.raf);
+    },
+    [],
+  );
 
   if (lyrics.status === 'loading') {
     return (
@@ -441,14 +480,38 @@ function Lyrics({ lyrics, index, palette, onSeek }) {
           return <div key={i} className="h-5" aria-hidden="true" />;
         }
         return (
-          <button
+          <LyricLine
             key={i}
-            ref={isActive ? activeRef : null}
+            lineRef={isActive ? activeRef : null}
+            text={line.text}
+            isActive={isActive}
+            distance={Math.min(distance, 3)}
+            glow={palette.glow}
+            at={line.at}
+            onSeek={onSeek}
+          />
+        );
+      })}
+    </section>
+  );
+}
+
+/**
+ * One line. Memoised on its own tone, so moving to the next line re-renders the
+ * four lines whose shade actually changed rather than every line in the song —
+ * a long track was re-rendering a hundred buttons on every beat.
+ */
+const LyricLine = memo(function LyricLine({ lineRef, text, isActive, distance, glow, at, onSeek }) {
+  return (
+          <button
+            ref={lineRef}
             type="button"
-            onClick={() => onSeek(line.at)}
+            onClick={() => onSeek(at)}
             title="Jump to this line"
             className={[
-              'block w-full origin-left rounded-lg px-2 py-1.5 text-left text-2xl font-medium leading-snug transition-all duration-500 hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:text-[1.75rem]',
+              // Only colour, transform and shadow transition. `transition-all`
+              // was animating layout properties too, on every line at once.
+              'block w-full origin-left rounded-lg px-2 py-1.5 text-left text-2xl font-medium leading-snug transition-[color,transform,text-shadow] duration-500 ease-out hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:text-[1.75rem]',
               isActive
                 ? 'scale-[1.03] text-white'
                 : distance === 1
@@ -468,20 +531,25 @@ function Lyrics({ lyrics, index, palette, onSeek }) {
               // background. Blurs stay inside the panel's padding, because this
               // is a scroll container and anything wider gets clipped at the
               // edge — which is the straight line that was showing.
-              textShadow: [
-                `0 0 calc(4px + var(--lyric-glow, 0) * 4px) ${rgba(palette.glow, isActive ? 0.95 : 0)}`,
-                `0 0 calc(15px + var(--lyric-glow, 0) * 12px) ${rgba(palette.glow, isActive ? 0.7 : 0)}`,
-                `0 0 calc(32px + var(--lyric-glow, 0) * 22px) ${rgba(palette.glow, isActive ? 0.42 : 0)}`,
-              ].join(', '),
+              // Only the sung line references --lyric-glow; the rest carry the
+              // same three shadows at fixed sizes and zero alpha, so the fade
+              // still interpolates but a glow tick can't invalidate them.
+              textShadow: isActive
+                ? [
+                    `0 0 calc(4px + var(--lyric-glow, 0) * 4px) ${rgba(glow, 0.95)}`,
+                    `0 0 calc(15px + var(--lyric-glow, 0) * 12px) ${rgba(glow, 0.7)}`,
+                    `0 0 calc(32px + var(--lyric-glow, 0) * 22px) ${rgba(glow, 0.42)}`,
+                  ].join(', ')
+                : `0 0 4px ${rgba(glow, 0)}, 0 0 15px ${rgba(glow, 0)}, 0 0 32px ${rgba(glow, 0)}`,
+              // Its own layer while it's the sung line, so the scale and glow
+              // don't repaint the lines around it.
+              willChange: isActive ? 'transform, text-shadow' : 'auto',
             }}
           >
-            {line.text}
+            {text}
           </button>
-        );
-      })}
-    </section>
   );
-}
+});
 
 /* ── Palette ─────────────────────────────────────────────────────────────── */
 

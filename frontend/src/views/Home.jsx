@@ -3,7 +3,6 @@ import {
   Check,
   Cloud,
   CloudRain,
-  Globe,
   ImagePlus,
   Plus,
   Settings2,
@@ -15,12 +14,14 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import GlassCard from '../components/GlassCard.jsx';
+import LaunchIcon, { AppIcon, SiteIcon } from '../components/LaunchIcon.jsx';
 import SettingsButton from '../components/SettingsButton.jsx';
-import { useCalendarEvents } from '../hooks/useCalendarEvents.js';
+import { loadedUntil, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { calendarColor, dateKey, keyToDate, occursOn, useLifeData } from '../hooks/useLifeData.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { useWeather } from '../hooks/useWeather.js';
 import { api } from '../services/api/backendClient.js';
+import { hostOf, isSite, itemKey, itemLabel, launchItem, normalizeUrl } from '../services/launchpad/items.js';
 import { getGreeting } from '../utils/dateTime.js';
 
 // Start-of-event helpers for the "Upcoming" list.
@@ -93,7 +94,17 @@ function fileToDataUrl(file, maxSize = 256) {
 
 // Flatten local + connected events into a single time-ordered list of upcoming
 // occurrences (recurring events expand to each date, so shifts show individually).
-function buildUpcoming(events, now, days = 75) {
+//
+// It looks as far ahead as the calendar is loaded. A fixed 75 days hid anything
+// further out — an appointment in December, seen from September — even though the
+// events were sitting right there.
+// A subscribed public-holiday calendar (Google's "Holidays in United Kingdom" and
+// the like). Its days are reference, not plans: left in, Halloween and Remembrance
+// Sunday took the few Upcoming slots ahead of the user's actual appointments.
+const isHolidayCalendar = (calendarId) => /#holiday@group\.v\.calendar\.google\.com$/.test(calendarId || '');
+
+function buildUpcoming(events, now, until = loadedUntil()) {
+  const days = Math.ceil((until - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000);
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const todayKey = dateKey(now);
   const out = [];
@@ -102,6 +113,8 @@ function buildUpcoming(events, now, days = 75) {
     const key = dateKey(d);
     for (const e of events) {
       if (!occursOn(e, key)) continue;
+      // Holidays still show on the day itself, and always on the Life Hub calendar.
+      if (i > 0 && isHolidayCalendar(e.calendarId)) continue;
       const t = firstTime(e.time);
       const allDay = !t;
       const mins = toMinutes(e.time);
@@ -132,38 +145,6 @@ function uniqueEventChoices(upcoming) {
     seen.add(key);
     return true;
   });
-}
-
-// A launchpad item is either a macOS app name (string) or a website shortcut
-// ({ url, name }). These helpers normalize the two so the grid + picker stay tidy.
-const isSite = (item) => Boolean(item) && typeof item === 'object' && typeof item.url === 'string';
-const hostOf = (url) => {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return (url || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-  }
-};
-const itemKey = (item) => (isSite(item) ? `site:${item.url}` : `app:${item}`);
-const itemLabel = (item) => (isSite(item) ? item.name || hostOf(item.url) : item);
-// Add a scheme if the user typed a bare host, then validate it as http(s).
-function normalizeUrl(raw) {
-  const trimmed = (raw || '').trim();
-  if (!trimmed) return '';
-  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  try {
-    const u = new URL(withScheme);
-    return u.protocol === 'http:' || u.protocol === 'https:' ? u.toString() : '';
-  } catch {
-    return '';
-  }
-}
-
-// Open a launchpad item — a native app (via the backend `open -a`) or a website
-// (opened in the default browser), failing silently if the backend is unreachable.
-function launchItem(item) {
-  if (isSite(item)) api.launch(undefined, item.url).catch(() => {});
-  else api.launch(item).catch(() => {});
 }
 
 // Fallback day-by-day outlook (used until live weather arrives / when there's no
@@ -516,7 +497,7 @@ export default function Home({ onAskPulse }) {
                       className="group flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1 transition hover:-translate-y-1 hover:bg-white/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                       aria-label={`Open ${label}`}
                     >
-                      {isSite(item) ? <SiteIcon url={item.url} /> : <AppIcon app={item} />}
+                      <LaunchIcon item={item} />
                       <span className="w-full truncate text-center text-[0.625rem] font-medium text-white/45 transition group-hover:text-white/80">
                         {label}
                       </span>
@@ -776,49 +757,6 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
   );
 }
 
-// A launchpad tile icon — the app's own macOS icon (served by the backend),
-// with a lettered fallback if it can't be read.
-function AppIcon({ app, size = 'h-11 w-11' }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return (
-      <span className={`grid ${size} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 text-sm font-semibold text-white/70 shadow-lg`}>
-        {app.slice(0, 1).toUpperCase()}
-      </span>
-    );
-  }
-  return (
-    <img
-      src={api.launch.iconUrl(app)}
-      alt=""
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className={`${size} shrink-0 object-contain drop-shadow-lg`}
-    />
-  );
-}
-
-// A website shortcut tile — the site's favicon on a soft tile, with a globe
-// fallback for sites that don't serve one.
-function SiteIcon({ url, size = 'h-11 w-11' }) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <span className={`grid ${size} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 shadow-lg ring-1 ring-white/10`}>
-      {failed ? (
-        <Globe className="h-5 w-5 text-cyan-100/70" strokeWidth={1.6} aria-hidden="true" />
-      ) : (
-        <img
-          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostOf(url))}&sz=128`}
-          alt=""
-          loading="lazy"
-          onError={() => setFailed(true)}
-          className="h-6 w-6 rounded object-contain"
-        />
-      )}
-    </span>
-  );
-}
-
 // Pick which installed apps + website shortcuts show on the launchpad.
 function LaunchpadPicker({ selected, onChange, onClose }) {
   const [apps, setApps] = useState(null);
@@ -936,7 +874,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                           on ? 'bg-cyan-200/12 ring-1 ring-cyan-200/25' : 'hover:bg-white/[0.06]',
                         ].join(' ')}
                       >
-                        <AppIcon app={a.name} size="h-8 w-8" />
+                        <AppIcon app={a.name} className="h-8 w-8" />
                         <span className={`min-w-0 flex-1 truncate text-xs ${on ? 'text-white' : 'text-white/70'}`}>
                           {a.name}
                         </span>
@@ -1002,7 +940,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                       key={site.url}
                       className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-2.5 py-2"
                     >
-                      <SiteIcon url={site.url} size="h-8 w-8" />
+                      <SiteIcon url={site.url} className="h-8 w-8" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-xs font-medium text-white">
                           {site.name || hostOf(site.url)}

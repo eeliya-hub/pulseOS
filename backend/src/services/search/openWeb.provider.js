@@ -1,19 +1,25 @@
-import { fetchJson, fetchText } from '../../utils/httpClient.js';
+import { fetchJson } from '../../utils/httpClient.js';
+import { http2Get } from './http2Get.js';
 import { rssProvider } from '../news/rss.provider.js';
 import { decodeEntities, htmlToText } from './pageText.js';
 
 // The always-available search provider: no API key, no account, no cost. Used
 // whenever Brave/Tavily aren't configured, and as the safety net if they fail.
 //
-// No single keyless source is dependable on its own — DuckDuckGo's HTML endpoint
-// answers freely one minute and rate-limits the next — so this queries several
-// in parallel and merges them:
-//   • DuckDuckGo (lite HTML)  general web results, when it feels like answering
+// No single keyless source is dependable on its own — DuckDuckGo now answers a
+// 202 anti-bot challenge more often than it answers a query — so this asks
+// several in parallel and merges them:
+//   • DuckDuckGo (lite + full HTML, over HTTP/2)  the general web index — what
+//                             answers how-to, local and long-tail questions that
+//                             news feeds know nothing about
 //   • Bing News RSS           fresh coverage of any topic, with direct article URLs
 //   • Google News RSS         a second news index, in case Bing is having a moment
 //   • Wikipedia               background on people, places, teams, concepts
 //   • DuckDuckGo Instant      a straight answer for facts and definitions
-// Between them, something always comes back.
+//
+// General web results lead the merge. Without that, a blocked DuckDuckGo left
+// only the news feeds, and every question — "how do I fix this error", "what
+// time does the shop shut" — came back as news articles about the subject.
 const INTEGRATION = 'Web search';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -39,10 +45,11 @@ function unwrap(href = '', param) {
 
 /** General web results — DuckDuckGo's no-JS "lite" page, scraped. */
 async function duckDuckGo(query, max) {
-  const html = await fetchText(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}&kl=uk-en`, {
+  // Over HTTP/2 — see http2Get. On HTTP/1.1 this endpoint answers a 202 bot
+  // challenge and no results, which is what left general web search empty.
+  const html = await http2Get(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}&kl=uk-en`, {
     integration: INTEGRATION,
     timeoutMs: 10_000,
-    headers: { 'user-agent': UA, accept: 'text/html', 'accept-language': 'en-GB,en;q=0.9' },
   });
 
   // Ads are marked as sponsored rows — drop them before pairing links to snippets.
@@ -67,6 +74,98 @@ async function duckDuckGo(query, max) {
     })
     .filter(Boolean)
     .slice(0, max);
+}
+
+/**
+ * DuckDuckGo's full HTML page — a second surface on the same index, parsed from
+ * a different layout. When the lite page is having a moment this usually isn't.
+ */
+async function duckDuckGoHtml(query, max) {
+  const html = await http2Get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=uk-en`, {
+    integration: INTEGRATION,
+    timeoutMs: 10_000,
+  });
+
+  const results = [];
+  const blockRe = /<div class="result results_links[^"]*"[\s\S]*?<a[^>]+class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<div class="result results_links|<\/body)/gi;
+  for (const [, href, rawTitle, rest] of html.matchAll(blockRe)) {
+    const url = unwrap(decodeEntities(href), 'uddg');
+    const title = htmlToText(rawTitle, 200);
+    if (!url.startsWith('http') || !title) continue;
+    const snippet = rest.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
+    results.push({
+      title,
+      url,
+      snippet: snippet ? htmlToText(snippet[1], 500) : '',
+      source: hostOf(url),
+      publishedAt: null,
+    });
+    if (results.length >= max) break;
+  }
+  return results;
+}
+
+/**
+ * Stack Exchange — the one general source that answers reliably from a server
+ * (no scraping, no key, no bot challenge). Only returns anything for technical
+ * questions, which is exactly when it's the best answer on the page.
+ */
+async function stackExchange(query, max = 3) {
+  const params = new URLSearchParams({
+    order: 'desc',
+    sort: 'relevance',
+    q: query,
+    site: 'stackoverflow',
+    pagesize: String(max),
+    filter: '!nNPvSNdWme', // question body + excerpt
+  });
+  const ask = (search) =>
+    fetchJson(`https://api.stackexchange.com/2.3/search/advanced?${search}`, {
+      integration: INTEGRATION,
+      timeoutMs: 8_000,
+      // No accept-encoding header on purpose: setting it by hand stops undici
+      // decompressing the reply, and Stack Exchange always gzips.
+      headers: { 'user-agent': UA },
+    });
+
+  let data = await ask(params);
+  // Their full-text search wants every word to match, so a natural question
+  // ("how do I fix ENOSPC on macOS") finds nothing. Retry on the distinctive
+  // words alone — the error code, the library name — which is what a person
+  // would have typed anyway.
+  if (!(data.items ?? []).length) {
+    const keywords = query
+      .replace(/[^\w\s.-]/g, ' ')
+      .split(/\s+/)
+      .filter((word) => word.length > 3 && !/^(what|when|where|which|how|does|do|the|and|for|with|from|that|this|about|fix|error|make|need)$/i.test(word))
+      .slice(0, 3)
+      .join(' ');
+    if (!keywords) return [];
+    const retry = new URLSearchParams(params);
+    retry.set('q', keywords);
+    data = await ask(retry);
+
+    // Still nothing: search titles for the single most distinctive word. An
+    // error code or library name on its own is usually the best query anyway.
+    if (!(data.items ?? []).length) {
+      const rarest = keywords.split(' ').sort((a, b) => b.length - a.length)[0];
+      const byTitle = new URLSearchParams(params);
+      byTitle.delete('q');
+      byTitle.set('intitle', rarest);
+      data = await ask(byTitle);
+    }
+  }
+
+  return (data.items ?? [])
+    .filter((item) => item.title && item.link)
+    .slice(0, max)
+    .map((item) => ({
+      title: decodeEntities(item.title),
+      url: item.link,
+      snippet: htmlToText(item.body ?? '', 500),
+      source: 'Stack Overflow',
+      publishedAt: item.creation_date ? new Date(item.creation_date * 1000).toISOString() : null,
+    }));
 }
 
 /** Bing News RSS — keyless, fresh, and its links unwrap to the real article. */
@@ -189,19 +288,27 @@ export const openWebProvider = {
   isConfigured: () => true, // no key, always available
 
   async search({ query, max = 8, freshness }) {
-    const [ddg, bing, instant, wiki] = await Promise.all([
+    const [ddg, ddgHtml, bing, instant, wiki, stack] = await Promise.all([
       duckDuckGo(query, max).catch(() => []),
+      duckDuckGoHtml(query, max).catch(() => []),
       bingNews(query, max).catch(() => []),
       instantAnswer(query).catch(() => ({ answer: null, results: [] })),
       wikipedia(query).catch(() => []),
+      stackExchange(query).catch(() => []),
     ]);
 
     // Only reach for the second news index if the first came back thin.
     const news = bing.length >= 2 ? bing : [...bing, ...(await googleNews(query, max).catch(() => []))];
 
-    // General web results lead when we have them; otherwise a direct answer,
-    // then news and background alternating so both make the cut.
-    const results = dedupe([...instant.results, ...interleave(ddg, news, wiki)]);
+    // General web results lead — they're what answers a question. News and
+    // background follow, alternating so neither crowds the other out. A direct
+    // instant answer, when there is one, goes first of all.
+    // The scraped general engines lead when they're answering.
+    const web = interleave(ddg, ddgHtml);
+    // Order: a direct answer, then the general web, then news and background.
+    // Stack Overflow goes last — it's the dependable source when the engines are
+    // blocked, but it shouldn't answer "what time does the shop close".
+    const results = dedupe([...instant.results, ...web, ...interleave(news, wiki), ...stack]);
 
     // Asked for recent results only: drop dated ones that fall outside the
     // window. Undated results (Wikipedia, reference pages) aren't news and are
@@ -214,12 +321,13 @@ export const openWebProvider = {
     // nothing — a slightly older result beats "I couldn't find anything".
     const inWindow = filtered.length >= 2 ? filtered : results;
 
-    // A headline with no summary (all Google News gives us) is the weakest thing
-    // we can hand the model — keep it, but never above a result it can read.
-    const ranked = [...inWindow.filter((r) => r.snippet), ...inWindow.filter((r) => !r.snippet)];
+    // Headlines with no summary (all Google News gives us) are the weakest thing
+    // we can hand the model, so they sink — but only past their own group, or a
+    // Stack Overflow body would outrank the web result that actually answers.
+    const ranked = inWindow.length > 4 ? [...inWindow.filter((r) => r.snippet || r.publishedAt), ...inWindow.filter((r) => !r.snippet && !r.publishedAt)] : inWindow;
 
     return {
-      provider: ddg.length ? 'duckduckgo' : 'open-web',
+      provider: web.length ? 'duckduckgo' : 'open-web',
       answer: instant.answer,
       results: ranked.slice(0, max),
     };

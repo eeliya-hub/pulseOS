@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  CloudOff,
   ExternalLink,
   Eye,
   EyeOff,
@@ -22,7 +23,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import GlassCard from '../components/GlassCard.jsx';
 import ViewHeader from '../components/ViewHeader.jsx';
-import { SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
+import { ensureCalendarRange, SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { api } from '../services/api/backendClient.js';
 import {
   CALENDARS,
@@ -298,6 +299,14 @@ function CalendarConnectPopup({ calendar, onClose }) {
               >
                 <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Connect Google Calendar
               </button>
+            ) : calendar.backendReachable === false ? (
+              // Not reaching the backend says nothing about how it is set up —
+              // claiming "add your client ID" here is what made a restart look
+              // like a broken install.
+              <p className="flex items-center gap-2 text-xs leading-relaxed text-amber-200/70">
+                <CloudOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                Can’t reach the Pulse backend — your Google connection is untouched. Retrying automatically.
+              </p>
             ) : (
               <p className="text-xs leading-relaxed text-white/45">
                 Add <code className="text-white/70">GOOGLE_CLIENT_ID</code> and{' '}
@@ -771,6 +780,13 @@ function MonthCalendar({ selectedKey, events, onPick }) {
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const todayKey = dateKey(new Date());
+
+  // Whatever month is on screen has to be loaded. The dashboard keeps several
+  // months to hand, but paging past them used to show empty days rather than
+  // fetching them.
+  useEffect(() => {
+    ensureCalendarRange(new Date(year, month, 1), new Date(year, month + 1, 1));
+  }, [year, month]);
   const offset = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = [...Array(offset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];

@@ -12,6 +12,11 @@ musicRouter.get('/token', musicController.token);
 musicRouter.put('/transfer', musicController.transfer);
 musicRouter.put('/play', musicController.play);
 
+// Spotify Connect — play on any device the account owns, controlled from here
+musicRouter.get('/devices', musicController.devices);
+musicRouter.get('/player', musicController.player);
+musicRouter.put('/command', musicController.command);
+
 // Data
 musicRouter.get('/now-playing', musicController.nowPlaying);
 musicRouter.get('/playlists', musicController.playlists);

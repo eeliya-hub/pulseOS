@@ -1,4 +1,20 @@
-import { Expand, ListMusic, Music2, Pause, Play, Search, SkipBack, SkipForward, X } from 'lucide-react';
+import {
+  Check,
+  Expand,
+  Laptop,
+  Loader2,
+  ListMusic,
+  Music2,
+  Pause,
+  Play,
+  Search,
+  SkipBack,
+  SkipForward,
+  Smartphone,
+  Speaker,
+  Tv,
+  X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import GlassCard from '../components/GlassCard.jsx';
 import MusicImmersive from '../components/MusicImmersive.jsx';
@@ -6,6 +22,7 @@ import ViewHeader from '../components/ViewHeader.jsx';
 import { useSpotifyPlayer } from '../hooks/useSpotifyPlayer.js';
 import { api } from '../services/api/backendClient.js';
 import { albumPalette, DEFAULT_PALETTE, rgba } from '../services/music/albumPalette.js';
+import { peek, put } from '../services/warmCache.js';
 
 const fmt = (ms) => {
   if (ms == null) return '0:00';
@@ -15,20 +32,152 @@ const fmt = (ms) => {
 
 const artistsOf = (t) => (Array.isArray(t.artists) ? t.artists.join(', ') : t.artists || '');
 
+/**
+ * Where the music comes out.
+ *
+ * Playback belongs to the Spotify account rather than to this tab, so it can be
+ * handed to a speaker or a phone and still be driven from here — Spotify keeps
+ * the queue and the position, so it is a handover, not a restart.
+ *
+ * One button rather than a row of chips: which device is playing matters when
+ * you go looking for it, not while you are listening.
+ */
+function DeviceButton({ devices, activeId, thisTabId, playingOn, pendingId, onPick }) {
+  const [open, setOpen] = useState(false);
+  const others = devices.filter((d) => d.id !== thisTabId && !d.restricted);
+  if (!others.length) return null;
+
+  // "This dashboard" is only an option when this tab actually has a player of
+  // its own. Without one — no Premium, no browser DRM, or the SDK still
+  // starting — offering it would either do nothing or duplicate the entry
+  // Spotify already lists for this app.
+  const options = thisTabId ? [{ id: thisTabId, name: 'This dashboard', type: 'Computer' }, ...others] : others;
+  const current = options.find((d) => d.id === activeId) ?? options[0];
+  const CurrentIcon = DEVICE_ICONS[current.type] ?? Speaker;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={playingOn ? `Playing on ${playingOn}. Change device` : 'Choose playback device'}
+        aria-expanded={open}
+        title={playingOn ? `Playing on ${playingOn}` : 'Play on this dashboard'}
+        className={[
+          'soft-button grid h-8 w-8 place-items-center rounded-full transition',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+          // Tinted while the music is somewhere else, so it reads at a glance.
+          playingOn ? 'text-cyan-200' : 'text-white/80',
+        ].join(' ')}
+      >
+        {pendingId ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <CurrentIcon className="h-4 w-4" aria-hidden="true" />
+        )}
+      </button>
+
+      {open ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close device list"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40 cursor-default"
+          />
+          <div className="absolute bottom-full right-0 z-50 mb-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#141a2e]/95 p-1 shadow-xl backdrop-blur-xl">
+            <p className="px-2.5 py-1.5 text-[0.5625rem] font-semibold uppercase tracking-[0.16em] text-white/32">
+              Play on
+            </p>
+            {options.map((d) => {
+              const Icon = DEVICE_ICONS[d.type] ?? Speaker;
+              const on = d.id === current.id;
+              // Waking a sleeping speaker takes Spotify a moment; the row says
+              // so instead of the press appearing to have done nothing.
+              const pending = d.id === pendingId;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    onPick(d.id);
+                    setOpen(false);
+                  }}
+                  className={[
+                    'flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs transition',
+                    on ? 'bg-cyan-200/12 text-cyan-50' : 'text-white/65 hover:bg-white/[0.06] hover:text-white',
+                    pending ? 'cursor-default' : '',
+                  ].join(' ')}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{d.name}</span>
+                  {pending ? (
+                    <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-cyan-200/80" aria-hidden="true" />
+                  ) : on ? (
+                    <Check className="ml-auto h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+const DEVICE_ICONS = {
+  Computer: Laptop,
+  Smartphone: Smartphone,
+  Speaker: Speaker,
+  TV: Tv,
+  AVR: Speaker,
+  STB: Tv,
+};
+
 export default function Music() {
-  const { status, deviceId, state, position, playbackError, controls, authorize } = useSpotifyPlayer();
-  const [playlists, setPlaylists] = useState([]);
-  const [recent, setRecent] = useState([]);
+  const { status, deviceId, state, position, playbackError, devices, activeDeviceId, playingOn, transferringTo, controls, authorize } =
+    useSpotifyPlayer();
+
+  // Spotify Connect: the account's other devices, so the music can be handed to
+  // a speaker and still be driven from here.
+  //
+  // Deliberately not gated on the in-tab player being ready. That player needs
+  // Premium and browser DRM, and when it can't start — the exact case where you
+  // most want a speaker — the account's other devices still work perfectly.
+  useEffect(() => {
+    if (status === 'needs-auth') return undefined;
+    controls.refreshDevices();
+    const id = window.setInterval(() => controls.refreshDevices(), 20_000);
+    return () => window.clearInterval(id);
+  }, [status, controls]);
+  const [playlists, setPlaylists] = useState(() => peek('music:playlists')?.playlists ?? []);
+  const [recent, setRecent] = useState(() => peek('music:recent')?.tracks ?? []);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [immersive, setImmersive] = useState(false);
   const [palette, setPalette] = useState(DEFAULT_PALETTE);
 
+  // Seeded from the launch preload above, so this refresh is invisible: the
+  // shelves are already populated when the view first paints.
   useEffect(() => {
     if (status !== 'ready') return;
-    api.music.playlists().then((d) => setPlaylists(d.playlists ?? [])).catch(() => {});
-    api.music.recentlyPlayed().then((d) => setRecent(d.tracks ?? [])).catch(() => {});
+    api.music
+      .playlists()
+      .then((d) => {
+        put('music:playlists', d);
+        setPlaylists(d.playlists ?? []);
+      })
+      .catch(() => {});
+    api.music
+      .recentlyPlayed()
+      .then((d) => {
+        put('music:recent', d);
+        setRecent(d.tracks ?? []);
+      })
+      .catch(() => {});
   }, [status]);
 
   // Tint the player card with the artwork's own colours — the same palette the
@@ -101,8 +250,26 @@ export default function Music() {
       <ViewHeader
         lead="Your"
         accent="Music"
-        subtitle={status === 'ready' && deviceId ? 'Playing on this device' : 'Connecting to Spotify…'}
+        subtitle={
+          playingOn
+            ? `Playing on ${playingOn}`
+            : status === 'ready' && deviceId
+              ? 'Playing on this device'
+              : status === 'needs-auth'
+                ? 'Connect Spotify to start'
+                : // A failed handshake is a final state, not a slow one: this
+                  // browser can't play in-tab (no Premium, or no DRM support).
+                  // Spotify Connect still works, so point at that instead of
+                  // showing a spinner message that will never resolve.
+                  status === 'error'
+                  ? devices.length
+                    ? 'Pick a device to play on'
+                    : 'In-app playback unavailable'
+                  : 'Connecting to Spotify…'
+        }
       />
+
+
 
       <div className="my-auto grid max-h-[24rem] min-h-0 w-full flex-1 grid-cols-[43rem_1fr] grid-rows-[15.75rem_7.25rem] gap-4">
         {/* ── Now playing ─────────────────────────────────────────── */}
@@ -225,15 +392,26 @@ export default function Music() {
                   <SkipForward className="h-5 w-5" fill="currentColor" aria-hidden="true" />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setImmersive(true)}
-                  disabled={!hasTrack}
-                  className="soft-button ml-auto inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.6875rem] font-semibold text-white/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-35"
-                >
-                  <Expand className="h-3.5 w-3.5" aria-hidden="true" />
-                  Immersive
-                </button>
+                <div className="ml-auto flex items-center gap-2">
+                  <DeviceButton
+                    devices={devices}
+                    activeId={activeDeviceId}
+                    thisTabId={deviceId}
+                    playingOn={playingOn}
+                    pendingId={transferringTo}
+                    onPick={(id) => controls.transferTo(id)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImmersive(true)}
+                    disabled={!hasTrack}
+                    aria-label="Immersive view"
+                    title="Immersive view"
+                    className="soft-button grid h-8 w-8 place-items-center rounded-full text-white/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-35"
+                  >
+                    <Expand className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

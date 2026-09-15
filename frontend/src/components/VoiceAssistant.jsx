@@ -1,37 +1,17 @@
 import { MicOff, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useVoiceLive, VOICE_STATUS } from '../hooks/useVoiceLive.js';
+import { useVoiceScript } from '../hooks/useVoiceScript.js';
+import { DEFAULT_CAPTION } from '../services/ai/toolCaptions.js';
+import ContextPanel from './voice/ContextPanel.jsx';
+import { onVoiceClose } from '../services/ui/afterSpeech.js';
 
-// The title shown while a tool runs — the "searching" state narrates the work.
-const TOOL_LABELS = {
-  get_upcoming_events: 'Checking your calendar',
-  get_past_events: 'Checking your calendar',
-  get_today: 'Checking your day',
-  get_weather: 'Checking the weather',
-  get_news: 'Reading the news',
-  search_web: 'Searching the internet',
-  get_sports: 'Checking the scores',
-  get_stocks: 'Checking the markets',
-  list_calendars: 'Checking your calendars',
-  create_calendar_event: 'Updating your calendar',
-  delete_calendar_event: 'Updating your calendar',
-  add_task: 'Adding your task',
-  complete_task: 'Updating your tasks',
-  add_habit: 'Adding your habit',
-  set_location: 'Updating your location',
-  add_stock: 'Updating your watchlist',
-  remember: 'Making a note',
-  forget: 'Forgetting that',
-  list_memories: 'Recalling what I know',
-  open_app: 'Opening that',
-  play_music: 'Starting the music',
-  pause_music: 'Pausing the music',
-  next_track: 'Skipping ahead',
-  previous_track: 'Going back a track',
-  get_now_playing: 'Checking what’s playing',
-};
-const DEFAULT_TASK = 'Putting together your brief';
+
+// header / stage / transcript. minmax(0, 1fr) on the middle row is what stops a
+// tall card from pushing the stage down over the transcript; set inline because
+// the equivalent Tailwind arbitrary value did not survive the build.
+const GRID_ROWS = { gridTemplateRows: 'auto minmax(0, 1fr) auto' };
 
 // Halo tint per state — violet-cyan while you talk, blue while Pulse talks, a
 // calm indigo while it works/connects, a soft rose on error. `scale` sizes the
@@ -85,7 +65,7 @@ function useTaskLatch(activity, minMs = 2000) {
  * only chrome is the close button. Mount it and pass onClose.
  */
 export default function VoiceAssistant({ onClose }) {
-  const { status, error, response, activity, getMicLevel, getAiLevel, getSpeechProgress, start, stop } =
+  const { status, error, response, activity, panels, getMicLevel, getAiLevel, getSpokenChars, start, stop } =
     useVoiceLive();
 
   // Own the session lifecycle here: open on mount, tear down on unmount. start/stop
@@ -97,10 +77,22 @@ export default function VoiceAssistant({ onClose }) {
     };
   }, [start, stop]);
 
-  const close = async () => {
+  const close = useCallback(async () => {
     await stop();
     onClose();
-  };
+  }, [stop, onClose]);
+
+  // Some answers end the conversation by their nature — handing the screen to a
+  // live channel, say. Registering here also tells the queue a voice session is
+  // running at all; without one, anything waiting on speech just runs.
+  //
+  // Registered once through a ref, deliberately: keying it on `close` re-ran the
+  // effect whenever App handed down a new onClose, and its cleanup drops
+  // whatever is queued — so a single re-render between "put the news on" and the
+  // end of the sentence threw the takeover away.
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  useEffect(() => onVoiceClose(() => void closeRef.current()), []);
 
   const task = useTaskLatch(activity);
 
@@ -109,6 +101,17 @@ export default function VoiceAssistant({ onClose }) {
   const errored = status === VOICE_STATUS.ERROR;
   const busy = status === VOICE_STATUS.REQUESTING_MIC || status === VOICE_STATUS.CONNECTING;
 
+  // One reading of where the voice is, shared by the transcript (which lights the
+  // words) and the card (which lights the rows). Both come out of the same
+  // timeline, so they cannot drift apart.
+  const {
+    sentences: segments,
+    sentence: current,
+    word,
+    panel,
+    spotlight,
+  } = useVoiceScript({ panels, transcript: response, speaking, getSpokenChars, holdReceipt: !task });
+
   let mode;
   let title;
   if (errored) {
@@ -116,7 +119,7 @@ export default function VoiceAssistant({ onClose }) {
     title = error || 'Something interrupted us';
   } else if (task) {
     mode = 'searching';
-    title = TOOL_LABELS[task] || DEFAULT_TASK;
+    title = task || DEFAULT_CAPTION;
   } else if (speaking) {
     mode = 'speaking';
     title = 'Speaking';
@@ -132,68 +135,98 @@ export default function VoiceAssistant({ onClose }) {
   }
 
   return createPortal(
-    <div
-      data-settings=""
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) close();
-      }}
-    >
-      <div className="absolute inset-0 bg-[#070b18]/80 backdrop-blur-md" aria-hidden="true" />
-      <div className="theme-card fade-in relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col items-center rounded-3xl px-6 pb-8 pt-5">
-        {/* Header — title + close only */}
-        <div className="mb-1 flex w-full items-center justify-between">
-          <div>
-            <h2 className="display-type text-lg font-light text-white text-glow">Pulse Voice</h2>
-            <p className="mt-0.5 text-[0.625rem] font-medium uppercase tracking-[0.24em] text-white/38">
-              Real-time · Gemini Live
-            </p>
+    <div data-settings="" className="fixed inset-0 z-[70] grid" style={GRID_ROWS}>
+      <div className="absolute inset-0 bg-[#03050e]/96 backdrop-blur-2xl" aria-hidden="true" />
+
+      {/* Header — identity + the way out */}
+      <header className="relative z-10 flex items-start justify-between px-6 pt-5 sm:px-10 sm:pt-7">
+        <div>
+          <h2 className="display-type text-lg font-light text-white text-glow">Pulse Voice</h2>
+          <p className="mt-0.5 text-[0.625rem] font-medium uppercase tracking-[0.24em] text-white/38">
+            Real-time · Gemini Live
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={close}
+          aria-label="End voice session"
+          className="grid h-9 w-9 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </header>
+
+      {/* The stage: visualiser on the left, what Pulse is talking about on the right */}
+      <main className="relative z-10 grid min-h-0 grid-cols-1 gap-4 px-6 py-4 sm:px-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-14">
+        <div className="flex min-h-0 items-center justify-center">
+          <div className="voice-stage voice-stage--full">
+            <span
+              className="voice-halo voice-halo--full"
+              style={{ background: HALO[mode].bg, transform: `scale(${HALO[mode].scale})` }}
+              aria-hidden="true"
+            />
+            {mode === 'listening' && <ListeningWave getLevel={getMicLevel} />}
+            {mode === 'speaking' && <SpeakingOrb getLevel={getAiLevel} />}
+            {(mode === 'searching' || mode === 'idle') && <SearchingDots />}
+            {mode === 'error' && <ErrorMark />}
           </div>
-          <button
-            type="button"
-            onClick={close}
-            aria-label="End voice session"
-            className="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
         </div>
 
-        {/* Visualiser stage — one reactive design per state */}
-        <div className="voice-stage">
-          <span
-            className="voice-halo"
-            style={{ background: HALO[mode].bg, transform: `scale(${HALO[mode].scale})` }}
-            aria-hidden="true"
-          />
-          {mode === 'listening' && <ListeningWave getLevel={getMicLevel} />}
-          {mode === 'speaking' && <SpeakingOrb getLevel={getAiLevel} />}
-          {(mode === 'searching' || mode === 'idle') && <SearchingDots />}
-          {mode === 'error' && <ErrorMark />}
+        {/* Right: the state on its own, or — once a tool has found something —
+            the card for it, with the state kept as a quiet line above. */}
+        <div className="flex min-h-0 flex-col justify-center">
+          {panel && !errored ? (
+            // max-h-full, not flex-1: a short card sits centred against the
+            // visualiser, a long one fills the space and scrolls inside itself
+            // rather than growing past the window or over the transcript.
+            <div className="flex max-h-full min-h-0 w-full flex-col">
+              <div className="mb-3 flex shrink-0 items-center gap-2">
+                <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-cyan-100/50">{title}</p>
+                {panels.length > 1 ? (
+                  <span className="flex items-center gap-1" aria-hidden="true">
+                    {panels.map((p, i) => (
+                      <span
+                        key={p.title ?? i}
+                        className={`h-1 rounded-full transition-all duration-500 ${
+                          p === panel ? 'w-3 bg-cyan-100/70' : 'w-1 bg-white/20'
+                        }`}
+                      />
+                    ))}
+                  </span>
+                ) : null}
+              </div>
+              <div className="min-h-0 flex-1">
+                <ContextPanel panel={panel} spotlight={spotlight} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center lg:items-start lg:text-left">
+              <p key={title} className="voice-rise display-type text-3xl font-light text-white text-glow sm:text-4xl">
+                {title}
+              </p>
+              {errored && (
+                <button
+                  type="button"
+                  onClick={() => start()}
+                  className="mt-5 rounded-full bg-cyan-200/15 px-5 py-1.5 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                >
+                  Try again
+                </button>
+              )}
+            </div>
+          )}
         </div>
+      </main>
 
-        {/* State title — the only narration */}
-        <p key={title} className="voice-rise display-type text-xl font-light text-white text-glow">
-          {title}
-        </p>
-
-        {/* The spoken answer — scrolls and highlights sentence-by-sentence in time
-            with the audio, then lingers until the next answer begins */}
-        {response && !errored && (
-          <SpokenTranscript text={response} speaking={speaking} getProgress={getSpeechProgress} />
-        )}
-
-        {/* Retry only lives on the error state */}
-        {errored && (
-          <button
-            type="button"
-            onClick={() => start()}
-            className="mt-4 rounded-full bg-cyan-200/15 px-5 py-1.5 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            Try again
-          </button>
-        )}
-      </div>
+      {/* The spoken answer, along the bottom — highlighting sentence-by-sentence
+          in time with the audio, then lingering until the next answer begins */}
+      {/* A frame of its own, always the same height whether or not there is an
+          answer in it — so the stage above never moves as the words arrive. */}
+      <footer className="relative z-10 mx-auto h-[10.5rem] w-full max-w-4xl px-6 pb-7 sm:px-10 sm:pb-9">
+        {response && !errored ? (
+          <SpokenTranscript segments={segments} current={current} word={word} speaking={speaking} />
+        ) : null}
+      </footer>
     </div>,
     document.body,
   );
@@ -433,72 +466,62 @@ function SpeakingOrb({ getLevel }) {
 // Split the transcript into spoken chunks (sentence- or line-sized), keeping each
 // chunk's raw end-offset so audio progress can map onto it. Markdown symbols are
 // stripped for display (the model shouldn't emit them in voice, but just in case).
-function toSegments(text) {
-  const out = [];
-  const re = /[^.!?…\n]+[.!?…]*|\n+/g;
-  let m = re.exec(text);
-  while (m) {
-    const raw = m[0];
-    const clean = raw
-      .replace(/[#*`>]+/g, '')
-      .replace(/^\s*[-•]\s+/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (clean) out.push({ clean, end: m.index + raw.length });
-    m = re.exec(text);
-  }
-  return out;
-}
-
 /**
  * The spoken answer, revealed and highlighted sentence-by-sentence in time with
  * the AUDIO (which lags the fast-arriving transcript). The sentence being said is
  * highlighted, already-said text dims, upcoming text is faint, and the view
  * auto-scrolls to keep the live sentence in view. At rest the whole answer reads.
  */
-function SpokenTranscript({ text, speaking, getProgress }) {
+function SpokenTranscript({ segments, current, word, speaking }) {
   const activeRef = useRef(null);
-  const [current, setCurrent] = useState(0);
-  const segments = useMemo(() => toSegments(text), [text]);
-
-  // Follow the audio: map playback progress → the segment currently being spoken.
-  useEffect(() => {
-    let raf = 0;
-    const tick = () => {
-      const p = speaking ? getProgress?.() ?? 1 : 1;
-      const spokenChars = p * text.length;
-      let idx = segments.findIndex((s) => s.end > spokenChars);
-      if (idx < 0) idx = segments.length - 1;
-      setCurrent((c) => (c === idx ? c : idx));
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [getProgress, segments, speaking, text]);
 
   // Keep the sentence being spoken in view.
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [current]);
 
+  if (!segments.length) return null;
+
   return (
-    <div className="glass-scroll mt-3 max-h-[26vh] w-full overflow-y-auto px-1">
-      <p className="voice-rise text-center text-[0.9375rem] leading-7">
+    <div className="glass-scroll h-full w-full overflow-y-auto px-1">
+      {/* dir="auto" on the paragraph only. Per-sentence direction was flipping the
+          alignment line by line inside one answer; the whole answer is one
+          language, so the whole paragraph takes one direction. */}
+      <p dir="auto" className="text-center text-[0.9375rem] leading-7">
         {segments.map((seg, index) => {
-          const cls = !speaking
-            ? 'text-white/85'
-            : index < current
-              ? 'text-white/40'
-              : index === current
-                ? 'text-white text-glow'
-                : 'text-white/25';
+          if (!speaking) {
+            return (
+              <span key={index} className="text-white/85">
+                {seg.text}{' '}
+              </span>
+            );
+          }
+          if (index !== current) {
+            // Said already fades back; still to come sits fainter still.
+            return (
+              <span
+                key={index}
+                className={`transition-colors duration-500 ${index < current ? 'text-white/35' : 'text-white/20'}`}
+              >
+                {seg.text}{' '}
+              </span>
+            );
+          }
+          // The sentence being spoken, lit word by word as the voice reaches
+          // each one — the whole point being that it moves continuously rather
+          // than a sentence at a time.
           return (
-            <span
-              key={index}
-              ref={index === current ? activeRef : null}
-              className={`${cls} transition-colors duration-300`}
-            >
-              {seg.clean}{' '}
+            <span key={index} ref={activeRef}>
+              {seg.words.map((w, i) => (
+                <span
+                  key={i}
+                  className={`transition-colors duration-200 ${
+                    i < word ? 'text-white/90' : i === word ? 'text-white text-glow' : 'text-white/30'
+                  }`}
+                >
+                  {w}{' '}
+                </span>
+              ))}
             </span>
           );
         })}

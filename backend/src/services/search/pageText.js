@@ -1,4 +1,4 @@
-import { fetchText } from '../../utils/httpClient.js';
+import { http2Get } from './http2Get.js';
 
 // Pulls the readable text out of a web page, so the assistant can answer from
 // what a page actually SAYS rather than from a one-line search snippet.
@@ -90,7 +90,7 @@ export function htmlToText(html = '', maxChars = 1200) {
 export async function readPage(url, { maxChars = 1200, timeoutMs = 7_000 } = {}) {
   if (!isReadableUrl(url)) return null;
   try {
-    const html = await fetchText(url, {
+    const html = await http2Get(url, {
       integration: INTEGRATION,
       timeoutMs,
       headers: {

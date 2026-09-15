@@ -89,6 +89,21 @@ const dateLabelFmt = new Intl.DateTimeFormat('en-GB', {
   year: 'numeric',
 });
 
+// Opening the native picker takes an explicit showPicker(). A click anywhere on
+// an <input type="date"> does NOT open it — only the little calendar indicator
+// does, and at opacity 0 there is nothing to aim at. That is why clicking these
+// fields appeared to do nothing at all.
+function openPicker(event) {
+  const input = event.currentTarget;
+  if (typeof input.showPicker !== 'function') return;
+  try {
+    input.showPicker();
+  } catch {
+    // Only throws when it isn't allowed (no user gesture, cross-origin frame);
+    // the field is still typeable either way.
+  }
+}
+
 // A neatly formatted date ("20 Aug 2026") that opens the native picker on click —
 // the real <input type="date"> sits transparent on top so editing stays effortless.
 export function EditableDate({ value, onChange, className = '', 'aria-label': ariaLabel }) {
@@ -105,6 +120,32 @@ export function EditableDate({ value, onChange, className = '', 'aria-label': ar
         type="date"
         value={value ?? ''}
         aria-label={ariaLabel}
+        onClick={openPicker}
+        onFocus={openPicker}
+        onChange={(event) => onChange(event.target.value)}
+        className="editable-date absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      />
+    </span>
+  );
+}
+
+// The same trick for a time of day ("09:15"), used for flight departure and
+// arrival. `placeholder` is what shows when nothing is set yet.
+export function EditableTime({ value, onChange, placeholder = 'Set time', className = '', 'aria-label': ariaLabel }) {
+  return (
+    <span
+      className={classes(
+        'editable-field relative inline-flex cursor-pointer items-center whitespace-nowrap',
+        className,
+      )}
+    >
+      <span className={classes('clock-figures', value ? '' : 'text-white/40')}>{value || placeholder}</span>
+      <input
+        type="time"
+        value={value ?? ''}
+        aria-label={ariaLabel}
+        onClick={openPicker}
+        onFocus={openPicker}
         onChange={(event) => onChange(event.target.value)}
         className="editable-date absolute inset-0 h-full w-full cursor-pointer opacity-0"
       />

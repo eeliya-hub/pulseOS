@@ -28,6 +28,9 @@ const DEFAULTS = {
   // Long-term memory: durable facts Pulse has learned about the user, recalled in
   // every future conversation. Each is { id, text, at }.
   memories: [],
+  // Which layers the trip map draws. Remembered across sessions — how someone
+  // wants to read their own trip is a preference, not a per-visit choice.
+  travelMapLayers: { places: true, stay: true, flight: true, airports: true },
   icalFeeds: [], // [{ id, name, url }] — subscribed .ics calendar feeds
   hiddenCalendars: [], // calendarIds toggled off in the Life Hub
   // Home highlight tracker: always show the next event whose title matches
@@ -86,8 +89,15 @@ const subscribers = new Set();
 // Read the current settings outside of React (used by the launch preloader).
 export const getSettings = () => state;
 
+/**
+ * Merge a change into settings. Pass a function to compute the change from the
+ * settings as they are at this instant — which is what anything built from a
+ * current list has to do. Two memories saved back to back from a render-time
+ * copy both start from the same list, and the second silently drops the first.
+ */
 function setState(patch) {
-  state = { ...state, ...patch };
+  const changes = typeof patch === 'function' ? patch(state) : patch;
+  state = { ...state, ...changes };
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {

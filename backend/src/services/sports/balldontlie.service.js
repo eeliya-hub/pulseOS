@@ -1,4 +1,5 @@
 import { createCache } from '../../utils/cache.js';
+import { teamGroup } from './teamGroups.js';
 import { balldontlieProvider } from './providers/balldontlie.provider.js';
 
 // NBA + NFL share balldontlie's shape, so one factory builds both services.
@@ -63,17 +64,28 @@ const mapGame = (sport) => (g) => ({
 // balldontlie's /standings endpoint requires a paid plan (401 on free keys).
 // Derive the table ourselves by tallying the season's finished games instead —
 // works on every plan since /games is free-tier.
-function tallyStandings(games) {
+/**
+ * Build the table from finished games, keeping each team's results in order so
+ * form and streak come out of the same pass — both are the sort of thing these
+ * tables are read for, and the games are already in hand.
+ */
+function tallyStandings(games, sport) {
   const rows = new Map();
   const bump = (name, result) => {
     if (!name) return;
-    const row = rows.get(name) ?? { team: name, played: 0, won: 0, lost: 0, drawn: 0 };
+    const row = rows.get(name) ?? { team: name, played: 0, won: 0, lost: 0, drawn: 0, sequence: [] };
     row.played += 1;
     row[result] += 1;
+    row.sequence.push(result === 'won' ? 'W' : result === 'lost' ? 'L' : 'T');
     rows.set(name, row);
   };
-  for (const g of games) {
-    if (g.homeScore == null || g.awayScore == null) continue;
+
+  // Oldest first, so the tail of `sequence` is the most recent run.
+  const played = games
+    .filter((g) => g.homeScore != null && g.awayScore != null)
+    .sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')));
+
+  for (const g of played) {
     if (g.homeScore === g.awayScore) {
       bump(g.homeTeam, 'drawn');
       bump(g.awayTeam, 'drawn');
@@ -85,12 +97,38 @@ function tallyStandings(games) {
       bump(g.homeTeam, 'lost');
     }
   }
-  return [...rows.values()].map((r) => ({
-    ...r,
-    points: null,
-    conference: null,
-    record: `${r.won}-${r.lost}${r.drawn ? `-${r.drawn}` : ''}`,
-  }));
+
+  return [...rows.values()].map((r) => {
+    const { conference, division } = teamGroup(sport, r.team);
+    return {
+      ...r,
+      points: null,
+      conference,
+      division,
+      form: r.sequence.slice(-5), // last five, oldest of the five first
+      streak: streakOf(r.sequence),
+      record: `${r.won}-${r.lost}${r.drawn ? `-${r.drawn}` : ''}`,
+      sequence: undefined,
+    };
+  });
+}
+
+/** "W3", "L2" — the run the team is currently on. */
+function streakOf(sequence = []) {
+  if (!sequence.length) return null;
+  const last = sequence[sequence.length - 1];
+  let run = 0;
+  for (let i = sequence.length - 1; i >= 0 && sequence[i] === last; i -= 1) run += 1;
+  return `${last}${run}`;
+}
+
+/**
+ * Games behind the conference leader — the number every NBA and NFL table
+ * leads with, and the one thing that says how live a playoff race is.
+ */
+function gamesBehind(leader, row) {
+  if (!leader || leader === row) return 0;
+  return ((leader.won - row.won) + (row.lost - leader.lost)) / 2;
 }
 
 function winPercentage(r) {
@@ -126,76 +164,102 @@ async function allGames(sport, query, maxPages = 4) {
 function makeService(sport) {
   const gmeta = mapGame(sport);
 
-  const upcomingQuery = () =>
-    sport === 'nba'
-      ? dateWindowQuery(0, 180)
-      : seasonQuery(sport, upcomingSeason(sport));
-
-  const recentQuery = () =>
-    sport === 'nba'
-      ? dateWindowQuery(-120, 0)
-      : seasonQuery(sport, currentSeason(sport));
+  /**
+   * Every game of a season, fetched once and shared.
+   *
+   * The table, the recent results and the next fixture all come out of this one
+   * read. They used to be three separate paginated calls fired together, which
+   * on a rate-limited tier meant they competed with each other and the table —
+   * the biggest of the three — was usually the one that lost.
+   */
+  const seasonGames = (season) =>
+    safeWith(
+      standingsCache,
+      `${sport}:games:${season}`,
+      async () => (await allGames(sport, seasonQuery(sport, season))).map(gmeta),
+      [],
+    );
 
   const service = {
     async getStandings() {
+      const build = (season) =>
+        safeWith(
+          standingsCache,
+          `${sport}:standings:${season}`,
+          async () => {
+            const games = (await seasonGames(season)).filter(finished);
+            // Never cache an empty table. The season read is allowed to come back
+            // empty when the tier says no, and storing that as the answer pins the
+            // card to "no standings" for the whole hour — which is exactly how the
+            // table came to be blank most of the time.
+            if (!games.length) throw new Error('no finished games to tally');
+
+            const byRecord = (a, b) =>
+              winPercentage(b) - winPercentage(a) ||
+              b.won - a.won ||
+              a.lost - b.lost ||
+              a.team.localeCompare(b.team);
+
+            const table = tallyStandings(games, sport).sort(byRecord);
+
+            // Seed within the conference as well as overall: the conference race
+            // is what decides the playoffs, so that is the rank worth showing.
+            const leaders = new Map();
+            const seeds = new Map();
+            for (const row of table) {
+              if (!row.conference) continue;
+              if (!leaders.has(row.conference)) leaders.set(row.conference, row);
+              const seed = (seeds.get(row.conference) ?? 0) + 1;
+              seeds.set(row.conference, seed);
+              row.seed = seed;
+              row.gamesBehind = gamesBehind(leaders.get(row.conference), row);
+            }
+            return table.map((r, i) => ({ position: i + 1, season, ...r }));
+          },
+          [],
+        );
+
       const season = currentSeason(sport);
-      return safeWith(
-        standingsCache,
-        `${sport}:standings:${season}`,
-        async () => {
-          const games = (await allGames(sport, seasonQuery(sport, season))).filter(finished).map(gmeta);
-          return tallyStandings(games)
-            .sort(
-              (a, b) =>
-                winPercentage(b) - winPercentage(a) ||
-                b.won - a.won ||
-                a.lost - b.lost ||
-                a.team.localeCompare(b.team),
-            )
-            .map((r, i) => ({ position: i + 1, ...r }));
-        },
-        [],
-      );
+      const current = await build(season);
+      if (current.length) return current;
+      // Before a season has been played there is nothing to tally. Rather than an
+      // empty table, show the one that just finished — which is what is actually
+      // being talked about in the weeks before kickoff.
+      return build(season - 1);
     },
 
     async getUpcomingGames() {
       const today = offsetDay(0);
-      return safe(
-        `${sport}:upcoming`,
-        async () =>
-          (await allGames(sport, upcomingQuery()))
-            .map(gmeta)
-            .filter((g) => !finished(g) && dayOf(g.date) >= today)
-            .sort((a, b) => new Date(a.date) - new Date(b.date)),
-        [],
-      );
+      const ahead = (games) =>
+        games.filter((g) => !finished(g) && dayOf(g.date) >= today).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      const thisSeason = ahead(await seasonGames(currentSeason(sport)));
+      if (thisSeason.length) return thisSeason;
+      // Nothing left in the season that is running: out of season the next
+      // fixtures belong to the one about to start.
+      const next = upcomingSeason(sport);
+      return next === currentSeason(sport) ? [] : ahead(await seasonGames(next));
     },
 
     async getRecentGames() {
-      return safe(
-        `${sport}:recent`,
-        async () =>
-          (await allGames(sport, recentQuery()))
-            .filter(finished)
-            .map(gmeta)
-            .sort((a, b) => new Date(b.date) - new Date(a.date)),
-        [],
-      );
+      return (await seasonGames(currentSeason(sport)))
+        .filter(finished)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
     },
 
     // Powers the unified team card.
     async teamSummary(team) {
-      const [standings, upcoming, recent] = await Promise.all([
-        this.getStandings(),
-        this.getUpcomingGames(),
-        this.getRecentGames(),
-      ]);
+      // Standings come from ESPN now (one keyless request for the real table),
+      // so this only pays for the fixture and recent results — both of which
+      // read from the same cached season fetch.
+      const upcoming = await this.getUpcomingGames();
+      const recent = await this.getRecentGames();
       const involves = (g) => sameTeam(g.homeTeam, team) || sameTeam(g.awayTeam, team);
       return {
         league: sport.toUpperCase(),
         fixture: upcoming.find(involves) ?? null,
         results: recent.filter(involves).slice(0, 5),
-        standings: standings.map((r) => ({ ...r, me: sameTeam(r.team, team) })),
+        standings: [], // filled by the caller from ESPN; getStandings() is the fallback
       };
     },
   };

@@ -26,6 +26,22 @@ export const musicController = {
     res.json(await musicService.play(req.body ?? {}));
   }),
 
+  // GET /api/music/devices → every device the account can play on
+  devices: asyncHandler(async (_req, res) => {
+    res.json(await musicService.devices());
+  }),
+
+  // GET /api/music/player → what is playing, wherever it is playing
+  player: asyncHandler(async (_req, res) => {
+    res.json(await musicService.playerState());
+  }),
+
+  // PUT /api/music/command { action, deviceId, positionMs, volumePercent }
+  command: asyncHandler(async (req, res) => {
+    const { action, deviceId, positionMs, volumePercent } = req.body ?? {};
+    res.json(await musicService.command(action, { deviceId, positionMs, volumePercent }));
+  }),
+
   nowPlaying: asyncHandler(async (_req, res) => {
     res.json(await musicService.nowPlaying());
   }),

@@ -1,5 +1,5 @@
 import { createCache } from '../../utils/cache.js';
-import { geocode, slugify } from './geocode.js';
+import { geocode, regionFromText } from './geocode.js';
 import { gnewsProvider } from './gnews.provider.js';
 import { rssProvider } from './rss.provider.js';
 import { DEFAULT_FEED, UK_REGIONS } from './ukRegions.js';
@@ -75,11 +75,27 @@ export const newsService = {
     return cache.wrap(`local:${query.toLowerCase()}`, async () => {
       // A typed county name (e.g. "Kent", "Greater Manchester") maps directly —
       // no geocode needed. Otherwise geocode the town → its county.
-      let region = UK_REGIONS[slugify(query)] ?? null;
+      // A county named in the query resolves with no network at all — either as
+      // the whole string ("Kent") or inside it ("Ashford, Kent").
+      let region = UK_REGIONS[regionFromText(query) ?? ''] ?? null;
       let geo = null;
-      if (!region) {
-        geo = await geoCache.wrap(`geo:${query.toLowerCase()}`, () => geocode(query).catch(() => null));
-        region = geo?.regionId ? UK_REGIONS[geo.regionId] : null;
+      // Geocode when we have no region at all, and also when the region we found
+      // runs town-level papers — that branch needs the town, which only the
+      // lookup can give us.
+      if (!region || region.reach) {
+        // A failed lookup must NOT be cached: it used to be swallowed into a
+        // null, stored as a perfectly good answer for 24 hours, and quietly pin
+        // local news to national for the rest of the day.
+        try {
+          geo = await geoCache.wrap(`geo:${query.toLowerCase()}`, async () => {
+            const found = await geocode(query);
+            if (!found) throw new Error('no geocode match');
+            return found;
+          });
+        } catch {
+          geo = null;
+        }
+        region = region ?? (geo?.regionId ? UK_REGIONS[geo.regionId] : null);
       }
 
       // 1. Town-specific feed on a Reach paper (merged with any extra outlets).

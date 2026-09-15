@@ -44,6 +44,14 @@ function emitFromMessage(message, onEvent) {
       calls: message.toolCall.functionCalls.map((fc) => ({ id: fc.id, name: fc.name, args: fc.args ?? {} })),
     });
   }
+
+  // They spoke over a tool that was still running, and Gemini has written the
+  // call off. It may well have finished already — an event that was created
+  // stays created — so this is reported rather than acted on, and the browser
+  // keeps showing what was actually done.
+  if (message.toolCallCancellation?.ids?.length) {
+    onEvent({ type: 'tool_cancel', ids: message.toolCallCancellation.ids });
+  }
 }
 
 /**

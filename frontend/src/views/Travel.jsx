@@ -17,10 +17,11 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import GlassCard from '../components/GlassCard.jsx';
-import { AddRow, EditableDate, RemoveButton } from '../components/InlineEdit.jsx';
+import { AddRow, EditableDate, EditableTime, RemoveButton } from '../components/InlineEdit.jsx';
+import { flightTimes, formatDuration } from '../services/travel/flightTimes.js';
 import ItineraryItemEditor from '../components/ItineraryItemEditor.jsx';
 import PlaceSearch from '../components/PlaceSearch.jsx';
 import TripEditor from '../components/TripEditor.jsx';
@@ -30,6 +31,7 @@ import { toDestination } from '../utils/destination.js';
 import { placePhotoUrl } from '../utils/places.js';
 import { useTripLive } from '../hooks/useTripLive.js';
 import { categoryOf, emptyTrip, useTravelStore } from '../hooks/useTravelStore.js';
+import { useSettings } from '../hooks/useSettings.js';
 
 const QUICK_AMOUNTS = [20, 50, 100, 250];
 const DAY_MS = 86400000;
@@ -109,6 +111,7 @@ export default function Travel() {
   const store = useTravelStore();
   const { trip, trips } = store;
   const live = useTripLive(trip);
+  const { settings, update: updateSettings } = useSettings();
 
   const [now, setNow] = useState(() => new Date());
   const [activeDayId, setActiveDayId] = useState(null);
@@ -117,14 +120,15 @@ export default function Travel() {
   const [editingItem, setEditingItem] = useState(null); // { dayId, itemId }
   const [pickingStay, setPickingStay] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
-  // Which layers the map draws. Off is remembered only for the session — it's a
-  // glance-level control, not a setting.
-  const [mapFilters, setMapFilters] = useState({
-    places: true,
-    stay: true,
-    flight: false,
-    airports: false,
-  });
+  // Which layers the map draws, kept in settings so the way someone last left
+  // their map is the way it comes back. Merged over the full layer list, so a
+  // layer added after a preference was saved arrives switched on rather than
+  // silently missing.
+  const mapFilters = useMemo(
+    () => ({ ...Object.fromEntries(MAP_LAYERS.map((l) => [l.key, true])), ...settings.travelMapLayers }),
+    [settings.travelMapLayers],
+  );
+  const setMapFilters = useCallback((next) => updateSettings({ travelMapLayers: next }), [updateSettings]);
   // Which day's plans to pin — 'all', or one day's id.
   const [mapDay, setMapDay] = useState('all');
   const [amount, setAmount] = useState('50');
@@ -207,11 +211,36 @@ export default function Travel() {
     return points;
   }, [trip, destination, mapFilters, mapDay, store.categories]);
 
-  const editedItem = editingItem
+  // A timetable lookup fills the flight in for you — but only the fields you
+  // haven't set yourself, so an edit is never overwritten by the next refresh.
+  useEffect(() => {
+    if (!trip) return;
+    for (const leg of trip.flights) {
+      const code = (leg.code || '').trim().toUpperCase();
+      const sched = code ? live.flights[code]?.schedule : null;
+      if (!sched) continue;
+      const patch = {};
+      if (!leg.departTime && sched.departure?.time) patch.departTime = sched.departure.time;
+      if (!leg.arriveTime && sched.arrival?.time) patch.arriveTime = sched.arrival.time;
+      if (Object.keys(patch).length) store.patchFlight(leg.id, patch);
+    }
+  }, [trip, live.flights, store]);
+
+  const rawEditedItem = editingItem
     ? trip?.itinerary
         .find((d) => d.id === editingItem.dayId)
         ?.items.find((i) => i.id === editingItem.itemId) ?? null
     : null;
+
+  // A flight line is generated from the flight itself, so it has no photos of
+  // its own — lend it the aircraft shot the flight card is already showing, and
+  // the two views agree about what you're looking at.
+  const editedItem = useMemo(() => {
+    if (rawEditedItem?.source?.kind !== 'flight' || rawEditedItem.photos?.length) return rawEditedItem;
+    const leg = trip?.flights.find((f) => f.id === rawEditedItem.source.id);
+    const photo = leg?.code ? live.flights[leg.code.trim().toUpperCase()]?.airline?.photo : null;
+    return photo?.url ? { ...rawEditedItem, photos: [photo] } : rawEditedItem;
+  }, [rawEditedItem, trip, live.flights]);
 
   if (!trip) return null;
 
@@ -595,6 +624,8 @@ function MapFilters({ value, onChange, days = [], day = 'all', onDay, className 
  */
 function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) {
   const airline = data?.airline ?? null;
+  // Departure is typed in; arrival follows from it unless it's typed in too.
+  const times = flightTimes(flight, data);
   const [addingLeg, setAddingLeg] = useState(false);
   const away = data?.daysAway;
   const when =
@@ -723,13 +754,28 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
           {/* The route itself */}
           <div className="relative z-10 mt-auto shrink-0">
             <div className="flex items-end justify-between gap-2">
-              <Airport code={data?.origin?.iata} city={data?.origin?.city} />
+              <Airport
+                code={data?.origin?.iata}
+                city={data?.origin?.city}
+                time={times.depart}
+                onTime={(value) => onPatch(flight.id, { departTime: value })}
+                timeLabel="Departure time"
+              />
               <span className="mb-2 flex flex-1 items-center gap-1.5 text-white/25" aria-hidden="true">
                 <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/30" />
                 <PlaneGlyph className="h-3 w-3 shrink-0 text-cyan-100/75" />
                 <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/30" />
               </span>
-              <Airport code={data?.destination?.iata} city={data?.destination?.city} align="right" />
+              <Airport
+                code={data?.destination?.iata}
+                city={data?.destination?.city}
+                align="right"
+                time={times.arrive}
+                onTime={(value) => onPatch(flight.id, { arriveTime: value })}
+                timeLabel="Arrival time"
+                estimated={times.arriveEstimated}
+                dayOffset={times.dayOffset}
+              />
             </div>
 
             <div className="mt-2.5 grid grid-cols-2 gap-1 border-t border-white/10 pt-2">
@@ -737,7 +783,10 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
                 label="Distance"
                 value={data?.distanceKm ? `${data.distanceKm.toLocaleString('en-GB')} km` : '—'}
               />
-              <Stat label="In the air" value={flightHours(data?.distanceKm)} />
+              <Stat
+                label={times.arrive && !times.arriveEstimated ? 'In the air' : 'In the air ≈'}
+                value={formatDuration(times.minutes)}
+              />
             </div>
           </div>
         </>
@@ -763,12 +812,6 @@ function legOptions(flights) {
  * A rough time in the air from the great-circle distance — cruise plus taxi and
  * climb. Marked "≈" because free feeds carry no schedule to check it against.
  */
-function flightHours(km) {
-  if (!km) return '—';
-  const minutes = Math.round((km / 840) * 60 + 35);
-  return `≈ ${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
-}
-
 /** A plane seen from above, nose to the right — the glyph that rides a route line. */
 function PlaneGlyph({ className = '' }) {
   return (
@@ -833,11 +876,28 @@ function AircraftPhoto({ photo, label }) {
   );
 }
 
-function Airport({ code, city, align = 'left' }) {
+function Airport({ code, city, align = 'left', time, onTime, timeLabel, estimated, dayOffset = 0 }) {
+  const right = align === 'right';
   return (
-    <div className={align === 'right' ? 'text-right' : ''}>
+    <div className={right ? 'text-right' : ''}>
       <p className="clock-figures text-xl font-light leading-none text-white">{code ?? '···'}</p>
       <p className="mt-1 max-w-[6rem] truncate text-[0.625rem] text-white/40">{city ?? ''}</p>
+      {onTime ? (
+        <p className={`mt-1 flex items-baseline gap-1 text-[0.6875rem] ${right ? 'justify-end' : ''}`}>
+          <EditableTime
+            value={time ?? ''}
+            onChange={onTime}
+            placeholder="--:--"
+            aria-label={timeLabel}
+            className={estimated ? 'text-cyan-100/45' : 'text-cyan-100/80'}
+          />
+          {dayOffset ? (
+            <span className="text-[0.5625rem] font-semibold text-amber-200/70">
+              {dayOffset > 0 ? `+${dayOffset}` : dayOffset}d
+            </span>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }

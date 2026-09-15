@@ -24,10 +24,13 @@ import { useNews } from '../hooks/useNews.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { useWeather } from '../hooks/useWeather.js';
 import { api } from '../services/api/backendClient.js';
+import { peek, put } from '../services/warmCache.js';
 import { formatCurrencyDetailed, formatPercent } from '../utils/formatters.js';
 
 function Ticker({ fallback }) {
-  const [assets, setAssets] = useState(fallback);
+  // Warmed on the launch screen, so the tape opens on live prices rather than
+  // showing the static fallback for a beat and then swapping under the eye.
+  const [assets, setAssets] = useState(() => peek('stocks:ticker')?.ticker?.length ? peek('stocks:ticker').ticker : fallback);
 
   useEffect(() => {
     let alive = true;
@@ -35,7 +38,9 @@ function Ticker({ fallback }) {
       api.stocks
         .ticker()
         .then((d) => {
-          if (alive && d.ticker?.length) setAssets(d.ticker);
+          if (!alive) return;
+          put('stocks:ticker', d);
+          if (d.ticker?.length) setAssets(d.ticker);
         })
         .catch(() => {});
     load();
@@ -192,12 +197,15 @@ const STANDINGS_COLS = 'grid-cols-[1.4rem_1fr_1.9rem_2.1rem_2.3rem]';
 function SportsPanel({ activeId, setActiveId }) {
   const { settings } = useSettings();
   const follows = useMemo(() => settings.follows ?? [], [settings.follows]);
-  const [data, setData] = useState(null);
+  const active = follows.find((f) => f.id === activeId) ?? follows[0] ?? null;
+  // Every followed team is fetched on the launch screen, so switching between
+  // them paints immediately and the refresh below happens under the content.
+  const [data, setData] = useState(() => (active ? (peek(`sports:${active.id}`) ?? null) : null));
   const [loading, setLoading] = useState(false);
 
-  const active = follows.find((f) => f.id === activeId) ?? follows[0] ?? null;
   const activeTeam = active?.team;
   const activeSport = active?.sport;
+  const activeFollowId = active?.id;
 
   useEffect(() => {
     if (follows.length && !follows.some((f) => f.id === activeId)) setActiveId(follows[0].id);
@@ -209,16 +217,22 @@ function SportsPanel({ activeId, setActiveId }) {
       return undefined;
     }
     let alive = true;
-    setLoading(true);
+    const warmed = peek(`sports:${activeFollowId}`);
+    if (warmed) setData(warmed);
+    setLoading(!warmed);
     api.sports
       .team(activeTeam, activeSport, active?.leagueId, active?.leagueLabel)
-      .then((d) => alive && setData(d))
-      .catch(() => alive && setData(null))
+      .then((d) => {
+        if (!alive) return;
+        put(`sports:${activeFollowId}`, d);
+        setData(d);
+      })
+      .catch(() => alive && !warmed && setData(null))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-  }, [activeTeam, activeSport, active?.leagueId, active?.leagueLabel]);
+  }, [activeTeam, activeSport, activeFollowId, active?.leagueId, active?.leagueLabel]);
 
   if (!follows.length) {
     return (
@@ -287,6 +301,13 @@ function SportsPanel({ activeId, setActiveId }) {
 
           {data.kind === 'f1' ? (
             <SportsF1Standings drivers={data.driverStandings} constructors={data.constructorStandings} />
+          ) : data.conferences?.length ? (
+            <BallStandings
+              rows={data.standings}
+              conferences={data.conferences}
+              playoffs={data.playoffs}
+              ties={data.ties}
+            />
           ) : data.standings.length ? (
             <SportsStandings rows={data.standings} variant={data.statSport === 'football' ? 'football' : 'wl'} />
           ) : data.kind === 'race' ? (
@@ -303,6 +324,115 @@ function SportsPanel({ activeId, setActiveId }) {
 function winPct(r) {
   if (!r.played) return '–';
   return (r.won / r.played).toFixed(3).replace(/^0(?=\.)/, '');
+}
+
+const BALL_COLS = 'grid-cols-[1.5rem_1fr_1.7rem_1.7rem_2.4rem_2.1rem]';
+const BALL_COLS_TIES = 'grid-cols-[1.5rem_1fr_1.5rem_1.5rem_1.5rem_2.4rem_2.1rem]';
+
+/**
+ * NBA and NFL standings, by conference.
+ *
+ * Neither sport is followed as a single 1–30 ladder — the conference race is
+ * what decides the playoffs, so the table is split East/West or AFC/NFC and
+ * seeded within each. The line under the last playoff place is the thing the
+ * table exists to show, so it is drawn.
+ */
+function BallStandings({ rows, conferences, playoffs, ties }) {
+  // Open on the conference of the team being followed.
+  const mine = rows.find((r) => r.me)?.conference;
+  const [conference, setConference] = useState(mine ?? conferences[0]);
+  useEffect(() => {
+    if (mine) setConference(mine);
+  }, [mine]);
+
+  const table = rows
+    .filter((r) => r.conference === conference)
+    .sort((a, b) => (a.seed ?? 99) - (b.seed ?? 99));
+  const cols = ties ? BALL_COLS_TIES : BALL_COLS;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-2 flex shrink-0 gap-1">
+        {conferences.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setConference(c)}
+            className={[
+              'rounded-full px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] transition',
+              c === conference ? 'bg-cyan-200/15 text-cyan-50 ring-1 ring-cyan-200/25' : 'text-white/40 hover:text-white/70',
+            ].join(' ')}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
+      <div className={`grid ${cols} gap-1 px-2 pb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-white/38`}>
+        <span>#</span>
+        <span>Team</span>
+        <span className="text-right">W</span>
+        <span className="text-right">L</span>
+        {ties ? <span className="text-right">T</span> : null}
+        <span className="text-right">Pct</span>
+        <span className="text-right">Strk</span>
+      </div>
+
+      <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+        {table.map((r) => {
+          // The playoff cut, and for the NBA the play-in band above it.
+          const cut = playoffs?.line && r.seed === playoffs.line;
+          const playIn = playoffs?.playIn && r.seed === playoffs.playIn;
+          const inPlayIn = playoffs?.playIn && r.seed > playoffs.line && r.seed <= playoffs.playIn;
+          return (
+            <div key={r.team} className={cut || playIn ? 'border-b border-dashed border-white/12 pb-1' : ''}>
+              <div
+                className={[
+                  `grid ${cols} items-center gap-1 rounded-xl px-2 py-2 text-xs`,
+                  r.me
+                    ? 'bg-cyan-200/12 text-white ring-1 ring-cyan-200/25'
+                    : inPlayIn
+                      ? 'bg-white/[0.03] text-white/60'
+                      : 'bg-white/[0.03] text-white/70',
+                ].join(' ')}
+              >
+                <span className={`clock-figures ${r.me ? 'text-cyan-100' : 'text-white/45'}`}>{r.seed ?? '–'}</span>
+                <span className="flex min-w-0 items-center gap-1.5 truncate font-medium">
+                  {r.crest ? (
+                    <img src={r.crest} alt="" className="h-4 w-4 shrink-0 rounded-sm bg-white/6 object-contain" />
+                  ) : null}
+                  <span className="truncate">{r.team}</span>
+                </span>
+                <span className="clock-figures text-right text-white/70">{r.won}</span>
+                <span className="clock-figures text-right text-white/55">{r.lost}</span>
+                {ties ? <span className="clock-figures text-right text-white/45">{r.drawn}</span> : null}
+                <span className="clock-figures text-right font-semibold text-white">{pct(r)}</span>
+                <span
+                  className={[
+                    'clock-figures text-right text-[0.6875rem] font-medium',
+                    r.streak?.startsWith('W') ? 'text-emerald-200/80' : r.streak?.startsWith('L') ? 'text-rose-200/70' : 'text-white/40',
+                  ].join(' ')}
+                >
+                  {r.streak ?? '–'}
+                </span>
+              </div>
+              {cut || playIn ? (
+                <p className="px-2 pt-1 text-[0.5625rem] font-semibold uppercase tracking-[0.14em] text-white/25">
+                  {playIn ? 'Play-in line' : 'Playoff line'}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Win percentage, shown the way these sports show it: .625 rather than 62.5%. */
+function pct(r) {
+  const value = r.winPct ?? (r.played ? (r.won + (r.drawn ?? 0) * 0.5) / r.played : null);
+  return value == null ? '–' : value.toFixed(3).replace(/^0(?=\.)/, '');
 }
 
 function SportsStandings({ rows, variant = 'football' }) {
@@ -596,13 +726,15 @@ const fmtPrice = (p) => (p == null ? '–' : p >= 1000 ? p.toLocaleString(undefi
 function StocksPanel() {
   const { settings } = useSettings();
   const symbols = useMemo(() => settings.stocks ?? [], [settings.stocks]);
-  const [rows, setRows] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const warmKey = `stocks:${symbols.join(',')}`;
+  const warmedRows = peek(warmKey)?.quotes;
+  const [rows, setRows] = useState(() => (warmedRows?.length ? warmedRows : null));
+  const [loading, setLoading] = useState(() => !warmedRows?.length);
   const [isSample, setIsSample] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    setLoading(!peek(warmKey)?.quotes?.length);
     if (!symbols.length) {
       setRows([]);
       setLoading(false);
@@ -612,6 +744,7 @@ function StocksPanel() {
       .quotes(symbols)
       .then((d) => {
         if (!alive) return;
+        put(warmKey, d);
         const qs = d.quotes ?? [];
         if (qs.length) {
           setRows(qs);
@@ -630,7 +763,7 @@ function StocksPanel() {
     return () => {
       alive = false;
     };
-  }, [symbols]);
+  }, [symbols, warmKey]);
 
   if (loading) {
     return <div className="min-h-0 flex-1 animate-pulse rounded-2xl bg-white/6" />;
