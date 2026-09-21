@@ -31,7 +31,7 @@ product can actually do.
 | Navigation | Floating pill dock, gradient AI button | A hairline baseline across the foot of the screen, with the assistant as an ECG beat in it |
 | Travel | Local-only, typed in by hand | Live flight tracking, real maps, places search, currency, destination facts |
 | Assistant | Text chat, agent loop over tools | The same, plus real-time speech over a WebSocket, with barge-in |
-| Immersive player | Blurred sleeve, karaoke lyrics, a starfield that ignored the music | Three switchable visuals that move to the track's real tempo |
+| Immersive player | Blurred sleeve, floating cover, karaoke lyrics | The song drawn as a horizon: every lyric line a tick on the rule |
 | Launchpad | A modal app picker | A view of its own: local apps, saved sites and web search |
 | Finance | Present | **Removed** |
 
@@ -161,84 +161,51 @@ search field that covers your Mac, your sites and the open web.
 
 ![Launchpad, before and after](docs/release/compare-launchpad.png)
 
-## 8. The immersive player: three rooms that move to the record
+## 8. The immersive player: the song as a horizon
 
 Music and the live news channel both have a full-screen mode. The music one has
-been rebuilt from nothing.
+been rebuilt.
 
-Its first version did what every full-screen player does: the sleeve blown up and
-blurred into wallpaper, the cover floating in a halo, karaoke lyrics glowing
-beside it, a starfield drifting behind the lot that had no relationship to the
-music at all. It looked like a music player because it was copying music players.
+Its first version did what every full-screen player does: the sleeve blown up
+and blurred into wallpaper, the cover floating in a halo on the left, karaoke
+lyrics glowing on the right. It looked like a music player because it was
+copying music players.
 
-What replaces it is a visual that fills the screen and actually moves with the
-track, with the record at the centre of it and the words underneath. There is no
-chrome at all until you move the pointer.
+The rebuild starts from the grammar the rest of Pulse OS is already built on. A
+view is a sky, a horizon and a ground — so here, **the horizon is the track**.
+The rule runs the full width of the screen, the part you have heard is lit, and
+every line of the lyric stands on it as a tick. That means the shape of the song
+is visible before you get to it: verses crowd together, a chorus repeats at an
+even pace, an instrumental break opens a gap in the marks. Click anywhere along
+the line to move there.
 
 ![The immersive player, before and after](docs/release/compare-immersive.png)
 
-### Three of them, switchable
+Above the line are the words, set in Newsreader because a lyric is read from
+across the room — the old version set them in the interface face and the track
+title in the display face, which was exactly the wrong way round. The line being
+sung is simply the only bright one, marked with the same accent tick that heads
+every column elsewhere in the app; there is no bloom. Below the line the record
+sits on the ground as an object, square-edged and casting a shadow, and nothing
+floats.
 
-**Resonance** is a surface the record is vibrating — three point sources sending
-rings across it, drifting on their own slow orbits, with the moiré between them
-as the figure. Rings rather than straight waves, deliberately: plane waves at
-fixed angles tile the screen and read as wallpaper, where circles crossing
-circles never repeat.
+The light in the room is the sleeve's, and only the sleeve's. It does not listen
+to the audio — no beat detection, nothing to tune — because this is somewhere to
+leave running, not a meter to watch. The starfield and nebula the old version
+drifted behind everything are gone, along with a shine that swept the cover, a
+breathing halo, a parallax drift and a pulsing glow on the sung line: five
+decorations that were there because they were possible.
 
-![Resonance](docs/release/gallery/immersive-resonance.jpg)
+![The immersive player, lit by a different record](docs/release/gallery/immersive.jpg)
 
-**Ink** is the album's colours released into dark water. Every sung line pushes a
-plume out from behind the sleeve and the beat gives it a shove. Nothing is ever
-cleared — each frame lays a nearly-transparent wash over the last, so the
-diffusion *is* the fade, which is also why it costs almost nothing.
-
-![Ink](docs/release/gallery/immersive-ink.jpg)
-
-**Lattice** is a sheet of wire being pushed from behind: a field of hairlines,
-flat until the music touches it, with a ring going out on every downbeat and a
-stronger one on every sung line. It is the sharp one, and the one that keeps the
-hairline vocabulary the rest of Pulse OS is drawn in.
-
-![Lattice](docs/release/gallery/immersive-lattice.jpg)
-
-### How it knows where the beat is
-
-This is the part that took the work. There is no audio to analyse: the record is
-playing on a Spotify Connect device, so none of it reaches the page, and the Web
-Playback SDK's own output is DRM-protected and cannot be routed into an
-AnalyserNode. Spotify's `/audio-analysis`, which used to publish a beat timeline,
-has returned 403 for apps in Development mode since November 2024.
-
-A microphone would work, and was the obvious answer, but it is a permission
-prompt, it hears the room rather than the record, and it does nothing at all on
-headphones.
-
-So the beat is reconstructed instead, from three things that are exact:
-
-1. **the track's real tempo** — Spotify's features endpoint where it still
-   answers, and ReccoBeats, which publishes the same measurements against
-   Spotify track ids, where it does not;
-2. **the phase of that tempo**, estimated from the synced lyric onsets. A singer
-   enters on the beat far more often than not, so taking every onset modulo one
-   beat and averaging them *as unit vectors* — which is what makes an average
-   meaningful when the values wrap — lands close to where the beat actually sits;
-3. **playback position**, reported each second and interpolated between.
-
-The result is steadier than a microphone, needs no permission, is identical on
-every play and works on headphones. What it cannot do is follow dynamics inside a
-bar: it knows where the beats are, not how hard each one was hit. So the visuals
-are driven by continuous oscillators running at the true tempo rather than by hard
-triggers on the beat — a few tens of milliseconds of drift then reads as feel,
-where a flash would read as landing in the wrong place. The accents, which do
-fire discretely, come from the lyric onsets, because those are timed to the vocal
-and land where you expect.
-
-The sleeve breathes on the beat, and the sung line is set in Newsreader, which is
-a variable face — so the letterforms genuinely gain and lose weight with the
-music rather than merely changing opacity.
+Where you are in the track is not a marker standing off the rule but a light
+sitting in it — the same three-part streak, accent tails around a white core,
+that runs the navigation baseline at the foot of every other view. A second one
+travels the whole rule on a long loop, so the line is never quite still.
 
 Leave the machine alone while something is playing and this takes over as the
-screensaver: the controls go away, a clock appears, and the words carry on.
+screensaver: the transport goes away, the clock takes the ground, and the words
+carry on.
 
 ## 9. What we removed
 
