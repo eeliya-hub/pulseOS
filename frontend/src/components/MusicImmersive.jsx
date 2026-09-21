@@ -1,11 +1,10 @@
 import { Minimize2, Music2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, memo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { activeLineIndex, useLyrics } from '../hooks/useLyrics.js';
 import { useSpotifyPlayer } from '../hooks/useSpotifyPlayer.js';
 import { albumPalette, DEFAULT_PALETTE, rgba } from '../services/music/albumPalette.js';
 import { formatClock, formatLongDate } from '../utils/dateTime.js';
-import { scene, SceneRenderer, stepScene } from '../services/music/scene/index.js';
 
 const fmt = (ms) => {
   if (ms == null) return '0:00';
@@ -20,20 +19,26 @@ const fmt = (ms) => {
 const LYRIC_LEAD_MS = 400;
 
 /**
- * Full-screen immersive player: the artwork's own colours washed across the
- * screen, time-synced lyrics you can tap to seek, and a room that drifts.
+ * Full-screen player: the song drawn as a horizon.
  *
- * The atmosphere deliberately does NOT react to the audio. It's an environment
- * to leave up, not a meter to watch: pools of light drift on their own slow
- * orbits and the album's colours cross-fade when the track changes, and that's
- * the whole of it. No microphone, no beat detection, no controls to tune —
- * nothing to configure and nothing to go out of sync.
+ * The rest of Pulse OS is built as sky, horizon and ground; this is that idea
+ * with the lights turned all the way up. The horizon IS the track — the rule
+ * runs the width of the screen, the part you have heard is lit, and every line
+ * of the lyric is a tick standing on it, so the shape of the song is visible
+ * before you hear it: verses crowd together, an instrumental opens a gap. Click
+ * anywhere along it to move.
+ *
+ * Above the line are the words, set in the display face because they are the
+ * thing read from across the room. Below it is the record itself and the
+ * controls. The light in the room is the sleeve's own colour and nothing else;
+ * it does not listen to the audio, because this is somewhere to leave running,
+ * not a meter to watch.
  */
 /**
  * @param {object} props
  * @param {() => void} props.onClose
  * @param {boolean} [props.afk] standing in for the screensaver: the clock takes
- *   over the header and a tap anywhere returns to Home
+ *   the ground, the transport goes away, and a tap anywhere returns to Home
  * @param {Date} [props.now] ticking clock, supplied by the app shell
  */
 export default function MusicImmersive({ onClose, afk = false, now }) {
@@ -47,21 +52,19 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
   // The player reports position once a second. Interpolating that in React state
   // re-rendered this whole component 60x a second AND restarted the progress
   // bar's width transition every frame, which is what made the bar stutter and
-  // lag behind. Position now lives in a ref, and the bar, the clock and the
-  // lyric index are written straight to the DOM from the shared frame loop.
+  // lag behind. Position lives in a ref, and the horizon, the clock and the
+  // lyric index are written straight to the DOM from the frame loop.
   const anchor = useRef({ at: performance.now(), pos: position });
   useEffect(() => {
     anchor.current = { at: performance.now(), pos: position };
   }, [position]);
 
-
-
-  // The line being sung: the frame loop breathes its glow, the lyric panel keeps
-  // it centred. One element, so neither has to touch the rest of the song.
   const activeLineRef = useRef(null);
-  const fillRef = useRef(null);
-  const knobRef = useRef(null);
+  const litRef = useRef(null);
+  const litTicksRef = useRef(null);
+  const headRef = useRef(null);
   const elapsedRef = useRef(null);
+  const fieldRef = useRef(null);
   const [lineIndex, setLineIndex] = useState(-1);
   const lineIndexRef = useRef(-1);
 
@@ -80,30 +83,20 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
 
   const seekTo = useCallback((ms) => controls.seek(Math.max(0, Math.round(ms))), [controls]);
 
-  // Light that lives outside the canvas: the artwork's halo and the colour wash
-  // breathe on the same slow clock as the scene, so the DOM and the canvas drift
-  // together. Written straight to the DOM — a React render per frame would be
-  // far too expensive for something this small.
-  const haloRef = useRef(null);
-  const washRef = useRef(null);
-  const backdropRef = useRef(null);
-  const shineRef = useRef(null);
-  const contentRef = useRef(null);
-  const rootRef = useRef(null);
-  const sparkRef = useRef(null);
-  const artworkRef = useRef(palette.glow);
-  artworkRef.current = palette.glow;
-
-  useSceneFrame(artworkRef, () => {
+  useFrame((t) => {
     // Where we actually are in the track, interpolated between the player's
     // once-a-second updates.
     const { at, pos } = anchor.current;
     const here = paused ? pos : pos + (performance.now() - at);
     const clamped = durationMs ? Math.min(here, durationMs) : here;
     const pct = durationMs ? Math.min(100, (clamped / durationMs) * 100) : 0;
-    if (fillRef.current) fillRef.current.style.width = `${pct.toFixed(3)}%`;
-    if (knobRef.current) knobRef.current.style.left = `${pct.toFixed(3)}%`;
-    if (sparkRef.current) sparkRef.current.style.left = `${pct.toFixed(2)}%`;
+
+    // The horizon: one width and one offset. The lit ticks are the same row of
+    // ticks as the dim ones, clipped to how far the song has got — one style
+    // write a frame instead of one per tick.
+    if (litRef.current) litRef.current.style.width = `${pct.toFixed(3)}%`;
+    if (litTicksRef.current) litTicksRef.current.style.clipPath = `inset(0 ${(100 - pct).toFixed(3)}% 0 0)`;
+    if (headRef.current) headRef.current.style.left = `${pct.toFixed(3)}%`;
     if (elapsedRef.current) elapsedRef.current.textContent = fmt(clamped);
 
     // Re-render only when the sung line actually changes — a few times a verse
@@ -114,217 +107,140 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
       setLineIndex(idx);
     }
 
-    // ── The room, on the DOM side. Transforms and opacity only: no layout. ──
-    const t = scene.t;
-    if (haloRef.current) {
-      haloRef.current.style.opacity = (0.55 + Math.sin(t * 0.13) * 0.18).toFixed(3);
-    }
-    if (washRef.current) {
-      washRef.current.style.opacity = (0.82 + Math.sin(t * 0.057 + 1.3) * 0.12).toFixed(3);
-    }
-    if (backdropRef.current) {
-      // A slow drift, so the blurred cover behind everything is never quite the
-      // same shot twice — TRANSLATION ONLY. Animating the scale of a 64px-blurred
-      // full-screen image forces the compositor to re-rasterise that blur every
-      // frame; translating an already-rasterised layer costs nothing. The zoom is
-      // baked into the class instead.
-      backdropRef.current.style.transform =
-        `translate3d(${(Math.sin(t * 0.017) * 1.1).toFixed(2)}%, ${(Math.cos(t * 0.013) * 0.9).toFixed(2)}%, 0)`;
-    }
-    if (shineRef.current) {
-      // A highlight crossing the glass roughly every twenty seconds.
-      const sweep = (t * 5) % 100;
-      shineRef.current.style.opacity = (sweep < 34 ? 0.32 * Math.sin((sweep / 34) * Math.PI) : 0).toFixed(3);
-      shineRef.current.style.transform = `translateX(${(-30 + sweep * 5).toFixed(1)}%)`;
-    }
-    // A slow breath on the sung line. Written to that ONE line, not to the root:
-    // every line's text-shadow referenced the root variable, so each frame's
-    // write invalidated and repainted the whole song — a hundred elements, sixty
-    // times a second, for a glow only one of them shows.
-    if (activeLineRef.current) {
-      activeLineRef.current.style.setProperty('--lyric-glow', (0.5 + 0.5 * Math.sin(t * 0.5)).toFixed(3));
-    }
-    // Parallax: the content sits in front of the room, so it drifts against the
-    // camera rather than with it.
-    if (contentRef.current) {
-      contentRef.current.style.transform =
-        `translate3d(${(-scene.camX * window.innerWidth * 0.5).toFixed(2)}px, ` +
-        `${(-scene.camY * window.innerHeight * 0.5).toFixed(2)}px, 0)`;
+    // The one ambient motion in the room: the album's light leans, very slowly,
+    // so a screen left on for an hour is never quite the same picture twice.
+    // Transform only — a gradient that re-renders every frame is a repaint of
+    // the whole screen.
+    if (fieldRef.current) {
+      fieldRef.current.style.transform =
+        `translate3d(${(Math.sin(t * 0.021) * 2.2).toFixed(2)}%, ${(Math.cos(t * 0.016) * 1.4).toFixed(2)}%, 0)`;
     }
   });
+
+  const hasTrack = Boolean(state?.track);
 
   return createPortal(
     // onScroll: focusing a lyric line can also scroll this container; snapping
     // it back keeps the overlay from drifting off the bottom of the screen.
     <div
-      ref={rootRef}
       data-settings=""
-      className="fixed inset-0 z-[80] overflow-hidden bg-[#05070f] text-moon"
+      className="immersive fixed inset-0 z-[80] overflow-hidden text-moon"
+      style={{ '--lit': rgba(palette.glow, 1) }}
       onScroll={(e) => {
         e.currentTarget.scrollTop = 0;
         e.currentTarget.scrollLeft = 0;
       }}
     >
-      {/* The artwork itself, blown up and blurred, is the backdrop */}
-      {state?.image ? (
-        <img
-          ref={backdropRef}
-          src={state.image}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full scale-125 object-cover opacity-35 blur-3xl saturate-150 will-change-transform"
-        />
-      ) : null}
+      {/* The room: the sleeve's colours as light, not as a photograph. */}
       <div
-        ref={washRef}
-        className="absolute inset-0"
+        ref={fieldRef}
         aria-hidden="true"
+        className="immersive-field"
         style={{
+          // The light pools to the right, opposite the words. The lyric sits in
+          // the shadow side of the room and the sleeve's colour fills the space
+          // beside it — which is what stops the right-hand half reading as
+          // simply empty.
           background:
-            `radial-gradient(120% 80% at 8% -10%, ${rgba(palette.base, 0.42)}, transparent 60%),` +
-            `radial-gradient(110% 90% at 100% 110%, ${rgba(palette.accent, 0.34)}, transparent 62%),` +
-            'linear-gradient(180deg, rgba(5,7,15,0.55) 0%, rgba(5,7,15,0.88) 100%)',
+            `radial-gradient(62% 68% at 84% 26%, ${rgba(palette.base, 0.78)}, transparent 68%),` +
+            `radial-gradient(52% 46% at 96% 78%, ${rgba(palette.accent, 0.5)}, transparent 70%),` +
+            `radial-gradient(70% 36% at 18% 6%, ${rgba(palette.glow, 0.22)}, transparent 72%)`,
         }}
       />
-      <Visualizer palette={palette} />
 
-      <div ref={contentRef} className="relative flex h-full flex-col will-change-transform">
-        {afk ? (
-          <header className="flex shrink-0 flex-col items-center px-6 pb-2 pt-7 text-center md:px-10">
-            <p className="clock-figures text-[clamp(3rem,7.5vw,5.5rem)] font-extralight leading-none text-moon text-glow">
-              {formatClock(now)}
-            </p>
-            <p className="display-type mt-2 text-sm font-light tracking-[0.06em] text-moon/60">
-              {formatLongDate(now)}
-            </p>
-          </header>
-        ) : (
-          <header className="flex shrink-0 items-center gap-3 px-6 py-5 md:px-10">
-            <span className="glow-dot h-1.5 w-1.5 rounded-full bg-accent text-accent" aria-hidden="true" />
-            <p className="text-[0.75rem] font-semibold text-moon/45">
-              {paused ? 'Paused' : 'Now playing'}
-            </p>
-
+      <div className="relative grid h-full" style={{ gridTemplateRows: 'minmax(0,1fr) auto' }}>
+        {/* ── Sky: the words ─────────────────────────────────────────── */}
+        <div className="relative min-h-0">
+          {!afk ? (
             <button
               type="button"
               onClick={onClose}
               aria-label="Exit immersive mode"
               title="Exit (Esc)"
-              className="soft-button ml-auto grid h-9 w-9 place-items-center rounded-full text-moon/75 transition hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="pill absolute right-7 top-6 z-20 grid h-10 w-10 place-items-center px-0 text-moon/70 md:right-10"
             >
               <Minimize2 className="h-4 w-4" aria-hidden="true" />
             </button>
-          </header>
-        )}
+          ) : null}
 
-        <main className="grid min-h-0 flex-1 grid-cols-1 items-center gap-8 px-6 pb-8 md:px-10 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-14">
-          {/* Artwork + transport */}
-          <section className="flex min-w-0 flex-col items-center lg:items-start">
-            <div className="relative">
-              <div
-                ref={haloRef}
-                className="absolute -inset-8 rounded-[3.5rem] blur-2xl will-change-transform"
-                style={{ background: `radial-gradient(circle, ${rgba(palette.glow, 0.55)}, transparent 70%)` }}
-                aria-hidden="true"
-              />
-              <div className="relative aspect-square w-[min(62vw,20rem)] overflow-hidden rounded-[2rem] shadow-2xl ring-1 ring-white/15">
-                {/* Highlight travelling the cover with the top end */}
-                <span
-                  ref={shineRef}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 -left-1/3 z-10 w-1/3 opacity-0 will-change-transform"
-                  style={{
-                    background:
-                      'linear-gradient(105deg, transparent, rgba(255,255,255,0.5) 45%, rgba(255,255,255,0.75) 50%, transparent 82%)',
-                  }}
-                />
-                {state?.image ? (
-                  <img src={state.image} alt={`${state.track} album art`} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="grid h-full w-full place-items-center bg-white/5">
-                    <Music2 className="h-16 w-16 text-moon/30" strokeWidth={1.2} aria-hidden="true" />
-                  </div>
-                )}
-              </div>
+          <Lyrics
+            lyrics={lyrics}
+            index={lineIndex}
+            onSeek={seekTo}
+            activeRef={activeLineRef}
+            hasTrack={hasTrack}
+          />
+        </div>
+
+        {/* ── The horizon: the song itself ───────────────────────────── */}
+        <Horizon
+          lines={lyrics.synced ? lyrics.lines : null}
+          durationMs={durationMs}
+          onSeek={seekTo}
+          litRef={litRef}
+          litTicksRef={litTicksRef}
+          headRef={headRef}
+        />
+
+        {/* ── Ground: the record, and what you can do to it ──────────── */}
+        <footer className="immersive-ground flex items-center gap-6 px-7 pb-7 pt-6 md:gap-8 md:px-10">
+          <Sleeve image={state?.image} track={state?.track} />
+
+          <div className="min-w-0 flex-1">
+            <h1 className="immersive-title truncate">{state?.track || 'Nothing playing'}</h1>
+            <p className="t-meta mt-1 truncate">
+              {state?.artists || 'Start something from your library'}
+            </p>
+          </div>
+
+          {afk ? (
+            <div className="text-right">
+              <p className="display-figures text-[clamp(2.25rem,4.4vw,3.5rem)] leading-none text-moon">
+                {formatClock(now)}
+              </p>
+              <p className="t-meta mt-1.5">{formatLongDate(now)}</p>
             </div>
-
-            <div className="mt-7 w-[min(62vw,20rem)] min-w-0 text-center lg:text-left">
-              <h1 className="display-type truncate text-3xl font-extralight tracking-wide text-moon text-glow">
-                {state?.track || 'Nothing playing'}
-              </h1>
-              <p className="mt-1.5 truncate text-sm font-light text-moon/60">
-                {state?.artists || 'Start something from your library'}
+          ) : (
+            <>
+              <p className="clock-figures shrink-0 text-[0.8125rem] text-moon/45">
+                <span ref={elapsedRef}>{fmt(position)}</span>
+                <span className="px-1.5 text-moon/25">/</span>
+                <span>{fmt(durationMs)}</span>
               </p>
 
-              <button
-                type="button"
-                aria-label="Seek"
-                onClick={(e) => {
-                  if (!durationMs) return;
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  seekTo(((e.clientX - rect.left) / rect.width) * durationMs);
-                }}
-                className="group relative mt-6 block h-1.5 w-full cursor-pointer rounded-full bg-white/12"
-              >
-                <div
-                  ref={fillRef}
-                  className="absolute left-0 top-0 h-1.5 w-0 rounded-full"
-                  style={{ background: rgba(palette.glow, 0.95) }}
-                />
-                <span
-                  ref={sparkRef}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 h-2.5 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[3px]"
-                  style={{ left: 0, background: rgba(palette.glow, 0.9) }}
-                />
-                <div
-                  ref={knobRef}
-                  className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-opacity group-hover:opacity-100"
-                  style={{ left: 0 }}
-                />
-              </button>
-              <div className="mt-2 flex justify-between text-[0.8125rem] font-medium text-moon/45">
-                <span ref={elapsedRef} className="clock-figures">{fmt(position)}</span>
-                <span className="clock-figures">{fmt(durationMs)}</span>
-              </div>
-
-              {/* Centred under the artwork — the column is exactly the art's width */}
-              <div className="mt-6 flex items-center justify-center gap-8">
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
                   onClick={controls.previous}
                   aria-label="Previous track"
-                  className="text-moon/60 transition hover:scale-110 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="pill grid h-11 w-11 place-items-center px-0"
                 >
-                  <SkipBack className="h-6 w-6" fill="currentColor" aria-hidden="true" />
+                  <SkipBack className="h-4 w-4" fill="currentColor" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
                   onClick={controls.toggle}
                   aria-label={paused ? 'Play' : 'Pause'}
-                  className="grid h-16 w-16 place-items-center rounded-full text-[#08101f] shadow-xl transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                  style={{ background: `linear-gradient(160deg, #fff, ${rgba(palette.glow, 0.85)})` }}
+                  className="pill pill-lit grid h-14 w-14 place-items-center px-0"
                 >
                   {paused ? (
-                    <Play className="ml-1 h-6 w-6" fill="currentColor" aria-hidden="true" />
+                    <Play className="ml-0.5 h-5 w-5" fill="currentColor" aria-hidden="true" />
                   ) : (
-                    <Pause className="h-6 w-6" fill="currentColor" aria-hidden="true" />
+                    <Pause className="h-5 w-5" fill="currentColor" aria-hidden="true" />
                   )}
                 </button>
                 <button
                   type="button"
                   onClick={controls.next}
                   aria-label="Next track"
-                  className="text-moon/60 transition hover:scale-110 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="pill grid h-11 w-11 place-items-center px-0"
                 >
-                  <SkipForward className="h-6 w-6" fill="currentColor" aria-hidden="true" />
+                  <SkipForward className="h-4 w-4" fill="currentColor" aria-hidden="true" />
                 </button>
               </div>
-            </div>
-          </section>
-
-          <Lyrics lyrics={lyrics} index={lineIndex} palette={palette} onSeek={seekTo} activeRef={activeLineRef} />
-        </main>
+            </>
+          )}
+        </footer>
       </div>
 
       {/* Standing in for the screensaver, the whole screen is the way back —
@@ -336,11 +252,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
           onClick={onClose}
           aria-label="Back to home"
           className="absolute inset-0 z-40 cursor-default focus:outline-none"
-        >
-          <span className="absolute inset-x-0 bottom-7 animate-pulse text-center text-[0.75rem] font-medium text-moon/25">
-            Touch anywhere for home
-          </span>
-        </button>
+        />
       ) : null}
     </div>,
     document.body,
@@ -349,51 +261,105 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
 
 /* ── Frame loop ──────────────────────────────────────────────────────────── */
 
-/**
- * Run `fn` every animation frame with the ambient scene already advanced.
- *
- * `stepScene` is idempotent per timestamp and rAF hands every callback in a
- * frame the same one, so the canvas and the DOM effects below can each drive
- * their own loop and still be looking at exactly the same scene.
- *
- * @param {{current: number[]}} artworkRef album colour, read fresh each frame
- * @param {(scene: object, dt: number) => void} fn
- */
-function useSceneFrame(artworkRef, fn) {
+/** Run `fn(seconds)` every animation frame. */
+function useFrame(fn) {
   const cb = useRef(fn);
   cb.current = fn;
 
   useEffect(() => {
     let raf = 0;
-    let last = performance.now();
-    const tick = (now) => {
+    const start = performance.now();
+    const tick = (stamp) => {
       raf = requestAnimationFrame(tick);
-      // Clamped: a backgrounded tab resumes with a huge gap, and without this
-      // every drifting element would jump on the first frame back.
-      const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
-      last = now;
-      cb.current(stepScene({ artwork: artworkRef.current, dt, stamp: now }), dt);
+      cb.current((stamp - start) / 1000);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [artworkRef]);
+  }, []);
+}
+
+/* ── The horizon ─────────────────────────────────────────────────────────── */
+
+/**
+ * The track as a line you can read and move along.
+ *
+ * The rule spans the screen; the heard part is lit. Each sung line stands on it
+ * as a tick, so the song's shape — where the verses are, where it opens up —
+ * is there to see. The lit ticks are a second copy of the same row clipped to
+ * the playhead, which keeps the per-frame work to two style writes however many
+ * lines the song has.
+ */
+function Horizon({ lines, durationMs, onSeek, litRef, litTicksRef, headRef }) {
+  // Positions change only when the track does.
+  const ticks = useMemo(() => {
+    if (!lines || !durationMs) return [];
+    return lines
+      .filter((l) => l.text && l.at != null)
+      .map((l) => ({ at: l.at, pct: Math.min(100, (l.at / durationMs) * 100) }));
+  }, [lines, durationMs]);
+
+  const seekFromEvent = (e) => {
+    if (!durationMs) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    onSeek(((e.clientX - rect.left) / rect.width) * durationMs);
+  };
+
+  const row = (lit) => (
+    <div className={lit ? 'immersive-ticks immersive-ticks--lit' : 'immersive-ticks'} ref={lit ? litTicksRef : null}>
+      {ticks.map((t, i) => (
+        <span key={i} style={{ left: `${t.pct.toFixed(3)}%` }} />
+      ))}
+    </div>
+  );
+
+  return (
+    <button
+      type="button"
+      aria-label="Seek within the track"
+      onClick={seekFromEvent}
+      className="immersive-horizon"
+    >
+      <div className="immersive-rule" aria-hidden="true">
+        <div ref={litRef} className="immersive-rule-lit" />
+      </div>
+      {row(false)}
+      {row(true)}
+      <span ref={headRef} className="immersive-head" aria-hidden="true" />
+    </button>
+  );
+}
+
+/* ── The sleeve ──────────────────────────────────────────────────────────── */
+
+/** The record as an object on the ground: square, hard-edged, casting a shadow. */
+function Sleeve({ image, track }) {
+  return (
+    <div className="immersive-sleeve shrink-0">
+      {image ? (
+        <img src={image} alt={`${track} album art`} className="h-full w-full object-cover" />
+      ) : (
+        <div className="grid h-full w-full place-items-center bg-white/5">
+          <Music2 className="h-7 w-7 text-moon/30" strokeWidth={1.2} aria-hidden="true" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── Lyrics ──────────────────────────────────────────────────────────────── */
 
-function Lyrics({ lyrics, index, palette, onSeek, activeRef }) {
+function Lyrics({ lyrics, index, onSeek, activeRef, hasTrack }) {
   const panelRef = useRef(null);
-  // Keep the line being sung in the middle of the panel.
+  // Keep the line being sung on the reading line.
   //
   // Scrolled by hand rather than with scrollIntoView: that scrolls EVERY
   // scrollable ancestor, and the full-screen portal counts as one (overflow
   // hidden is still programmatically scrollable). It was dragging the whole
-  // overlay up ~22px, which showed as a hard-edged strip along the bottom of
-  // the screen where the backdrop and canvas no longer reached.
-  // Scrolled by hand on a rAF ease rather than `behavior: 'smooth'`. The native
-  // one restarts from scratch every time it's called, so on a fast verse each
-  // new line cancelled the previous glide mid-flight — that was the stutter.
-  // This one just retargets: the line already in motion keeps its momentum.
+  // overlay up ~22px, which showed as a hard-edged strip along the bottom.
+  // Eased on a rAF rather than `behavior: 'smooth'`: the native one restarts
+  // from scratch every time it's called, so on a fast verse each new line
+  // cancelled the previous glide mid-flight — that was the stutter. This one
+  // retargets, so the line already in motion keeps its momentum.
   const scrollRef = useRef({ raf: 0, target: 0 });
   useEffect(() => {
     const line = activeRef.current;
@@ -434,120 +400,99 @@ function Lyrics({ lyrics, index, palette, onSeek, activeRef }) {
 
   if (lyrics.status === 'loading') {
     return (
-      <section className="hidden min-h-0 self-stretch py-10 lg:block">
-        <div className="space-y-4">
-          {[0.9, 0.7, 0.8, 0.5, 0.65].map((w, i) => (
+      <div className="immersive-words">
+        <div className="w-full max-w-3xl space-y-5">
+          {[0.82, 0.6, 0.72].map((w, i) => (
             <div
               key={i}
-              className="h-6 animate-pulse rounded-lg bg-white/8"
-              style={{ width: `${w * 100}%`, animationDelay: `${i * 120}ms` }}
+              className="h-9 animate-pulse rounded bg-white/[0.06]"
+              style={{ width: `${w * 100}%`, animationDelay: `${i * 140}ms` }}
             />
           ))}
         </div>
-      </section>
+      </div>
     );
   }
 
   if (lyrics.status !== 'found') {
     return (
-      <section className="hidden min-h-0 items-center justify-center self-stretch lg:flex">
-        <p className="max-w-xs text-center text-sm leading-7 text-moon/35">
-          {lyrics.status === 'idle' ? 'Play something to see its lyrics here.' : 'No lyrics found for this track.'}
+      <div className="immersive-words">
+        <p className="immersive-line immersive-line--quiet max-w-2xl">
+          {hasTrack ? 'No words for this one.' : 'Play something to fill the room.'}
         </p>
-      </section>
+      </div>
     );
   }
 
-  // Plain lyrics: no timings to sync to, so it's a readable column instead.
+  // Plain lyrics: no timings to sync to, so it reads as a column instead of a
+  // stage — still the display face, still on the reading line.
   if (!lyrics.synced) {
     return (
-      <section className="glass-scroll hidden max-h-[70vh] min-h-0 self-stretch overflow-y-auto py-10 pr-3 lg:block">
-        <p className="whitespace-pre-line text-lg font-light leading-9 text-moon/70">{lyrics.plain}</p>
-      </section>
+      <div className="immersive-words">
+        <div className="lyric-fade hide-scrollbar max-h-full overflow-y-auto">
+          <p className="immersive-line immersive-line--near max-w-3xl whitespace-pre-line">{lyrics.plain}</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <section
-      ref={panelRef}
-      className="lyric-fade hide-scrollbar hidden max-h-[34vh] min-h-0 self-center overflow-y-auto px-5 py-[15vh] lg:block"
-      aria-label="Lyrics"
-    >
-      {lyrics.lines.map((line, i) => {
-        const isActive = i === index;
-        const distance = Math.abs(i - index);
-        if (!line.text) {
-          return <div key={i} className="h-5" aria-hidden="true" />;
-        }
-        return (
-          <LyricLine
-            key={i}
-            lineRef={isActive ? activeRef : null}
-            text={line.text}
-            isActive={isActive}
-            distance={Math.min(distance, 3)}
-            glow={palette.glow}
-            at={line.at}
-            onSeek={onSeek}
-          />
-        );
-      })}
-    </section>
+    <div className="immersive-words">
+      <div
+        ref={panelRef}
+        className="immersive-stage lyric-fade hide-scrollbar overflow-y-auto"
+        aria-label="Lyrics"
+      >
+        <div className="py-[21vh]">
+          {lyrics.lines.map((line, i) => {
+            if (!line.text) return <div key={i} className="h-7" aria-hidden="true" />;
+            const distance = Math.abs(i - index);
+            return (
+              <LyricLine
+                key={i}
+                lineRef={i === index ? activeRef : null}
+                text={line.text}
+                isActive={i === index}
+                distance={Math.min(distance, 3)}
+                at={line.at}
+                onSeek={onSeek}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
 /**
  * One line. Memoised on its own tone, so moving to the next line re-renders the
- * four lines whose shade actually changed rather than every line in the song —
+ * few lines whose shade actually changed rather than every line in the song —
  * a long track was re-rendering a hundred buttons on every beat.
+ *
+ * The sung line is marked the way every column in the app marks its head: an
+ * accent tick in the margin. No bloom — brightness and weight carry it.
  */
-const LyricLine = memo(function LyricLine({ lineRef, text, isActive, distance, glow, at, onSeek }) {
+const LyricLine = memo(function LyricLine({ lineRef, text, isActive, distance, at, onSeek }) {
   return (
-          <button
-            ref={lineRef}
-            type="button"
-            onClick={() => onSeek(at)}
-            title="Jump to this line"
-            className={[
-              // Only colour, transform and shadow transition. `transition-all`
-              // was animating layout properties too, on every line at once.
-              'block w-full origin-left rounded-lg px-2 py-1.5 text-left text-2xl font-medium leading-snug transition-[color,transform,text-shadow] duration-500 ease-out hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:text-[1.75rem]',
-              isActive
-                ? 'scale-[1.03] text-moon'
-                : distance === 1
-                  ? 'text-moon/35'
-                  : distance === 2
-                    ? 'text-moon/15'
-                    : 'text-moon/[0.06]',
-            ].join(' ')}
-            style={{
-              // Every line carries the SAME three shadows, transparent when it
-              // isn't the one being sung. CSS can't interpolate to or from
-              // `none`, so a shadow that only exists on the active line pops in
-              // and out instead of fading — that was the inconsistency.
-              //
-              // Three of them, not one: a tight core so the letterforms stay
-              // crisp, a mid bloom, and a wider halo to lift the line off the
-              // background. Blurs stay inside the panel's padding, because this
-              // is a scroll container and anything wider gets clipped at the
-              // edge — which is the straight line that was showing.
-              // Only the sung line references --lyric-glow; the rest carry the
-              // same three shadows at fixed sizes and zero alpha, so the fade
-              // still interpolates but a glow tick can't invalidate them.
-              textShadow: isActive
-                ? [
-                    `0 0 calc(4px + var(--lyric-glow, 0) * 4px) ${rgba(glow, 0.95)}`,
-                    `0 0 calc(15px + var(--lyric-glow, 0) * 12px) ${rgba(glow, 0.7)}`,
-                    `0 0 calc(32px + var(--lyric-glow, 0) * 22px) ${rgba(glow, 0.42)}`,
-                  ].join(', ')
-                : `0 0 4px ${rgba(glow, 0)}, 0 0 15px ${rgba(glow, 0)}, 0 0 32px ${rgba(glow, 0)}`,
-              // Its own layer while it's the sung line, so the scale and glow
-              // don't repaint the lines around it.
-              willChange: isActive ? 'transform, text-shadow' : 'auto',
-            }}
-          >
-            {text}
-          </button>
+    <button
+      ref={lineRef}
+      type="button"
+      onClick={() => onSeek(at)}
+      title="Jump to this line"
+      className={[
+        'immersive-line',
+        isActive
+          ? 'immersive-line--on'
+          : distance === 1
+            ? 'immersive-line--near'
+            : distance === 2
+              ? 'immersive-line--far'
+              : 'immersive-line--quiet',
+      ].join(' ')}
+    >
+      {text}
+    </button>
   );
 });
 
@@ -563,33 +508,4 @@ function usePalette(image) {
     };
   }, [image]);
   return palette;
-}
-
-/* ── Visualiser ──────────────────────────────────────────────────────────── */
-
-/**
- * Canvas layer. All the thinking happens in services/music/scene; this only owns
- * the element, the resize listener and the per-frame draw call.
- */
-function Visualizer({ palette }) {
-  const ref = useRef(null);
-  const rendererRef = useRef(null);
-  const artworkRef = useRef(palette.glow);
-  artworkRef.current = palette.glow;
-
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return undefined;
-    rendererRef.current = new SceneRenderer(canvas);
-    const onResize = () => rendererRef.current?.resize();
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      rendererRef.current = null;
-    };
-  }, []);
-
-  useSceneFrame(artworkRef, (s) => rendererRef.current?.draw(s));
-
-  return <canvas ref={ref} className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true" />;
 }

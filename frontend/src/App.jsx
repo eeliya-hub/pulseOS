@@ -106,8 +106,16 @@ export default function App() {
   // Idle + music playing + opted in = the immersive player stands in for the
   // screensaver. Anything else falls through to the usual idle screen.
   const { settings } = useSettings();
-  const { state: playerState } = useSpotifyPlayer();
+  const { state: playerState, controls: playerControls } = useSpotifyPlayer();
   const afkImmersive = settings.afkImmersive !== false && Boolean(playerState?.track) && !playerState.paused;
+
+  // Ask Spotify what is already playing, once, at launch. Nothing else did:
+  // devices were only polled from the Music view, so opening Pulse with a record
+  // already on somewhere else left the shell believing nothing was playing — and
+  // going idle then dropped to the clock instead of the immersive player.
+  useEffect(() => {
+    playerControls.refreshDevices?.();
+  }, [playerControls]);
   const [boot, setBoot] = useState({ progress: 0, label: '', done: false, exiting: false });
   const idleTimerRef = useRef(null);
 

@@ -31,6 +31,7 @@ product can actually do.
 | Navigation | Floating pill dock, gradient AI button | A hairline baseline across the foot of the screen, with the assistant as an ECG beat in it |
 | Travel | Local-only, typed in by hand | Live flight tracking, real maps, places search, currency, destination facts |
 | Assistant | Text chat, agent loop over tools | The same, plus real-time speech over a WebSocket, with barge-in |
+| Immersive player | Blurred sleeve, floating cover, karaoke lyrics | The song drawn as a horizon: every lyric line a tick on the rule |
 | Launchpad | A modal app picker | A view of its own: local apps, saved sites and web search |
 | Finance | Present | **Removed** |
 
@@ -133,6 +134,24 @@ Double-tap the space bar anywhere in the app to start talking.
 
 ![Ask Pulse](docs/release/hero-ai.jpg)
 
+Voice is not a transcript with a microphone bolted on. It has three states and
+each one looks like what it is. While you talk, a waveform tracks your voice.
+
+![Pulse Voice listening](docs/release/gallery/voice-listening.jpg)
+
+While it works, the answer stops and the task says what it is doing — a tool
+call is a thing that takes time, so the interface admits it rather than
+pretending the pause is thinking.
+
+![Pulse Voice running a task](docs/release/gallery/voice-working.jpg)
+
+And when it answers, whatever it looked up comes up on screen beside the
+spoken reply. Ask what the weather is doing and you hear the answer *and* see
+the forecast it read — the same weather data the Home view is built from,
+fetched by the same tool the typed assistant uses.
+
+![Pulse Voice speaking, with the weather it looked up](docs/release/gallery/voice-speaking.jpg)
+
 ## 7. Launchpad is a place
 
 In v1 the launchpad was a card on Home plus a modal for choosing apps. In v2 it
@@ -142,12 +161,46 @@ search field that covers your Mac, your sites and the open web.
 
 ![Launchpad, before and after](docs/release/compare-launchpad.png)
 
-## 8. Two immersive modes
+## 8. The immersive player: the song as a horizon
 
-Music and the live news channel both now have a full-screen mode. The immersive
-player runs time-synced lyrics (via LRCLIB) against the album-lit background;
-leave the machine alone while something is playing and it takes over as the
-screensaver instead of the idle clock.
+Music and the live news channel both have a full-screen mode. The music one has
+been rebuilt.
+
+Its first version did what every full-screen player does: the sleeve blown up
+and blurred into wallpaper, the cover floating in a halo on the left, karaoke
+lyrics glowing on the right. It looked like a music player because it was
+copying music players.
+
+The rebuild starts from the grammar the rest of Pulse OS is already built on. A
+view is a sky, a horizon and a ground — so here, **the horizon is the track**.
+The rule runs the full width of the screen, the part you have heard is lit, and
+every line of the lyric stands on it as a tick. That means the shape of the song
+is visible before you get to it: verses crowd together, a chorus repeats at an
+even pace, an instrumental break opens a gap in the marks. Click anywhere along
+the line to move there.
+
+![The immersive player, before and after](docs/release/compare-immersive.png)
+
+Above the line are the words, set in Newsreader because a lyric is read from
+across the room — the old version set them in the interface face and the track
+title in the display face, which was exactly the wrong way round. The line being
+sung is simply the only bright one, marked with the same accent tick that heads
+every column elsewhere in the app; there is no bloom. Below the line the record
+sits on the ground as an object, square-edged and casting a shadow, and nothing
+floats.
+
+The light in the room is the sleeve's, and only the sleeve's. It does not listen
+to the audio — no beat detection, nothing to tune — because this is somewhere to
+leave running, not a meter to watch. The starfield and nebula the old version
+drifted behind everything are gone, along with a shine that swept the cover, a
+breathing halo, a parallax drift and a pulsing glow on the sung line: five
+decorations that were there because they were possible.
+
+![The immersive player, lit by a different record](docs/release/gallery/immersive.jpg)
+
+Leave the machine alone while something is playing and this takes over as the
+screensaver: the transport goes away, the clock takes the ground, and the words
+carry on.
 
 ## 9. What we removed
 

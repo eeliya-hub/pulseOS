@@ -343,10 +343,25 @@ user can browse their playlists, see what they have recently played and search t
 full Spotify catalogue. All Spotify communication is proxied through the backend
 so that secret credentials never reach the client.</p>
 
-<p>Version 2 adds a full-screen immersive mode that runs time-synced lyrics,
-fetched from the keyless LRCLIB service, against a background lit by the album's
-own colours. If the machine is left idle while something is playing, this
-immersive player takes over as the screensaver in place of the idle clock.</p>
+<p>Version 2 adds a full-screen immersive mode built on the same spatial system
+as the rest of the application, so that the player is a sky, a horizon and a
+ground like every other view. Here the horizon is the track itself: the rule
+spans the screen, the portion already played is lit, and every line of the
+lyric stands on it as a tick mark. This makes the structure of a song legible
+before it is heard &mdash; verses appear as crowded marks, an instrumental break
+as a gap &mdash; and the whole rule is a seek control, so any point in the track
+can be reached directly. Lyrics are fetched from the keyless LRCLIB service,
+synchronised to playback position, and set in the display typeface above the
+line; the line currently being sung is marked with the same accent tick used to
+head every column elsewhere in the interface. Below the line the album sleeve is
+presented as a physical object alongside the transport controls.</p>
+
+<p>The colour of the whole screen is sampled from the album artwork and nothing
+else; the atmosphere deliberately does not react to the audio, since the screen
+is intended to be left running rather than watched. If the machine is left idle
+while something is playing, this immersive player takes over as the screensaver
+in place of the idle clock, hiding the transport and giving the ground to the
+clock.</p>
 
 <h3>4.7 Travel</h3>
 
