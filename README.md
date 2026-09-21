@@ -71,7 +71,7 @@ return a clear `503 NOT_CONFIGURED` instead of crashing.
 | Live TV | HLS streams via hls.js | keyless |
 | Sport | Football-Data.org, balldontlie, Jolpica/Ergast | F1 is keyless |
 | Calendar | Google (read+write), Apple iCloud (CalDAV), public `.ics` | OAuth |
-| Music | Spotify Web API + Web Playback SDK + Connect; LRCLIB lyrics | OAuth; lyrics keyless |
+| Music | Spotify Web API + Web Playback SDK + Connect; LRCLIB lyrics; ReccoBeats tempo | OAuth; lyrics and tempo keyless |
 | Travel | Google Places *or* OpenStreetMap, AeroDataBox, OpenFreeMap | degrades to keyless |
 | Search | Brave, Tavily, or keyless open web | optional keys |
 | AI | Gemini (default), OpenAI, Claude | swappable per request |
