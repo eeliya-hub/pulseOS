@@ -141,16 +141,16 @@ export default function VoiceAssistant({ onClose }) {
       {/* Header — identity + the way out */}
       <header className="relative z-10 flex items-start justify-between px-6 pt-5 sm:px-10 sm:pt-7">
         <div>
-          <h2 className="display-type text-lg font-light text-white text-glow">Pulse Voice</h2>
-          <p className="mt-0.5 text-[0.625rem] font-medium uppercase tracking-[0.24em] text-white/38">
-            Real-time · Gemini Live
+          <h2 className="display-type text-lg font-light text-moon text-glow">Pulse Voice</h2>
+          <p className="mt-0.5 text-[0.75rem] font-medium text-moon/38">
+            Real-time with Gemini Live
           </p>
         </div>
         <button
           type="button"
           onClick={close}
           aria-label="End voice session"
-          className="grid h-9 w-9 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="grid h-9 w-9 place-items-center rounded-full text-moon/50 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -181,14 +181,14 @@ export default function VoiceAssistant({ onClose }) {
             // rather than growing past the window or over the transcript.
             <div className="flex max-h-full min-h-0 w-full flex-col">
               <div className="mb-3 flex shrink-0 items-center gap-2">
-                <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-cyan-100/50">{title}</p>
+                <p className="text-[0.75rem] font-semibold text-accent/50">{title}</p>
                 {panels.length > 1 ? (
                   <span className="flex items-center gap-1" aria-hidden="true">
                     {panels.map((p, i) => (
                       <span
                         key={p.title ?? i}
                         className={`h-1 rounded-full transition-all duration-500 ${
-                          p === panel ? 'w-3 bg-cyan-100/70' : 'w-1 bg-white/20'
+                          p === panel ? 'w-3 bg-accent/70' : 'w-1 bg-white/20'
                         }`}
                       />
                     ))}
@@ -201,14 +201,14 @@ export default function VoiceAssistant({ onClose }) {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center text-center lg:items-start lg:text-left">
-              <p key={title} className="voice-rise display-type text-3xl font-light text-white text-glow sm:text-4xl">
+              <p key={title} className="voice-rise display-type text-3xl font-light text-moon text-glow sm:text-4xl">
                 {title}
               </p>
               {errored && (
                 <button
                   type="button"
                   onClick={() => start()}
-                  className="mt-5 rounded-full bg-cyan-200/15 px-5 py-1.5 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="mt-5 rounded-full bg-accent/15 px-5 py-1.5 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 >
                   Try again
                 </button>
@@ -491,7 +491,7 @@ function SpokenTranscript({ segments, current, word, speaking }) {
         {segments.map((seg, index) => {
           if (!speaking) {
             return (
-              <span key={index} className="text-white/85">
+              <span key={index} className="text-moon/85">
                 {seg.text}{' '}
               </span>
             );
@@ -501,7 +501,7 @@ function SpokenTranscript({ segments, current, word, speaking }) {
             return (
               <span
                 key={index}
-                className={`transition-colors duration-500 ${index < current ? 'text-white/35' : 'text-white/20'}`}
+                className={`transition-colors duration-500 ${index < current ? 'text-moon/35' : 'text-moon/20'}`}
               >
                 {seg.text}{' '}
               </span>
@@ -516,7 +516,7 @@ function SpokenTranscript({ segments, current, word, speaking }) {
                 <span
                   key={i}
                   className={`transition-colors duration-200 ${
-                    i < word ? 'text-white/90' : i === word ? 'text-white text-glow' : 'text-white/30'
+                    i < word ? 'text-moon/90' : i === word ? 'text-moon text-glow' : 'text-moon/30'
                   }`}
                 >
                   {w}{' '}

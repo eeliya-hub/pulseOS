@@ -1,8 +1,7 @@
-import { MessageSquarePlus, Mic, Send, Settings, Sparkles, Trash2 } from 'lucide-react';
+import { MessageSquarePlus, Mic, Send, Settings, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import GlassCard from '../components/GlassCard.jsx';
 import { ChatThread } from '../components/PulseMessages.jsx';
-import ViewHeader from '../components/ViewHeader.jsx';
+import { Column, Ground, SkyZone } from '../components/Stage.jsx';
 import VoiceAssistant from '../components/VoiceAssistant.jsx';
 import { toPromptChip, usePulseChat } from '../hooks/usePulseChat.js';
 
@@ -56,38 +55,53 @@ export default function AIAssistant({
 
   return (
     <div className="flex h-full flex-col">
-      <ViewHeader lead="Pulse" accent="AI" subtitle="Calm, synced, listening" />
-      <GlassCard className="relative flex min-h-0 flex-1 flex-row overflow-hidden" noPadding>
-        <aside className="hidden w-52 shrink-0 flex-col border-r border-white/10 bg-white/[0.03] md:flex">
-          <div className="flex shrink-0 items-center justify-between gap-2 px-3.5 py-3">
-            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
-              Chats
-            </p>
-            <button
-              type="button"
-              onClick={onNewConversation}
-              className="soft-button grid h-7 w-7 place-items-center rounded-lg text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-              aria-label="New chat"
-            >
-              <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
+      {/* ── Sky: the conversation you're in ──────────────────────────────── */}
+      <SkyZone className="flex items-end justify-between gap-8">
+        <div className="min-w-0">
+          <p className="t-lede flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-rise" aria-hidden="true" />
+            {conversations.length === 1 ? 'One conversation' : `${conversations.length} conversations`}
+          </p>
+          <h1 className="t-hero mt-1 truncate">{activeTitle}</h1>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 pb-1">
+          <button type="button" onClick={onNewConversation} className="pill h-10 px-4">
+            <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
+            New chat
+          </button>
+          <button
+            type="button"
+            onClick={onOpenAiSettings}
+            aria-label="Pulse AI settings"
+            title="Pulse AI settings"
+            className="pill h-10 w-10 px-0 text-moon/75"
+          >
+            <Settings className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </SkyZone>
 
-          <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pb-3">
+      {/* ── Ground: your conversations, and the one you're reading ─────────── */}
+      <Ground className="grid grid-cols-[15rem_minmax(0,1fr)]">
+        <Column label="Conversations" className="pr-6 pt-7" bodyClassName="glass-scroll overflow-y-auto pb-4 pr-1">
+          <div className="cascade mt-1 space-y-0.5">
             {conversations.map((conversation) => {
               const isActive = conversation.id === activeId;
               return (
                 <div
                   key={conversation.id}
                   className={[
-                    'group relative flex items-center rounded-xl transition-colors',
-                    isActive ? 'soft-row glow-ring' : 'hover:bg-white/6',
+                    'group relative flex items-center rounded-[0.9rem] transition-colors',
+                    isActive ? 'bg-white/[0.08]' : 'hover:bg-white/[0.045]',
                   ].join(' ')}
                 >
                   <button
                     type="button"
                     onClick={() => onSelectConversation(conversation.id)}
-                    className="min-w-0 flex-1 truncate py-2 pl-3 pr-2 text-left text-xs font-medium text-white/80 focus:outline-none"
+                    className={[
+                      'min-w-0 flex-1 truncate py-2.5 pl-3 pr-2 text-left text-[0.9375rem] focus:outline-none',
+                      isActive ? 'text-moon' : 'text-moon/70',
+                    ].join(' ')}
                     title={conversation.title}
                   >
                     {conversation.title}
@@ -95,7 +109,7 @@ export default function AIAssistant({
                   <button
                     type="button"
                     onClick={() => onDeleteConversation(conversation.id)}
-                    className="mr-1.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg text-white/35 opacity-0 transition hover:bg-white/10 hover:text-white/80 focus:opacity-100 focus:outline-none group-hover:opacity-100"
+                    className="mr-1.5 grid h-7 w-7 shrink-0 place-items-center rounded-full text-moon/35 opacity-0 transition hover:bg-white/10 hover:text-moon/80 focus:opacity-100 focus:outline-none group-hover:opacity-100"
                     aria-label={`Delete ${conversation.title}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -104,63 +118,26 @@ export default function AIAssistant({
               );
             })}
           </div>
-        </aside>
+        </Column>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="panel-header flex shrink-0 items-center gap-3 px-5 py-3">
-            <span className="orb-button grid h-8 w-8 place-items-center rounded-full">
-              <Sparkles className="h-4 w-4 text-white" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="display-type truncate text-base font-normal leading-none text-white">
-                {activeTitle}
-              </p>
-              <p className="mt-1 text-[0.625rem] font-medium uppercase tracking-[0.2em] text-white/38">
-                Current conversation
-              </p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenAiSettings}
-                aria-label="Pulse AI settings"
-                title="Pulse AI settings"
-                className="grid h-8 w-8 place-items-center rounded-full text-white/45 transition hover:bg-white/10 hover:text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-              >
-                <Settings className="h-4 w-4" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={onNewConversation}
-                className="soft-button inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.6875rem] font-semibold text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:hidden"
-              >
-                <MessageSquarePlus className="h-3.5 w-3.5" aria-hidden="true" />
-                New
-              </button>
-              <span
-                className="glow-dot h-1.5 w-1.5 rounded-full bg-emerald-300 text-emerald-300"
-                aria-hidden="true"
-              />
-            </div>
-          </div>
-
+        <div className="ground-rule flex min-h-0 min-w-0 flex-col pl-8 pt-7">
           <ChatThread
             messages={messages}
             isLoading={isLoading}
             toolActivity={toolActivity}
             userInitial={(userName || 'E').slice(0, 1).toUpperCase()}
-            className="p-5"
+            className="mx-auto w-full max-w-[46rem] pb-7"
           />
 
-          <div className="shrink-0 border-t border-white/10 bg-white/5 p-3.5 backdrop-blur-xl">
-            <div className="hide-scrollbar mb-2.5 flex gap-2 overflow-x-auto">
+          <div className="mx-auto w-full max-w-[46rem] shrink-0 pb-3 pt-2">
+            <div className="hide-scrollbar mb-3 flex gap-2 overflow-x-auto pr-10 [mask-image:linear-gradient(90deg,#000_85%,transparent)]">
               {prompts.map((chip, index) => (
                 <button
                   key={`${chip.label}-${index}`}
                   type="button"
                   onClick={() => submit(chip.text, chip.label)}
                   title={chip.text}
-                  className="soft-button shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-white/72 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  className="pill h-8 shrink-0 px-3.5 text-[0.8125rem] text-moon/80"
                 >
                   {chip.label}
                 </button>
@@ -168,7 +145,7 @@ export default function AIAssistant({
             </div>
 
             <form
-              className="group relative flex items-center gap-2"
+              className="flex items-center gap-1.5 rounded-full bg-white/[0.06] p-1.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-xl transition focus-within:bg-white/[0.08] focus-within:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
               onSubmit={(event) => {
                 event.preventDefault();
                 submit();
@@ -179,7 +156,7 @@ export default function AIAssistant({
                 onClick={() => setShowVoice(true)}
                 aria-label="Start a voice conversation"
                 title="Talk to Pulse"
-                className="soft-button grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/80 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-moon/70 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
               >
                 <Mic className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -191,23 +168,23 @@ export default function AIAssistant({
                 type="text"
                 value={inputText}
                 onChange={(event) => setInputText(event.target.value)}
-                placeholder="Message Pulse..."
-                className="min-w-0 flex-1 rounded-full border border-white/12 bg-white/7 py-2.5 pl-4 pr-12 text-sm text-white outline-none transition-all placeholder:text-white/40 focus:border-cyan-100/30 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(116,242,255,0.08)]"
+                placeholder="Message Pulse"
+                className="min-w-0 flex-1 bg-transparent px-2 text-[0.9375rem] text-moon outline-none placeholder:text-moon/40"
               />
               <button
                 type="submit"
                 disabled={isLoading || !inputText.trim()}
-                className="orb-button absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-105 disabled:opacity-50"
+                className="pill pill-lit h-10 w-10 px-0 disabled:opacity-40"
                 aria-label="Send message"
               >
-                <Send className="ml-0.5 h-3.5 w-3.5" aria-hidden="true" />
+                <Send className="ml-0.5 h-4 w-4" aria-hidden="true" />
               </button>
             </form>
-
-            {showVoice && <VoiceAssistant onClose={() => setShowVoice(false)} />}
           </div>
         </div>
-      </GlassCard>
+      </Ground>
+
+      {showVoice && <VoiceAssistant onClose={() => setShowVoice(false)} />}
     </div>
   );
 }

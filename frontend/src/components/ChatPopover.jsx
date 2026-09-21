@@ -42,18 +42,18 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
         {/* Header */}
         <div className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3">
           <span className="orb-button grid h-8 w-8 shrink-0 place-items-center rounded-full">
-            <Sparkles className="h-4 w-4 text-white" aria-hidden="true" />
+            <Sparkles className="h-4 w-4 text-moon" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="display-type truncate text-sm font-normal leading-none text-white">Pulse</p>
-            <p className="mt-1 text-[0.5625rem] font-medium uppercase tracking-[0.22em] text-white/38">Here to help</p>
+            <p className="display-type truncate text-sm font-normal leading-none text-moon">Pulse</p>
+            <p className="mt-1 text-[0.75rem] font-medium text-moon/38">Here to help</p>
           </div>
           <button
             type="button"
             onClick={onNewChat}
             aria-label="New chat"
             title="New chat"
-            className="soft-button grid h-7 w-7 place-items-center rounded-lg text-white/70 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="soft-button grid h-7 w-7 place-items-center rounded-lg text-moon/70 transition hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -62,7 +62,7 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
             onClick={onExpand}
             aria-label="Expand to full screen"
             title="Expand"
-            className="soft-button grid h-7 w-7 place-items-center rounded-lg text-white/70 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="soft-button grid h-7 w-7 place-items-center rounded-lg text-moon/70 transition hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <Maximize2 className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -70,7 +70,7 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
             type="button"
             onClick={onClose}
             aria-label="Close chat"
-            className="grid h-7 w-7 place-items-center rounded-lg text-white/55 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="grid h-7 w-7 place-items-center rounded-lg text-moon/55 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -95,7 +95,7 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
                   type="button"
                   onClick={() => submit(chip.text, chip.label)}
                   title={chip.text}
-                  className="soft-button shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-white/72 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  className="soft-button shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-moon/72 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                 >
                   {chip.label}
                 </button>
@@ -115,7 +115,7 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
               onClick={onVoice}
               aria-label="Talk to Pulse"
               title="Talk to Pulse"
-              className="soft-button grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/80 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className="soft-button grid h-9 w-9 shrink-0 place-items-center rounded-full text-moon/80 transition hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             >
               <Mic className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -129,7 +129,7 @@ export default function ChatPopover({ messages, setMessages, onClose, onExpand, 
               value={inputText}
               onChange={(event) => setInputText(event.target.value)}
               placeholder="Ask anything"
-              className="min-w-0 flex-1 rounded-full border border-white/12 bg-white/7 py-2.5 pl-4 pr-11 text-sm text-white outline-none transition-all placeholder:text-white/40 focus:border-cyan-100/30 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(116,242,255,0.08)]"
+              className="min-w-0 flex-1 rounded-full border border-white/12 bg-white/7 py-2.5 pl-4 pr-11 text-sm text-moon outline-none transition-all placeholder:text-moon/40 focus:border-accent/30 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(116,242,255,0.08)]"
             />
             <button
               type="submit"

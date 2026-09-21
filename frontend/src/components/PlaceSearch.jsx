@@ -68,7 +68,7 @@ export default function PlaceSearch({ kind = 'any', near = null, onPick, autoFoc
     <div className={`flex min-h-0 flex-col ${className}`}>
       <div className="relative shrink-0">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/35"
+          className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-moon/35"
           aria-hidden="true"
         />
         <input
@@ -77,11 +77,11 @@ export default function PlaceSearch({ kind = 'any', near = null, onPick, autoFoc
           autoFocus={autoFocus}
           placeholder={KIND_HINTS[kind] ?? KIND_HINTS.any}
           aria-label="Search places"
-          className="w-full rounded-xl border border-white/12 bg-white/8 py-2 pl-9 pr-9 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+          className="w-full rounded-xl border border-white/12 bg-white/8 py-2 pl-9 pr-9 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
         />
         {status === 'loading' && (
           <Loader2
-            className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-cyan-100/70"
+            className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-accent/70"
             aria-hidden="true"
           />
         )}
@@ -94,7 +94,7 @@ export default function PlaceSearch({ kind = 'any', near = null, onPick, autoFoc
           </p>
         )}
         {status === 'empty' && (
-          <p className="px-3 py-6 text-center text-xs text-white/40">No places matched “{query.trim()}”.</p>
+          <p className="px-3 py-6 text-center text-xs text-moon/40">No places matched “{query.trim()}”.</p>
         )}
         {results.map((place) => {
           const photo = placePhotoUrl(place.photo, 160);
@@ -114,15 +114,15 @@ export default function PlaceSearch({ kind = 'any', near = null, onPick, autoFoc
                 />
               ) : (
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/8 ring-1 ring-white/10">
-                  <MapPin className="h-4 w-4 text-cyan-100/60" aria-hidden="true" />
+                  <MapPin className="h-4 w-4 text-accent/60" aria-hidden="true" />
                 </span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-white">{place.name}</span>
-                <span className="mt-0.5 block truncate text-[0.6875rem] text-white/45">{place.address}</span>
+                <span className="block truncate text-sm font-medium text-moon">{place.name}</span>
+                <span className="mt-0.5 block truncate text-[0.8125rem] text-moon/45">{place.address}</span>
               </span>
               {place.rating ? (
-                <span className="flex shrink-0 items-center gap-1 text-[0.6875rem] font-semibold text-amber-200/90">
+                <span className="flex shrink-0 items-center gap-1 text-[0.8125rem] font-semibold text-amber-200/90">
                   <Star className="h-3 w-3 fill-amber-200/90" aria-hidden="true" />
                   {place.rating.toFixed(1)}
                 </span>
@@ -133,7 +133,7 @@ export default function PlaceSearch({ kind = 'any', near = null, onPick, autoFoc
       </div>
 
       {source ? (
-        <p className="mt-2 shrink-0 text-[0.5625rem] uppercase tracking-[0.18em] text-white/25">
+        <p className="mt-2 shrink-0 text-[0.75rem] text-moon/25">
           {source === 'google' ? 'Google Places' : 'OpenStreetMap'}
         </p>
       ) : null}

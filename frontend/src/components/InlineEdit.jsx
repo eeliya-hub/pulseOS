@@ -115,7 +115,7 @@ export function EditableDate({ value, onChange, className = '', 'aria-label': ar
         className,
       )}
     >
-      <span className={value ? '' : 'text-white/40'}>{label}</span>
+      <span className={value ? '' : 'text-moon/40'}>{label}</span>
       <input
         type="date"
         value={value ?? ''}
@@ -139,7 +139,7 @@ export function EditableTime({ value, onChange, placeholder = 'Set time', classN
         className,
       )}
     >
-      <span className={classes('clock-figures', value ? '' : 'text-white/40')}>{value || placeholder}</span>
+      <span className={classes('clock-figures', value ? '' : 'text-moon/40')}>{value || placeholder}</span>
       <input
         type="time"
         value={value ?? ''}
@@ -161,7 +161,7 @@ export function RemoveButton({ onClick, className = '', label = 'Remove' }) {
       onClick={onClick}
       aria-label={label}
       className={classes(
-        'shrink-0 rounded-md p-1 text-white/25 opacity-0 transition',
+        'shrink-0 rounded-md p-1 text-moon/25 opacity-0 transition',
         'hover:bg-white/10 hover:text-rose-300',
         'focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
         'group-hover:opacity-100',
@@ -181,14 +181,14 @@ export function AddRow({ onClick, label, className = '' }) {
       onClick={onClick}
       className={classes(
         'group/add flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left',
-        'text-white/40 transition hover:text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+        'text-moon/40 transition hover:text-moon/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
         className,
       )}
     >
-      <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-dashed border-white/25 transition group-hover/add:border-cyan-100/55">
+      <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full border border-dashed border-white/25 transition group-hover/add:border-accent/55">
         <Plus className="h-2.5 w-2.5" aria-hidden="true" />
       </span>
-      <span className="text-[0.6875rem] font-medium uppercase tracking-[0.12em]">{label}</span>
+      <span className="text-[0.8125rem] font-medium">{label}</span>
     </button>
   );
 }

@@ -117,29 +117,29 @@ export default function AISettings({ onClose }) {
   };
 
   return createPortal(
-    <div data-settings="" className="fixed inset-0 z-[75] flex flex-col text-white" style={PAGE_BG}>
+    <div data-settings="" className="fixed inset-0 z-[75] flex flex-col text-moon" style={PAGE_BG}>
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-5 py-4 md:px-8">
         <button
           type="button"
           onClick={onClose}
           aria-label="Back"
-          className="soft-button grid h-9 w-9 place-items-center rounded-full text-white/75 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="soft-button grid h-9 w-9 place-items-center rounded-full text-moon/75 transition hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <span className="orb-button grid h-9 w-9 place-items-center rounded-2xl">
-          <Sparkles className="h-4 w-4 text-white" aria-hidden="true" />
+          <Sparkles className="h-4 w-4 text-moon" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h1 className="display-type truncate text-lg font-light leading-none text-white text-glow">Pulse AI</h1>
-          <p className="mt-1 truncate text-[0.625rem] font-medium uppercase tracking-[0.24em] text-white/38">
+          <h1 className="display-type truncate text-lg font-light leading-none text-moon text-glow">Pulse AI</h1>
+          <p className="mt-1 truncate text-[0.75rem] font-medium text-moon/38">
             {active.label}
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="ml-auto rounded-full bg-white/8 px-4 py-2 text-xs font-semibold text-white/80 ring-1 ring-white/12 transition hover:bg-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="ml-auto rounded-full bg-white/8 px-4 py-2 text-xs font-semibold text-moon/80 ring-1 ring-white/12 transition hover:bg-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           Done
         </button>
@@ -167,7 +167,7 @@ export default function AISettings({ onClose }) {
               onClick={() => setSection(s.id)}
               className={[
                 'shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
-                s.id === section ? 'bg-cyan-200/15 text-cyan-50 ring-1 ring-cyan-200/30' : 'soft-button text-white/70',
+                s.id === section ? 'bg-accent/15 text-accent ring-1 ring-accent/30' : 'soft-button text-moon/70',
               ].join(' ')}
             >
               {s.label}
@@ -179,8 +179,8 @@ export default function AISettings({ onClose }) {
         <main className="glass-scroll min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl p-5 md:p-8">
             <div className="mb-5">
-              <h2 className="display-type text-2xl font-light text-white text-glow">{active.title}</h2>
-              <p className="mt-1.5 max-w-xl text-sm leading-6 text-white/50">{active.blurb}</p>
+              <h2 className="display-type text-2xl font-light text-moon text-glow">{active.title}</h2>
+              <p className="mt-1.5 max-w-xl text-sm leading-6 text-moon/50">{active.blurb}</p>
             </div>
 
             {section === 'personality' && <PersonalityPane settings={settings} update={update} />}
@@ -205,13 +205,13 @@ function NavItem({ section, active, badge, onClick }) {
       aria-current={active ? 'page' : undefined}
       className={[
         'flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
-        active ? 'soft-row glow-ring text-white' : 'text-white/60 hover:bg-white/6 hover:text-white/85',
+        active ? 'soft-row glow-ring text-moon' : 'text-moon/60 hover:bg-white/6 hover:text-moon/85',
       ].join(' ')}
     >
-      <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-cyan-100/90' : 'text-white/45'}`} aria-hidden="true" />
+      <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-accent/90' : 'text-moon/45'}`} aria-hidden="true" />
       <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold">{section.label}</span>
       {badge ? (
-        <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[0.625rem] font-bold text-white/60">{badge}</span>
+        <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[0.75rem] font-bold text-moon/60">{badge}</span>
       ) : null}
     </button>
   );
@@ -238,9 +238,9 @@ function PersonalityPane({ settings, update }) {
             type="button"
             onClick={() => addStarter(s.text)}
             title={s.text}
-            className="soft-button inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="soft-button inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-moon/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
-            <Plus className="h-3 w-3 text-cyan-100/80" aria-hidden="true" />
+            <Plus className="h-3 w-3 text-accent/80" aria-hidden="true" />
             {s.label}
           </button>
         ))}
@@ -254,22 +254,22 @@ function PersonalityPane({ settings, update }) {
             'e.g. Respond like Jarvis and call me Mr Nayeri. Be concise but add a touch of wit. ' +
             'Comment on things — the weather, a song, the day ahead — not just the facts.'
           }
-          className="glass-scroll min-h-[18rem] w-full resize-y rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3.5 text-[0.9375rem] leading-7 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/[0.08]"
+          className="glass-scroll min-h-[18rem] w-full resize-y rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-3.5 text-[0.9375rem] leading-7 text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/[0.08]"
         />
         <div className="mt-2 flex items-center justify-between">
           <button
             type="button"
             onClick={() => update({ aiInstructions: '' })}
             disabled={!instructions}
-            className="rounded-lg px-2 py-1 text-[0.6875rem] font-medium text-white/40 transition hover:bg-white/8 hover:text-rose-300/90 focus:outline-none disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-white/40"
+            className="rounded-lg px-2 py-1 text-[0.8125rem] font-medium text-moon/40 transition hover:bg-white/8 hover:text-rose-300/90 focus:outline-none disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-moon/40"
           >
             Clear
           </button>
-          <span className="text-[0.625rem] font-medium text-white/30">{instructions.length} characters</span>
+          <span className="text-[0.75rem] font-medium text-moon/30">{instructions.length} characters</span>
         </div>
       </section>
 
-      <p className="px-1 text-xs leading-5 text-white/35">
+      <p className="px-1 text-xs leading-5 text-moon/35">
         Your wording wins over Pulse’s default tone — but never over its tool rules, so it will still check your real
         calendar, weather and the web before answering.
       </p>
@@ -307,13 +307,13 @@ function VoicePane({ settings, update }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-2xl border border-cyan-200/20 bg-cyan-200/[0.07] px-4 py-3">
-        <AudioLines className="h-4 w-4 shrink-0 text-cyan-100/80" aria-hidden="true" />
-        <p className="min-w-0 flex-1 text-sm text-white/75">
-          Speaking as <span className="font-semibold text-cyan-50">{current?.label ?? selected}</span>
-          {current ? <span className="text-white/40"> · {current.note.toLowerCase()}</span> : null}
+      <div className="flex items-center gap-3 rounded-2xl border border-accent/20 bg-accent/[0.07] px-4 py-3">
+        <AudioLines className="h-4 w-4 shrink-0 text-accent/80" aria-hidden="true" />
+        <p className="min-w-0 flex-1 text-sm text-moon/75">
+          Speaking as <span className="font-semibold text-accent">{current?.label ?? selected}</span>
+          {current ? <span className="text-moon/40"> · {current.note.toLowerCase()}</span> : null}
         </p>
-        <span className="shrink-0 text-[0.625rem] font-medium uppercase tracking-[0.18em] text-white/35">
+        <span className="shrink-0 text-[0.75rem] font-medium text-moon/35">
           Next session
         </span>
       </div>
@@ -329,7 +329,7 @@ function VoicePane({ settings, update }) {
               className={[
                 'relative rounded-2xl border transition',
                 on
-                  ? 'border-cyan-200/40 bg-cyan-200/12 ring-1 ring-cyan-200/25'
+                  ? 'border-accent/40 bg-accent/12 ring-1 ring-accent/25'
                   : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.07]',
               ].join(' ')}
             >
@@ -337,14 +337,14 @@ function VoicePane({ settings, update }) {
                 type="button"
                 onClick={() => update({ voiceName: voice.id })}
                 aria-pressed={on}
-                className="flex w-full flex-col items-start rounded-2xl px-3.5 py-3 pr-10 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
+                className="flex w-full flex-col items-start rounded-2xl px-3.5 py-3 pr-10 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
-                <span className={`text-sm font-semibold ${on ? 'text-cyan-50' : 'text-white/85'}`}>{voice.label}</span>
-                <span className="mt-0.5 text-[0.6875rem]">
+                <span className={`text-sm font-semibold ${on ? 'text-accent' : 'text-moon/85'}`}>{voice.label}</span>
+                <span className="mt-0.5 text-[0.8125rem]">
                   <span className={voice.gender === 'female' ? 'text-rose-200/85' : 'text-sky-200/85'}>
                     {voice.gender === 'female' ? 'Female' : 'Male'}
                   </span>
-                  <span className="text-white/35"> · {voice.note}</span>
+                  <span className="text-moon/35"> · {voice.note}</span>
                 </span>
               </button>
               <button
@@ -352,12 +352,12 @@ function VoicePane({ settings, update }) {
                 onClick={() => playVoicePreview(voice.id)}
                 aria-label={`Preview ${voice.label} voice`}
                 title="Preview"
-                className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-white/10 text-moon/70 transition hover:bg-white/20 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
               >
                 {loading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                 ) : playing ? (
-                  <Volume2 className="h-3.5 w-3.5 animate-pulse text-cyan-100" aria-hidden="true" />
+                  <Volume2 className="h-3.5 w-3.5 animate-pulse text-accent" aria-hidden="true" />
                 ) : (
                   <Play className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true" />
                 )}
@@ -402,20 +402,20 @@ function PromptsPane({ settings, update }) {
             className="group rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 transition hover:border-white/20 hover:bg-white/[0.06]"
           >
             <div className="flex items-center gap-2">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-cyan-200/12 text-[0.6875rem] font-bold text-cyan-100/90">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-accent/12 text-[0.8125rem] font-bold text-accent/90">
                 {index + 1}
               </span>
               <input
                 value={prompt.title ?? ''}
                 onChange={(e) => editPrompt(index, { title: e.target.value })}
                 placeholder="Title (chip label)"
-                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:font-normal placeholder:text-white/30"
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-moon outline-none placeholder:font-normal placeholder:text-moon/30"
               />
               <button
                 type="button"
                 onClick={() => removePrompt(index)}
                 aria-label="Delete prompt"
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/30 opacity-0 transition hover:bg-white/10 hover:text-rose-300 focus:opacity-100 focus:outline-none group-hover:opacity-100"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-moon/30 opacity-0 transition hover:bg-white/10 hover:text-rose-300 focus:opacity-100 focus:outline-none group-hover:opacity-100"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
@@ -425,7 +425,7 @@ function PromptsPane({ settings, update }) {
               onChange={(e) => editPrompt(index, { prompt: e.target.value })}
               rows={2}
               placeholder="What it sends to Pulse…"
-              className="glass-scroll mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-[0.8125rem] leading-6 text-white/85 outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-black/25"
+              className="glass-scroll mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-[0.8125rem] leading-6 text-moon/85 outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-black/25"
             />
           </div>
         ))
@@ -436,7 +436,7 @@ function PromptsPane({ settings, update }) {
           value={draft.title}
           onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
           placeholder="New prompt title, e.g. Daily brief"
-          className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:font-normal placeholder:text-white/35"
+          className="w-full bg-transparent text-sm font-semibold text-moon outline-none placeholder:font-normal placeholder:text-moon/35"
         />
         <textarea
           value={draft.prompt}
@@ -449,15 +449,15 @@ function PromptsPane({ settings, update }) {
           }}
           rows={2}
           placeholder="What it sends to Pulse…"
-          className="glass-scroll mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-[0.8125rem] leading-6 text-white/85 outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-black/25"
+          className="glass-scroll mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/15 px-3 py-2 text-[0.8125rem] leading-6 text-moon/85 outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-black/25"
         />
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-[0.625rem] text-white/30">⌘/Ctrl + Enter</span>
+          <span className="text-[0.75rem] text-moon/30">⌘/Ctrl + Enter</span>
           <button
             type="button"
             onClick={addPrompt}
             disabled={!draft.prompt.trim()}
-            className="orb-button inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:scale-100 disabled:opacity-40"
+            className="orb-button inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-moon transition-transform hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:scale-100 disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             Add prompt
@@ -498,13 +498,13 @@ function MemoryPane({ settings, update }) {
             }
           }}
           placeholder="Add something to remember…"
-          className="min-w-0 flex-1 rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-2.5 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/[0.08]"
+          className="min-w-0 flex-1 rounded-2xl border border-white/12 bg-white/[0.05] px-4 py-2.5 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/[0.08]"
         />
         <button
           type="button"
           onClick={addMemory}
           disabled={!draft.trim()}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-cyan-200/15 px-3.5 py-2.5 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-accent/15 px-3.5 py-2.5 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
         >
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           Add
@@ -520,13 +520,13 @@ function MemoryPane({ settings, update }) {
       ) : (
         <>
           <div className="flex items-center justify-between px-1">
-            <p className="text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-white/35">
+            <p className="text-[0.8125rem] font-medium text-moon/35">
               {memories.length} remembered
             </p>
             <button
               type="button"
               onClick={() => setMemories([])}
-              className="rounded-lg px-2 py-1 text-[0.6875rem] font-medium text-white/40 transition hover:bg-white/8 hover:text-rose-300/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className="rounded-lg px-2 py-1 text-[0.8125rem] font-medium text-moon/40 transition hover:bg-white/8 hover:text-rose-300/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             >
               Forget everything
             </button>
@@ -537,13 +537,13 @@ function MemoryPane({ settings, update }) {
                 key={memory.id}
                 className="group flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 transition hover:border-white/20 hover:bg-white/[0.06]"
               >
-                <span className="mt-[0.45rem] h-1 w-1 shrink-0 rounded-full bg-cyan-200/70" aria-hidden="true" />
-                <p className="min-w-0 flex-1 text-[0.8125rem] leading-6 text-white/85">{memory.text}</p>
+                <span className="mt-[0.45rem] h-1 w-1 shrink-0 rounded-full bg-accent/70" aria-hidden="true" />
+                <p className="min-w-0 flex-1 text-[0.8125rem] leading-6 text-moon/85">{memory.text}</p>
                 <button
                   type="button"
                   onClick={() => setMemories(memories.filter((m) => m.id !== memory.id))}
                   aria-label="Forget this"
-                  className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-white/30 opacity-0 transition hover:bg-white/10 hover:text-rose-300 focus:opacity-100 focus:outline-none group-hover:opacity-100"
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-moon/30 opacity-0 transition hover:bg-white/10 hover:text-rose-300 focus:opacity-100 focus:outline-none group-hover:opacity-100"
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
@@ -640,7 +640,7 @@ function CapabilitiesPane() {
 
   if (state.loading) {
     return (
-      <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white/50">
+      <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-moon/50">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         Checking what’s connected…
       </div>
@@ -661,16 +661,16 @@ function CapabilitiesPane() {
       {day ? (
         <section className="theme-card rounded-3xl p-4">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-white/40">
+            <p className="text-[0.8125rem] font-medium text-moon/40">
               Today’s {providerLabel(providerId)} allowance
             </p>
-            <p className="text-xs text-white/45">
-              <span className="font-semibold text-white/80">{day.requests.used}</span>
+            <p className="text-xs text-moon/45">
+              <span className="font-semibold text-moon/80">{day.requests.used}</span>
               {day.requests.limit ? ` / ${day.requests.limit}` : ''} requests
             </p>
           </div>
           <Meter used={day.requests.used} limit={day.requests.limit} />
-          <p className="mt-2 text-[0.6875rem] text-white/30">
+          <p className="mt-2 text-[0.8125rem] text-moon/30">
             {day.tokens.used.toLocaleString()} tokens used
             {day.tokens.limit ? ` of ${day.tokens.limit.toLocaleString()}` : ''} · resets at midnight
           </p>
@@ -685,15 +685,15 @@ function CapabilitiesPane() {
               key={row.key}
               className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3"
             >
-              <Icon className={`h-4 w-4 shrink-0 ${row.live ? 'text-cyan-100/80' : 'text-white/25'}`} aria-hidden="true" />
+              <Icon className={`h-4 w-4 shrink-0 ${row.live ? 'text-accent/80' : 'text-moon/25'}`} aria-hidden="true" />
               <div className="min-w-0 flex-1">
-                <p className={`text-sm font-semibold ${row.live ? 'text-white/90' : 'text-white/45'}`}>{row.name}</p>
-                <p className="truncate text-xs text-white/40">{row.note}</p>
+                <p className={`text-sm font-semibold ${row.live ? 'text-moon/90' : 'text-moon/45'}`}>{row.name}</p>
+                <p className="truncate text-xs text-moon/40">{row.note}</p>
               </div>
               <span
                 className={[
-                  'shrink-0 rounded-full px-2.5 py-1 text-[0.625rem] font-bold uppercase tracking-wider',
-                  row.live ? 'bg-emerald-300/12 text-emerald-200/90' : 'bg-white/6 text-white/35',
+                  'shrink-0 rounded-full px-2.5 py-1 text-[0.75rem] font-bold',
+                  row.live ? 'bg-emerald-300/12 text-emerald-200/90' : 'bg-white/6 text-moon/35',
                 ].join(' ')}
               >
                 {row.live ? 'Live' : 'Set up'}
@@ -708,7 +708,7 @@ function CapabilitiesPane() {
 
 function Meter({ used, limit }) {
   const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-  const tone = pct > 85 ? 'bg-rose-300/70' : pct > 60 ? 'bg-amber-200/70' : 'bg-cyan-200/70';
+  const tone = pct > 85 ? 'bg-rose-300/70' : pct > 60 ? 'bg-amber-200/70' : 'bg-accent/70';
   return (
     <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-white/8">
       <div className={`h-full rounded-full transition-all duration-500 ${tone}`} style={{ width: `${pct}%` }} />
@@ -719,9 +719,9 @@ function Meter({ used, limit }) {
 function EmptyState({ icon: Icon, title, hint }) {
   return (
     <div className="flex min-h-[10rem] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/12 px-6 text-center">
-      <Icon className="h-6 w-6 text-white/25" aria-hidden="true" />
-      <p className="text-sm text-white/45">{title}</p>
-      <p className="text-xs text-white/30">{hint}</p>
+      <Icon className="h-6 w-6 text-moon/25" aria-hidden="true" />
+      <p className="text-sm text-moon/45">{title}</p>
+      <p className="text-xs text-moon/30">{hint}</p>
     </div>
   );
 }

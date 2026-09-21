@@ -159,7 +159,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
     <div
       ref={rootRef}
       data-settings=""
-      className="fixed inset-0 z-[80] overflow-hidden bg-[#05070f] text-white"
+      className="fixed inset-0 z-[80] overflow-hidden bg-[#05070f] text-moon"
       onScroll={(e) => {
         e.currentTarget.scrollTop = 0;
         e.currentTarget.scrollLeft = 0;
@@ -191,17 +191,17 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
       <div ref={contentRef} className="relative flex h-full flex-col will-change-transform">
         {afk ? (
           <header className="flex shrink-0 flex-col items-center px-6 pb-2 pt-7 text-center md:px-10">
-            <p className="clock-figures text-[clamp(3rem,7.5vw,5.5rem)] font-extralight leading-none text-white text-glow">
+            <p className="clock-figures text-[clamp(3rem,7.5vw,5.5rem)] font-extralight leading-none text-moon text-glow">
               {formatClock(now)}
             </p>
-            <p className="display-type mt-2 text-sm font-light tracking-[0.06em] text-white/60">
+            <p className="display-type mt-2 text-sm font-light tracking-[0.06em] text-moon/60">
               {formatLongDate(now)}
             </p>
           </header>
         ) : (
           <header className="flex shrink-0 items-center gap-3 px-6 py-5 md:px-10">
-            <span className="glow-dot h-1.5 w-1.5 rounded-full bg-cyan-200 text-cyan-200" aria-hidden="true" />
-            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-white/45">
+            <span className="glow-dot h-1.5 w-1.5 rounded-full bg-accent text-accent" aria-hidden="true" />
+            <p className="text-[0.75rem] font-semibold text-moon/45">
               {paused ? 'Paused' : 'Now playing'}
             </p>
 
@@ -210,7 +210,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
               onClick={onClose}
               aria-label="Exit immersive mode"
               title="Exit (Esc)"
-              className="soft-button ml-auto grid h-9 w-9 place-items-center rounded-full text-white/75 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="soft-button ml-auto grid h-9 w-9 place-items-center rounded-full text-moon/75 transition hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               <Minimize2 className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -242,17 +242,17 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
                   <img src={state.image} alt={`${state.track} album art`} className="h-full w-full object-cover" />
                 ) : (
                   <div className="grid h-full w-full place-items-center bg-white/5">
-                    <Music2 className="h-16 w-16 text-white/30" strokeWidth={1.2} aria-hidden="true" />
+                    <Music2 className="h-16 w-16 text-moon/30" strokeWidth={1.2} aria-hidden="true" />
                   </div>
                 )}
               </div>
             </div>
 
             <div className="mt-7 w-[min(62vw,20rem)] min-w-0 text-center lg:text-left">
-              <h1 className="display-type truncate text-3xl font-extralight tracking-wide text-white text-glow">
+              <h1 className="display-type truncate text-3xl font-extralight tracking-wide text-moon text-glow">
                 {state?.track || 'Nothing playing'}
               </h1>
-              <p className="mt-1.5 truncate text-sm font-light text-white/60">
+              <p className="mt-1.5 truncate text-sm font-light text-moon/60">
                 {state?.artists || 'Start something from your library'}
               </p>
 
@@ -283,7 +283,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
                   style={{ left: 0 }}
                 />
               </button>
-              <div className="mt-2 flex justify-between text-[0.6875rem] font-medium text-white/45">
+              <div className="mt-2 flex justify-between text-[0.8125rem] font-medium text-moon/45">
                 <span ref={elapsedRef} className="clock-figures">{fmt(position)}</span>
                 <span className="clock-figures">{fmt(durationMs)}</span>
               </div>
@@ -294,7 +294,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
                   type="button"
                   onClick={controls.previous}
                   aria-label="Previous track"
-                  className="text-white/60 transition hover:scale-110 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="text-moon/60 transition hover:scale-110 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 >
                   <SkipBack className="h-6 w-6" fill="currentColor" aria-hidden="true" />
                 </button>
@@ -315,7 +315,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
                   type="button"
                   onClick={controls.next}
                   aria-label="Next track"
-                  className="text-white/60 transition hover:scale-110 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="text-moon/60 transition hover:scale-110 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                 >
                   <SkipForward className="h-6 w-6" fill="currentColor" aria-hidden="true" />
                 </button>
@@ -337,7 +337,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
           aria-label="Back to home"
           className="absolute inset-0 z-40 cursor-default focus:outline-none"
         >
-          <span className="absolute inset-x-0 bottom-7 animate-pulse text-center text-[0.625rem] font-medium uppercase tracking-[0.4em] text-white/25">
+          <span className="absolute inset-x-0 bottom-7 animate-pulse text-center text-[0.75rem] font-medium text-moon/25">
             Touch anywhere for home
           </span>
         </button>
@@ -451,7 +451,7 @@ function Lyrics({ lyrics, index, palette, onSeek, activeRef }) {
   if (lyrics.status !== 'found') {
     return (
       <section className="hidden min-h-0 items-center justify-center self-stretch lg:flex">
-        <p className="max-w-xs text-center text-sm leading-7 text-white/35">
+        <p className="max-w-xs text-center text-sm leading-7 text-moon/35">
           {lyrics.status === 'idle' ? 'Play something to see its lyrics here.' : 'No lyrics found for this track.'}
         </p>
       </section>
@@ -462,7 +462,7 @@ function Lyrics({ lyrics, index, palette, onSeek, activeRef }) {
   if (!lyrics.synced) {
     return (
       <section className="glass-scroll hidden max-h-[70vh] min-h-0 self-stretch overflow-y-auto py-10 pr-3 lg:block">
-        <p className="whitespace-pre-line text-lg font-light leading-9 text-white/70">{lyrics.plain}</p>
+        <p className="whitespace-pre-line text-lg font-light leading-9 text-moon/70">{lyrics.plain}</p>
       </section>
     );
   }
@@ -513,12 +513,12 @@ const LyricLine = memo(function LyricLine({ lineRef, text, isActive, distance, g
               // was animating layout properties too, on every line at once.
               'block w-full origin-left rounded-lg px-2 py-1.5 text-left text-2xl font-medium leading-snug transition-[color,transform,text-shadow] duration-500 ease-out hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 md:text-[1.75rem]',
               isActive
-                ? 'scale-[1.03] text-white'
+                ? 'scale-[1.03] text-moon'
                 : distance === 1
-                  ? 'text-white/35'
+                  ? 'text-moon/35'
                   : distance === 2
-                    ? 'text-white/15'
-                    : 'text-white/[0.06]',
+                    ? 'text-moon/15'
+                    : 'text-moon/[0.06]',
             ].join(' ')}
             style={{
               // Every line carries the SAME three shadows, transparent when it

@@ -4,6 +4,20 @@ import { useCallback, useEffect, useState } from 'react';
 // every component — idle screen, home, news card — reads and updates the same
 // source of truth and re-renders together.
 const KEY = 'pulse.settings.v1';
+
+// A handful of sites to start the launchpad's website row off with, so it isn't
+// empty on day one. Seeded exactly once (see `migrate`) — delete any of them and
+// they stay deleted.
+const STARTER_SITES = [
+  { url: 'https://www.google.com', name: 'Google' },
+  { url: 'https://www.youtube.com', name: 'YouTube' },
+  { url: 'https://mail.google.com', name: 'Gmail' },
+  { url: 'https://web.whatsapp.com', name: 'WhatsApp' },
+  { url: 'https://chatgpt.com', name: 'ChatGPT' },
+  { url: 'https://www.reddit.com', name: 'Reddit' },
+  { url: 'https://www.amazon.co.uk', name: 'Amazon' },
+];
+
 const DEFAULTS = {
   name: 'Eeliya',
   location: 'Kent',
@@ -39,13 +53,27 @@ const DEFAULTS = {
   pinned: { label: 'Highlighted event', match: '', title: '', image: '', excludeFromUpcoming: false },
   // Home launchpad — items are either a macOS app name (string, opened with its
   // own icon) or a website shortcut ({ url, name }, opened in the browser).
-  launchpad: ['Safari', 'Mail', 'Calendar', 'Notes', 'Music', 'App Store', 'System Settings', 'Photos'],
+  launchpad: ['Safari', 'Mail', 'Calendar', 'Notes', 'Music', 'App Store', 'System Settings', 'Photos', ...STARTER_SITES],
+  // Whether the starter sites above have been handed out yet. False here so a
+  // launchpad saved before they existed picks them up on its next load.
+  seededSites: false,
 };
 
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return migrate({ ...DEFAULTS, ...JSON.parse(raw) });
+    if (raw) {
+      const migrated = migrate({ ...DEFAULTS, ...JSON.parse(raw) });
+      // Write the migration straight back, so the one-time work really is one
+      // time: without this the seeding flag never sticks and a starter site the
+      // user deletes reappears on the next load.
+      try {
+        localStorage.setItem(KEY, JSON.stringify(migrated));
+      } catch {
+        /* ignore */
+      }
+      return migrated;
+    }
   } catch {
     /* ignore */
   }
@@ -80,7 +108,24 @@ function migrate(saved) {
         : { id: m.id ?? `m-${i}`, text: m.text ?? '', at: m.at ?? 0 },
     )
     .filter((m) => m.text.trim());
-  return { ...saved, follows, pinned: { ...DEFAULTS.pinned, ...pinned }, customPrompts, memories };
+  // One-time: give a launchpad saved before the starter sites existed its share
+  // of them, skipping any the user already has. Runs once, so deleted ones stay
+  // deleted.
+  const launchpad = saved.seededSites
+    ? saved.launchpad
+    : [
+        ...(saved.launchpad ?? []),
+        ...STARTER_SITES.filter((site) => !(saved.launchpad ?? []).some((item) => item?.url === site.url)),
+      ];
+  return {
+    ...saved,
+    follows,
+    launchpad,
+    seededSites: true,
+    pinned: { ...DEFAULTS.pinned, ...pinned },
+    customPrompts,
+    memories,
+  };
 }
 
 let state = load();

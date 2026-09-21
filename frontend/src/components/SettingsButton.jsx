@@ -24,14 +24,11 @@ export default function SettingsButton({
         data-settings=""
         onClick={() => setOpen(true)}
         aria-label="Settings"
-        className={[
-          'inline-flex items-center gap-1.5 text-white/40 transition hover:text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
-          className,
-        ].join(' ')}
+        className={[label ? 'pill h-9 px-3 text-moon/75' : 'pill h-11 w-11 px-0 text-moon/70', className].join(' ')}
       >
         <Settings className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" />
         {label ? (
-          <span className="text-[0.625rem] font-medium uppercase tracking-[0.2em]">Settings</span>
+          <span className="text-[0.75rem] font-medium">Settings</span>
         ) : null}
       </button>
 
@@ -44,15 +41,15 @@ export default function SettingsButton({
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className="absolute inset-0 bg-[#070b18]/70 backdrop-blur-sm" aria-hidden="true" />
-          <div className="theme-card fade-in relative z-10 w-full max-w-sm rounded-3xl p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="display-type text-lg font-light text-white text-glow">{title}</h2>
+          <div className="fade-in absolute inset-0 bg-ink/70 backdrop-blur-md" aria-hidden="true" />
+          <div className="theme-popover launcher-rise relative z-10 w-full max-w-sm rounded-[1.75rem] p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="display-type text-[1.75rem] leading-none text-moon">{title}</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close settings"
-                className="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="pill h-8 w-8 px-0 text-moon/70"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -119,8 +116,8 @@ function Toggle({ label, hint, checked, onChange, className = '' }) {
   return (
     <div className={`flex items-start justify-between gap-4 ${className}`}>
       <span className="min-w-0">
-        <span className="block text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-white/45">{label}</span>
-        {hint ? <span className="mt-1 block text-xs font-light leading-snug text-white/40">{hint}</span> : null}
+        <span className="block text-[0.875rem] text-moon/90">{label}</span>
+        {hint ? <span className="mt-1 block text-[0.75rem] leading-snug text-dim">{hint}</span> : null}
       </span>
       <button
         type="button"
@@ -130,13 +127,13 @@ function Toggle({ label, hint, checked, onChange, className = '' }) {
         onClick={() => onChange(!checked)}
         className={[
           'relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
-          checked ? 'bg-cyan-300/80' : 'bg-white/15',
+          checked ? 'bg-moon' : 'bg-white/15',
         ].join(' ')}
       >
         <span
           className={[
-            'absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all',
-            checked ? 'left-6' : 'left-1',
+            'absolute top-1 h-4 w-4 rounded-full shadow transition-all duration-300',
+            checked ? 'left-6 bg-ink' : 'left-1 bg-moon',
           ].join(' ')}
         />
       </button>
@@ -147,16 +144,14 @@ function Toggle({ label, hint, checked, onChange, className = '' }) {
 function Field({ label, value, onChange, placeholder, hint, className = '' }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
-        {label}
-      </span>
+      <span className="t-label mb-2 block">{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+        className="h-11 w-full rounded-full bg-white/[0.07] px-4 text-[0.9375rem] text-moon shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)] outline-none transition placeholder:text-moon/35 focus:bg-white/[0.1] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
       />
-      {hint ? <span className="mt-1 block text-[0.625rem] text-white/38">{hint}</span> : null}
+      {hint ? <span className="mt-1.5 block pl-1 text-[0.75rem] text-dim">{hint}</span> : null}
     </label>
   );
 }
@@ -164,17 +159,15 @@ function Field({ label, value, onChange, placeholder, hint, className = '' }) {
 function Textarea({ label, value, onChange, placeholder, hint, className = '' }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
-        {label}
-      </span>
+      <span className="t-label mb-2 block">{label}</span>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={4}
-        className="glass-scroll w-full resize-none rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm leading-6 text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+        className="glass-scroll w-full resize-none rounded-[1.25rem] bg-white/[0.07] px-4 py-3 text-[0.9375rem] leading-6 text-moon shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)] outline-none transition placeholder:text-moon/35 focus:bg-white/[0.1] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
       />
-      {hint ? <span className="mt-1 block text-[0.625rem] text-white/38">{hint}</span> : null}
+      {hint ? <span className="mt-1.5 block pl-1 text-[0.75rem] text-dim">{hint}</span> : null}
     </label>
   );
 }

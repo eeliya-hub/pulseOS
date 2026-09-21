@@ -37,14 +37,14 @@ export default class ErrorBoundary extends Component {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="theme-card flex max-w-md flex-col items-center gap-3 rounded-3xl px-8 py-7 text-center">
-          <p className="display-type text-lg font-light text-white">This panel hit a snag</p>
-          <p className="text-xs leading-5 text-white/50">
+          <p className="display-type text-lg font-light text-moon">This panel hit a snag</p>
+          <p className="text-xs leading-5 text-moon/50">
             {String(error?.message || error).slice(0, 200)}
           </p>
           <button
             type="button"
             onClick={() => this.setState({ error: null })}
-            className="soft-button mt-1 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            className="soft-button mt-1 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-moon/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
             Try again

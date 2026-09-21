@@ -12,7 +12,7 @@ export function AppIcon({ app, className = 'h-11 w-11' }) {
   if (failed) {
     return (
       <span
-        className={`grid ${className} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 font-semibold text-white/70 shadow-lg`}
+        className={`grid ${className} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 font-semibold text-moon/70 shadow-lg`}
       >
         {app.slice(0, 1).toUpperCase()}
       </span>
@@ -38,7 +38,7 @@ export function SiteIcon({ url, className = 'h-11 w-11' }) {
       className={`grid ${className} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 shadow-lg ring-1 ring-white/10`}
     >
       {failed ? (
-        <Globe className="h-1/2 w-1/2 text-cyan-100/70" strokeWidth={1.6} aria-hidden="true" />
+        <Globe className="h-1/2 w-1/2 text-accent/70" strokeWidth={1.6} aria-hidden="true" />
       ) : (
         <img
           src={faviconUrl(url)}

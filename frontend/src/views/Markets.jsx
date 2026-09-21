@@ -13,11 +13,10 @@ import {
   Sun,
   Trophy,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import GlassCard from '../components/GlassCard.jsx';
+import { useEffect, useMemo, useState } from 'react';
 import LiveNewsPlayer from '../components/LiveNewsPlayer.jsx';
 import SettingsButton from '../components/SettingsButton.jsx';
-import ViewHeader from '../components/ViewHeader.jsx';
+import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { localConstructorLogo } from '../data/f1Logos.js';
 import { useMarketData } from '../hooks/useMarketData.js';
 import { useNews } from '../hooks/useNews.js';
@@ -53,22 +52,25 @@ function Ticker({ fallback }) {
 
   const lane = [...assets, ...assets];
   return (
-    <div className="theme-card ticker-mask relative mt-3 shrink-0 overflow-hidden rounded-2xl py-2.5">
-      <div className="ticker-track gap-8 pl-8">
+    // The tape: no box, just a band ruled above and below that the prices run
+    // along. Symbols in weight, prices in tabular figures, the move as a small
+    // pill in the colour of its direction.
+    <div className="ticker-mask relative z-10 mx-[calc(50%-50vw)] shrink-0 overflow-hidden py-3">
+      <div className="ticker-track gap-10 pl-10">
         {lane.map((asset, index) => {
           const up = asset.change >= 0;
           return (
             <span
               key={`${asset.symbol}-${index}`}
-              className="flex items-center gap-2 whitespace-nowrap text-sm"
+              className="flex items-center gap-2.5 whitespace-nowrap text-[0.9375rem]"
             >
-              <span className="display-type font-medium text-white/90">{asset.symbol}</span>
-              <span className="clock-figures text-white/70">
+              <span className="font-semibold tracking-tight text-moon">{asset.symbol}</span>
+              <span className="clock-figures text-moon/65">
                 {formatCurrencyDetailed(asset.price, { currency: 'USD' })}
               </span>
               <span
-                className={`inline-flex items-center gap-0.5 text-xs font-semibold ${
-                  up ? 'text-emerald-300' : 'text-rose-300'
+                className={`clock-figures inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.75rem] font-semibold ${
+                  up ? 'bg-rise/[0.12] text-rise' : 'bg-fall/[0.12] text-fall'
                 }`}
               >
                 {up ? (
@@ -78,7 +80,6 @@ function Ticker({ fallback }) {
                 )}
                 {formatPercent(asset.change)}
               </span>
-              <span className="ml-2 h-1 w-1 rounded-full bg-white/20" aria-hidden="true" />
             </span>
           );
         })}
@@ -113,8 +114,8 @@ function ArticleThumb({ src }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return (
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-white/12 to-cyan-100/8 ring-1 ring-white/10">
-        <Newspaper className="h-4 w-4 text-white/45" strokeWidth={1.6} aria-hidden="true" />
+      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[0.8rem] bg-white/[0.06]">
+        <Newspaper className="h-4 w-4 text-moon/45" strokeWidth={1.6} aria-hidden="true" />
       </span>
     );
   }
@@ -124,7 +125,7 @@ function ArticleThumb({ src }) {
       alt=""
       loading="lazy"
       onError={() => setFailed(true)}
-      className="h-11 w-11 shrink-0 rounded-lg object-cover ring-1 ring-white/10"
+      className="h-14 w-14 shrink-0 rounded-[0.8rem] object-cover"
     />
   );
 }
@@ -137,13 +138,13 @@ function NewsPanel({ scope, onPlace }) {
   }, [place, onPlace]);
 
   return (
-    <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+    <div className="glass-scroll cascade min-h-0 flex-1 overflow-y-auto pr-1">
         {notConfigured ? (
-          <p className="px-2 py-6 text-center text-xs leading-relaxed text-white/45">
-            Add <span className="text-cyan-100/80">GNEWS_API_KEY</span> to <code>backend/.env</code> and restart to load live news.
+          <p className="px-2 py-6 text-center text-xs leading-relaxed text-moon/45">
+            Add <span className="text-accent/80">GNEWS_API_KEY</span> to <code>backend/.env</code> and restart to load live news.
           </p>
         ) : error ? (
-          <p className="px-2 py-6 text-center text-xs text-white/45">Couldn&rsquo;t load news right now.</p>
+          <p className="px-2 py-6 text-center text-xs text-moon/45">Couldn&rsquo;t load news right now.</p>
         ) : loading ? (
           <div className="space-y-3 pt-1">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -151,7 +152,7 @@ function NewsPanel({ scope, onPlace }) {
             ))}
           </div>
         ) : articles.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-white/45">No stories found.</p>
+          <p className="px-2 py-6 text-center text-xs text-moon/45">No stories found.</p>
         ) : (
           articles.map((article) => (
             <a
@@ -159,16 +160,15 @@ function NewsPanel({ scope, onPlace }) {
               href={article.url}
               target="_blank"
               rel="noreferrer noopener"
-              className="group flex gap-3 rounded-lg border-b border-white/8 px-1 py-3 transition last:border-0 hover:bg-white/[0.04]"
+              className="ground-row group flex gap-3.5 px-2 py-3"
             >
               <ArticleThumb src={article.image} />
               <div className="min-w-0 flex-1">
-                <h3 className="line-clamp-2 text-sm font-medium leading-snug text-white/88 group-hover:text-white">
+                <h3 className="t-title line-clamp-2 group-hover:text-moon">
                   {article.title}
                 </h3>
-                <p className="mt-1.5 flex items-center gap-1.5 text-[0.625rem] font-medium uppercase tracking-[0.12em] text-white/40">
-                  <span className="truncate text-cyan-100/70">{article.source}</span>
-                  <span aria-hidden="true">·</span>
+                <p className="t-micro mt-1.5 flex items-center gap-2">
+                  <span className="truncate text-accent/80">{article.source}</span>
                   <span className="shrink-0">{relTime(article.publishedAt)}</span>
                   <ExternalLink
                     className="ml-auto h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-70"
@@ -236,7 +236,7 @@ function SportsPanel({ activeId, setActiveId }) {
 
   if (!follows.length) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-white/45">
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs leading-relaxed text-moon/45">
         Add teams in Settings to see fixtures and standings.
       </div>
     );
@@ -249,7 +249,7 @@ function SportsPanel({ activeId, setActiveId }) {
       {loading ? (
         <div className="flex-1 animate-pulse rounded-2xl bg-white/6" />
       ) : !data?.found ? (
-        <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-white/45">
+        <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">
           Couldn&rsquo;t find &ldquo;{active?.team}&rdquo;. Try the club&rsquo;s full name.
         </div>
       ) : (
@@ -267,35 +267,35 @@ function SportsPanel({ activeId, setActiveId }) {
                 />
               ) : (
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/6">
-                  <Trophy className="h-5 w-5 text-white/50" aria-hidden="true" />
+                  <Trophy className="h-5 w-5 text-moon/50" aria-hidden="true" />
                 </span>
               )}
               <div className="min-w-0">
-                <p className="text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-cyan-100/70">
+                <p className="text-[0.75rem] font-semibold text-accent/70">
                   {data.league || data.sport}
                 </p>
-                <p className="display-type truncate text-lg font-light leading-tight text-white">{data.name}</p>
+                <p className="display-type truncate text-lg font-light leading-tight text-moon">{data.name}</p>
               </div>
             </div>
             {fixture ? (
               <div className="mt-3">
-                <p className="text-sm font-medium text-white/88">{fixture.name}</p>
-                {fixture.venue ? <p className="mt-0.5 truncate text-xs text-white/48">{fixture.venue}</p> : null}
+                <p className="text-sm font-medium text-moon/88">{fixture.name}</p>
+                {fixture.venue ? <p className="mt-0.5 truncate text-xs text-moon/48">{fixture.venue}</p> : null}
                 <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                  <span className="soft-row flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-white/80">
-                    <CalendarDays className="h-3.5 w-3.5 text-white/55" aria-hidden="true" />
+                  <span className="soft-row flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-moon/80">
+                    <CalendarDays className="h-3.5 w-3.5 text-moon/55" aria-hidden="true" />
                     {fmtDate(fixture.date)}
                   </span>
                   {fmtTime(fixture.time) ? (
-                    <span className="soft-row clock-figures flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-white">
-                      <Clock className="h-3.5 w-3.5 text-white/55" aria-hidden="true" />
+                    <span className="soft-row clock-figures flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-moon">
+                      <Clock className="h-3.5 w-3.5 text-moon/55" aria-hidden="true" />
                       {fmtTime(fixture.time)}
                     </span>
                   ) : null}
                 </div>
               </div>
             ) : (
-              <p className="mt-3 text-xs text-white/45">No upcoming fixture scheduled.</p>
+              <p className="mt-3 text-xs text-moon/45">No upcoming fixture scheduled.</p>
             )}
           </div>
 
@@ -359,8 +359,8 @@ function BallStandings({ rows, conferences, playoffs, ties }) {
             type="button"
             onClick={() => setConference(c)}
             className={[
-              'rounded-full px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] transition',
-              c === conference ? 'bg-cyan-200/15 text-cyan-50 ring-1 ring-cyan-200/25' : 'text-white/40 hover:text-white/70',
+              'rounded-full px-2.5 py-1 text-[0.75rem] font-semibold transition',
+              c === conference ? 'bg-accent/15 text-accent ring-1 ring-accent/25' : 'text-moon/40 hover:text-moon/70',
             ].join(' ')}
           >
             {c}
@@ -368,7 +368,7 @@ function BallStandings({ rows, conferences, playoffs, ties }) {
         ))}
       </div>
 
-      <div className={`grid ${cols} gap-1 px-2 pb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-white/38`}>
+      <div className={`grid ${cols} gap-1 px-2 pb-1.5 text-[0.75rem] font-semibold text-moon/38`}>
         <span>#</span>
         <span>Team</span>
         <span className="text-right">W</span>
@@ -390,34 +390,34 @@ function BallStandings({ rows, conferences, playoffs, ties }) {
                 className={[
                   `grid ${cols} items-center gap-1 rounded-xl px-2 py-2 text-xs`,
                   r.me
-                    ? 'bg-cyan-200/12 text-white ring-1 ring-cyan-200/25'
+                    ? 'bg-accent/12 text-moon ring-1 ring-accent/25'
                     : inPlayIn
-                      ? 'bg-white/[0.03] text-white/60'
-                      : 'bg-white/[0.03] text-white/70',
+                      ? 'bg-white/[0.03] text-moon/60'
+                      : 'bg-white/[0.03] text-moon/70',
                 ].join(' ')}
               >
-                <span className={`clock-figures ${r.me ? 'text-cyan-100' : 'text-white/45'}`}>{r.seed ?? '–'}</span>
+                <span className={`clock-figures ${r.me ? 'text-accent' : 'text-moon/45'}`}>{r.seed ?? '–'}</span>
                 <span className="flex min-w-0 items-center gap-1.5 truncate font-medium">
                   {r.crest ? (
                     <img src={r.crest} alt="" className="h-4 w-4 shrink-0 rounded-sm bg-white/6 object-contain" />
                   ) : null}
                   <span className="truncate">{r.team}</span>
                 </span>
-                <span className="clock-figures text-right text-white/70">{r.won}</span>
-                <span className="clock-figures text-right text-white/55">{r.lost}</span>
-                {ties ? <span className="clock-figures text-right text-white/45">{r.drawn}</span> : null}
-                <span className="clock-figures text-right font-semibold text-white">{pct(r)}</span>
+                <span className="clock-figures text-right text-moon/70">{r.won}</span>
+                <span className="clock-figures text-right text-moon/55">{r.lost}</span>
+                {ties ? <span className="clock-figures text-right text-moon/45">{r.drawn}</span> : null}
+                <span className="clock-figures text-right font-semibold text-moon">{pct(r)}</span>
                 <span
                   className={[
-                    'clock-figures text-right text-[0.6875rem] font-medium',
-                    r.streak?.startsWith('W') ? 'text-emerald-200/80' : r.streak?.startsWith('L') ? 'text-rose-200/70' : 'text-white/40',
+                    'clock-figures text-right text-[0.8125rem] font-medium',
+                    r.streak?.startsWith('W') ? 'text-emerald-200/80' : r.streak?.startsWith('L') ? 'text-rose-200/70' : 'text-moon/40',
                   ].join(' ')}
                 >
                   {r.streak ?? '–'}
                 </span>
               </div>
               {cut || playIn ? (
-                <p className="px-2 pt-1 text-[0.5625rem] font-semibold uppercase tracking-[0.14em] text-white/25">
+                <p className="px-2 pt-1 text-[0.75rem] font-semibold text-moon/25">
                   {playIn ? 'Play-in line' : 'Playoff line'}
                 </p>
               ) : null}
@@ -443,7 +443,7 @@ function SportsStandings({ rows, variant = 'football' }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div
-        className={`grid ${STANDINGS_COLS} gap-1 px-2 pb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-white/38`}
+        className={`grid ${STANDINGS_COLS} gap-1 px-2 pb-1.5 text-[0.75rem] font-semibold text-moon/38`}
       >
         <span>#</span>
         <span>Team</span>
@@ -461,19 +461,19 @@ function SportsStandings({ rows, variant = 'football' }) {
               key={`${r.rank}-${r.team}`}
               className={[
                 `grid ${STANDINGS_COLS} items-center gap-1 rounded-xl px-2 py-2 text-xs`,
-                r.me ? 'bg-cyan-200/12 text-white ring-1 ring-cyan-200/25' : 'bg-white/[0.03] text-white/70',
+                r.me ? 'bg-accent/12 text-moon ring-1 ring-accent/25' : 'bg-white/[0.03] text-moon/70',
               ].join(' ')}
             >
-              <span className="text-white/45">{r.rank}</span>
+              <span className="text-moon/45">{r.rank}</span>
               <span className="flex min-w-0 items-center gap-1.5 truncate font-medium">
                 {r.crest ? (
                   <img src={r.crest} alt="" className="h-4 w-4 shrink-0 rounded-sm bg-white/6 object-contain" />
                 ) : null}
                 <span className="truncate">{r.team}</span>
               </span>
-              <span className="clock-figures text-right text-white/55">{a}</span>
-              <span className="clock-figures text-right text-white/55">{b}</span>
-              <span className="clock-figures text-right font-semibold text-white">{c}</span>
+              <span className="clock-figures text-right text-moon/55">{a}</span>
+              <span className="clock-figures text-right text-moon/55">{b}</span>
+              <span className="clock-figures text-right font-semibold text-moon">{c}</span>
             </div>
           );
         })}
@@ -516,8 +516,8 @@ function SportsF1Standings({ drivers = [], constructors = [] }) {
             type="button"
             onClick={() => setTab(key)}
             className={[
-              'rounded-full px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.1em] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-              tab === key ? 'bg-cyan-200/15 text-cyan-50 ring-1 ring-cyan-200/25' : 'text-white/40 hover:text-white/70',
+              'rounded-full px-2.5 py-1 text-[0.75rem] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+              tab === key ? 'bg-accent/15 text-accent ring-1 ring-accent/25' : 'text-moon/40 hover:text-moon/70',
             ].join(' ')}
           >
             {label}
@@ -534,26 +534,26 @@ function SportsF1Standings({ drivers = [], constructors = [] }) {
               key={r.position + (isDrivers ? r.driverName : r.constructor)}
               className={[
                 'grid grid-cols-[1.4rem_1fr_2.6rem] items-center gap-1 rounded-xl px-2 py-2 text-xs',
-                r.me ? 'bg-cyan-200/12 text-white ring-1 ring-cyan-200/25' : 'bg-white/[0.03] text-white/70',
+                r.me ? 'bg-accent/12 text-moon ring-1 ring-accent/25' : 'bg-white/[0.03] text-moon/70',
               ].join(' ')}
             >
-              <span className="text-white/45">{r.position}</span>
+              <span className="text-moon/45">{r.position}</span>
               <span className="flex min-w-0 items-center gap-3.5">
                 <ConstructorLogo src={crest} scale={logo?.scale} className="h-5 w-8" />
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{isDrivers ? r.driverName : r.constructor}</span>
                   {isDrivers && r.team ? (
-                    <span className="block truncate text-[0.625rem] text-white/40">{r.team}</span>
+                    <span className="block truncate text-[0.75rem] text-moon/40">{r.team}</span>
                   ) : null}
                 </span>
               </span>
-              <span className="clock-figures text-right font-semibold text-white">{r.points}</span>
+              <span className="clock-figures text-right font-semibold text-moon">{r.points}</span>
             </div>
             );
           })}
         </div>
       ) : (
-        <div className="flex flex-1 items-center justify-center text-xs text-white/40">Standings unavailable.</div>
+        <div className="flex flex-1 items-center justify-center text-xs text-moon/40">Standings unavailable.</div>
       )}
     </div>
   );
@@ -561,19 +561,19 @@ function SportsF1Standings({ drivers = [], constructors = [] }) {
 
 function SportsResults({ results }) {
   if (!results?.length) {
-    return <div className="flex flex-1 items-center justify-center text-xs text-white/40">No recent results.</div>;
+    return <div className="flex flex-1 items-center justify-center text-xs text-moon/40">No recent results.</div>;
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-1.5 px-1 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/38">Recent results</p>
+      <p className="mb-1.5 px-1 text-[0.75rem] font-semibold text-moon/38">Recent results</p>
       <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         {results.map((r) => (
           <div key={r.id} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2.5 py-2 text-xs">
-            <span className="min-w-0 flex-1 truncate text-right text-white/75">{r.homeTeam}</span>
-            <span className="clock-figures shrink-0 rounded-md bg-white/8 px-2 py-0.5 font-semibold text-white">
+            <span className="min-w-0 flex-1 truncate text-right text-moon/75">{r.homeTeam}</span>
+            <span className="clock-figures shrink-0 rounded-md bg-white/8 px-2 py-0.5 font-semibold text-moon">
               {`${r.homeScore ?? '–'} – ${r.awayScore ?? '–'}`}
             </span>
-            <span className="min-w-0 flex-1 truncate text-white/75">{r.awayTeam}</span>
+            <span className="min-w-0 flex-1 truncate text-moon/75">{r.awayTeam}</span>
           </div>
         ))}
       </div>
@@ -583,16 +583,16 @@ function SportsResults({ results }) {
 
 function SportsRaces({ races }) {
   if (!races?.length) {
-    return <div className="flex flex-1 items-center justify-center text-xs text-white/40">No recent races.</div>;
+    return <div className="flex flex-1 items-center justify-center text-xs text-moon/40">No recent races.</div>;
   }
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-1.5 px-1 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/38">Recent races</p>
+      <p className="mb-1.5 px-1 text-[0.75rem] font-semibold text-moon/38">Recent races</p>
       <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         {races.map((r) => (
           <div key={r.id} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2.5 py-2 text-xs">
-            <span className="min-w-0 flex-1 truncate text-white/78">{r.name}</span>
-            <span className="clock-figures shrink-0 text-[0.625rem] text-white/45">{fmtDate(r.date)}</span>
+            <span className="min-w-0 flex-1 truncate text-moon/78">{r.name}</span>
+            <span className="clock-figures shrink-0 text-[0.75rem] text-moon/45">{fmtDate(r.date)}</span>
           </div>
         ))}
       </div>
@@ -612,101 +612,81 @@ function NewsSportsCard() {
     if (follows.length && !follows.some((f) => f.id === activeId)) setActiveId(follows[0].id);
   }, [follows, activeId, setActiveId]);
 
+  const selectClass =
+    'h-8 appearance-none rounded-full bg-white/[0.07] pl-3.5 pr-8 text-[0.8125rem] text-moon shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50';
+
   return (
-    <GlassCard delay={100} className="col-span-4 flex min-h-0 flex-col overflow-hidden">
-      <div className="mb-3 flex shrink-0 items-center gap-2">
-        {/* Icon tabs */}
-        <div className="flex items-center gap-1">
+    <div className="ground-rule flex min-h-0 min-w-0 flex-col pl-8 pt-7">
+      <div className="col-head justify-start gap-2">
+        <div className="pill-group" role="tablist">
           {[
             { id: 'news', Icon: Newspaper, label: 'News' },
-            { id: 'sports', Icon: Trophy, label: 'Sports' },
-            { id: 'stocks', Icon: LineChart, label: 'Stocks' },
+            { id: 'sports', Icon: Trophy, label: 'Sport' },
+            { id: 'stocks', Icon: LineChart, label: 'Markets' },
           ].map(({ id, Icon, label }) => (
             <button
               key={id}
               type="button"
+              role="tab"
+              aria-selected={tab === id}
               onClick={() => setTab(id)}
-              aria-label={label}
-              title={label}
-              className={[
-                'grid h-8 w-8 place-items-center rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-                tab === id
-                  ? 'bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-200/25'
-                  : 'text-white/40 hover:bg-white/[0.06] hover:text-white/75',
-              ].join(' ')}
+              className="pill h-8 px-3.5 text-[0.8125rem]"
             >
-              <Icon className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
+              {label}
             </button>
           ))}
         </div>
 
-        {/* Centered local hint */}
-        <div className="flex min-w-0 flex-1 justify-center">
-          {tab === 'news' && scope === 'local' ? (
-            <p className="flex min-w-0 items-center gap-1 text-[0.625rem] text-white/45">
-              <MapPin className="h-3 w-3 shrink-0 text-cyan-100/60" aria-hidden="true" />
-              <span className="truncate">{place ?? settings.location}</span>
-            </p>
-          ) : null}
-        </div>
-
-        {/* Right cluster: category dropdown · settings (news only) */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {tab === 'news' ? (
             <div className="relative shrink-0">
-              <select
-                value={scope}
-                onChange={(e) => setScope(e.target.value)}
-                aria-label="News category"
-                className="appearance-none rounded-full bg-white/8 py-1 pl-3 pr-7 text-[0.6875rem] font-medium text-white/85 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
-              >
+              <select value={scope} onChange={(e) => setScope(e.target.value)} aria-label="News category" className={selectClass}>
                 {NEWS_SCOPES.map((s) => (
-                  <option key={s.id} value={s.id} className="bg-[#1a2138] text-white">
+                  <option key={s.id} value={s.id} className="bg-ink text-moon">
                     {s.label}
                   </option>
                 ))}
               </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-white/45"
-                aria-hidden="true"
-              />
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-moon/50" aria-hidden="true" />
             </div>
           ) : tab === 'sports' && follows.length ? (
             <div className="relative shrink-0">
-              <select
-                value={activeId}
-                onChange={(e) => setActiveId(e.target.value)}
-                aria-label="Followed team"
-                className="appearance-none rounded-full bg-white/8 py-1 pl-3 pr-7 text-[0.6875rem] font-medium text-white/85 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
-              >
+              <select value={activeId} onChange={(e) => setActiveId(e.target.value)} aria-label="Followed team" className={selectClass}>
                 {follows.map((f) => (
-                  <option key={f.id} value={f.id} className="bg-[#1a2138] text-white">
+                  <option key={f.id} value={f.id} className="bg-ink text-moon">
                     {f.team}
                   </option>
                 ))}
               </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-white/45"
-                aria-hidden="true"
-              />
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-moon/50" aria-hidden="true" />
             </div>
           ) : null}
           <SettingsButton
-            className="mr-0.5"
+            className="!h-8 !w-8"
             title={tab === 'news' ? 'Local news' : tab === 'sports' ? 'Sports & teams' : 'Stocks'}
             fields={tab === 'news' ? ['location'] : tab === 'sports' ? ['sports'] : ['stocks']}
           />
         </div>
       </div>
 
-      {tab === 'news' ? (
-        <NewsPanel scope={scope} onPlace={setPlace} />
-      ) : tab === 'sports' ? (
-        <SportsPanel activeId={activeId} setActiveId={setActiveId} />
-      ) : (
-        <StocksPanel />
-      )}
-    </GlassCard>
+      {tab === 'news' && scope === 'local' ? (
+        <p className="mt-3 flex min-w-0 items-center gap-1.5 text-[0.8125rem] text-dim">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-accent/70" aria-hidden="true" />
+          <span className="truncate">{place ?? settings.location}</span>
+        </p>
+      ) : null}
+
+      <div className="mt-3 flex min-h-0 flex-1 flex-col pb-4">
+        {tab === 'news' ? (
+          <NewsPanel scope={scope} onPlace={setPlace} />
+        ) : tab === 'sports' ? (
+          <SportsPanel activeId={activeId} setActiveId={setActiveId} />
+        ) : (
+          <StocksPanel />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -770,7 +750,7 @@ function StocksPanel() {
   }
   if (!rows?.length) {
     return (
-      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-white/45">
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">
         Add tickers in Settings to track stocks.
       </div>
     );
@@ -782,8 +762,8 @@ function StocksPanel() {
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="soft-row flex shrink-0 items-center justify-between rounded-2xl px-3.5 py-2.5">
         <div>
-          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-cyan-100/70">Watchlist</p>
-          <p className="display-type text-lg font-light leading-tight text-white">{rows.length} instruments</p>
+          <p className="text-[0.75rem] font-semibold text-accent/70">Watchlist</p>
+          <p className="display-type text-lg font-light leading-tight text-moon">{rows.length} instruments</p>
         </div>
         <div className="text-right">
           <p className="clock-figures text-sm font-medium text-emerald-300/90">{gainers} up</p>
@@ -797,13 +777,13 @@ function StocksPanel() {
           return (
             <div key={r.symbol} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-moon">
                   {r.symbol}
-                  {r.name ? <span className="truncate text-[0.6875rem] font-normal text-white/40">{r.name}</span> : null}
+                  {r.name ? <span className="truncate text-[0.8125rem] font-normal text-moon/40">{r.name}</span> : null}
                 </p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="clock-figures text-sm font-medium text-white">{fmtPrice(r.price)}</p>
+                <p className="clock-figures text-sm font-medium text-moon">{fmtPrice(r.price)}</p>
                 <p
                   className={[
                     'clock-figures flex items-center justify-end gap-0.5 text-xs font-medium',
@@ -818,8 +798,8 @@ function StocksPanel() {
           );
         })}
       </div>
-      <p className="shrink-0 text-center text-[0.625rem] text-white/30">
-        {isSample ? 'Sample data · add a Finnhub key for live quotes' : 'Live · Finnhub'}
+      <p className="shrink-0 text-center text-[0.75rem] text-moon/30">
+        {isSample ? 'Sample data. Add a Finnhub key for live quotes' : 'Live from Finnhub'}
       </p>
     </div>
   );
@@ -836,77 +816,23 @@ const conditionIcon = (condition = '') => {
 
 // Hour-by-hour carousel: shows one hour at a time with < > to navigate 12 hours ahead.
 // Simple dot progress indicator below.
-function WeatherCard() {
-  const { weather, loading } = useWeather();
-  const [hourIndex, setHourIndex] = useState(0);
-  const hours = weather?.hourly?.slice(0, 12) ?? [];
-
-  const goBack = useCallback(
-    () => setHourIndex((i) => Math.max(0, i - 1)),
-    [],
-  );
-  const goForward = useCallback(
-    () => setHourIndex((i) => Math.min(hours.length - 1, i + 1)),
-    [hours.length],
-  );
-
-  if (loading || !weather) {
-    return <div className="min-h-0 flex-1 animate-pulse rounded-2xl bg-white/6" />;
-  }
-
+/** The weather now, set in the sky beside the title. */
+function WeatherNow() {
+  const { weather } = useWeather();
+  if (!weather) return null;
   const Condition = conditionIcon(weather.condition);
-  const hour = hours[hourIndex];
-  const HourIcon = hourlyIcon[hour?.icon] ?? Cloud;
-
   return (
-    <div className="flex min-h-0 flex-1 items-center gap-5">
-      {/* Current conditions */}
-      <div className="flex shrink-0 items-center gap-3">
-        <Condition className="h-9 w-9 text-cyan-100/85" aria-hidden="true" />
-        <span className="display-type text-4xl font-light leading-none text-white text-glow">
-          {weather.temperature}&deg;
-        </span>
-        <div className="flex flex-col leading-tight">
-          <span className="text-sm font-medium text-white/85">{weather.location}</span>
-          <span className="text-xs text-white/55">{weather.condition}</span>
-          <span className="clock-figures mt-0.5 text-[0.6875rem] text-white/45">
-            H {weather.high}&deg; · L {weather.low}&deg; · Feels {weather.feelsLike}&deg;
-          </span>
-        </div>
+    <div className="flex shrink-0 items-center gap-4 pb-1 text-right">
+      <div className="leading-tight">
+        <p className="t-body">
+          {weather.condition} in {weather.location}
+        </p>
+        <p className="t-meta clock-figures mt-1">
+          High {weather.high}&deg;&ensp;Low {weather.low}&deg;&ensp;Feels {weather.feelsLike}&deg;
+        </p>
       </div>
-
-      {/* Hour-by-hour — pill vertically centred; the dots live inside the pill, underlining the content */}
-      <div className="ml-auto hidden shrink-0 items-center gap-3 md:flex">
-        <button
-          type="button"
-          onClick={goBack}
-          disabled={hourIndex === 0}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:opacity-38 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          aria-label="Previous hour"
-        >
-          <span className="text-xl font-light leading-none">‹</span>
-        </button>
-
-        <div key={hourIndex} className="fade-in flex items-center gap-5 px-2">
-          <span className="display-type clock-figures text-2xl font-light leading-none text-white/70">
-            {hour.time}
-          </span>
-          <HourIcon className="h-7 w-7 shrink-0 text-cyan-100/85" strokeWidth={1.5} aria-hidden="true" />
-          <span className="display-type clock-figures text-2xl font-light leading-none text-white text-glow">
-            {hour.temp}&deg;
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={goForward}
-          disabled={hourIndex === hours.length - 1}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:opacity-38 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          aria-label="Next hour"
-        >
-          <span className="text-xl font-light leading-none">›</span>
-        </button>
-      </div>
+      <p className="display-figures text-[3.5rem] leading-none text-moon">{weather.temperature}&deg;</p>
+      <Condition className="h-8 w-8 shrink-0 text-moon/80" strokeWidth={1.3} aria-hidden="true" />
     </div>
   );
 }
@@ -915,31 +841,31 @@ export default function Markets() {
   const { market, loading } = useMarketData();
 
   if (loading || !market) {
-    return <div className="h-full animate-pulse rounded-3xl bg-white/6" />;
+    return <div className="h-full" />;
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <ViewHeader lead="Markets" accent="& News" subtitle="A calm read on the day's moves" />
+    <div className="markets-view flex h-full flex-col">
+      {/* ── Sky: the desk's name and the weather outside ──────────────────── */}
+      <SkyZone tape className="flex items-end justify-between gap-10">
+        <h1 className="t-hero truncate">Markets & News</h1>
+        <WeatherNow />
+      </SkyZone>
+
+      {/* The tape runs along the horizon, like the crawl under a broadcast. */}
       <Ticker fallback={market.watchlist} />
 
-      <div className="mt-4 grid min-h-0 flex-1 grid-cols-12 gap-4">
-        <div className="col-span-8 flex min-h-0 flex-col gap-4">
-          <GlassCard
-            tone="cyan"
-            noPadding
-            className="relative aspect-video w-full shrink-0 overflow-hidden"
-          >
+      {/* ── Ground: the live channel and the desk ─────────────────────────── */}
+      <Ground className="markets-ground">
+        <div className="flex min-h-0 min-w-0 flex-col pb-3 pr-8 pt-7">
+          <ColumnHead label="Live channel" />
+          <div className="lift relative mt-2 aspect-video max-h-full w-full overflow-hidden rounded-[1.5rem] bg-black shadow-[0_40px_80px_-40px_rgba(0,0,0,0.95)] ring-1 ring-white/10">
             <LiveNewsPlayer />
-          </GlassCard>
-
-          <GlassCard tone="purple" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <WeatherCard />
-          </GlassCard>
+          </div>
         </div>
 
         <NewsSportsCard />
-      </div>
+      </Ground>
     </div>
   );
 }

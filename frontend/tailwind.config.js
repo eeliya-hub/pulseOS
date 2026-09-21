@@ -4,6 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Afterglow — see styles.css. The accent follows the hour, so it is read
+        // from a CSS variable and mixed for opacity rather than fixed here.
+        ink: '#0a0d1c',
+        moon: 'rgb(238 240 250 / <alpha-value>)',
+        haze: 'rgb(226 230 248 / 0.66)',
+        dim: 'rgb(226 230 248 / 0.42)',
+        accent: 'color-mix(in srgb, var(--accent) calc(<alpha-value> * 100%), transparent)',
+        signal: '#ff6b57',
+        rise: '#6fe0a8',
+        fall: '#ff8a80',
         midnight: '#070b14',
         glass: 'rgba(255, 255, 255, 0.08)',
         'glass-border': 'rgba(255, 255, 255, 0.16)',
@@ -21,21 +31,8 @@ export default {
         'purple-glow': '0 0 44px rgba(168, 85, 247, 0.22)',
       },
       fontFamily: {
-        sans: [
-          'Inter',
-          'ui-sans-serif',
-          'system-ui',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          'Segoe UI',
-          'sans-serif',
-        ],
-        display: [
-          'Outfit',
-          'ui-sans-serif',
-          'system-ui',
-          'sans-serif',
-        ],
+        sans: ['"Schibsted Grotesk"', 'Vazirmatn', 'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+        display: ['Newsreader', 'Vazirmatn', '"Iowan Old Style"', 'Georgia', 'serif'],
       },
       backdropBlur: {
         glass: '28px',

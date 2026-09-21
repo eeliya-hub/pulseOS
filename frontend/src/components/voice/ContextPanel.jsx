@@ -137,9 +137,9 @@ function PanelFrame({ title, subtitle, icon: Icon, children }) {
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
       <div className="mb-3 flex shrink-0 items-baseline gap-2">
-        {Icon ? <Icon className="h-3.5 w-3.5 shrink-0 text-white/40" aria-hidden="true" /> : null}
-        <h3 className="text-[0.6875rem] font-semibold uppercase tracking-[0.22em] text-white/50">{title}</h3>
-        {subtitle ? <span className="truncate text-[0.625rem] font-medium text-white/30">{subtitle}</span> : null}
+        {Icon ? <Icon className="h-3.5 w-3.5 shrink-0 text-moon/40" aria-hidden="true" /> : null}
+        <h3 className="text-[0.8125rem] font-semibold text-moon/50">{title}</h3>
+        {subtitle ? <span className="truncate text-[0.75rem] font-medium text-moon/30">{subtitle}</span> : null}
       </div>
       <div className="glass-scroll flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">{children}</div>
     </div>
@@ -159,15 +159,15 @@ function CalendarPanel({ panel, spotlight }) {
           litRef={item.id === firstLit ? litRef : null}
         >
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[0.9375rem] font-medium text-white/90">{item.title}</span>
-            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[0.6875rem] text-white/45">
-              {item.day ? <span className="font-medium text-white/60">{item.day}</span> : null}
+            <span className="block truncate text-[0.9375rem] font-medium text-moon/90">{item.title}</span>
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[0.8125rem] text-moon/45">
+              {item.day ? <span className="font-medium text-moon/60">{item.day}</span> : null}
               {item.time ? <span className="clock-figures">{item.time}</span> : null}
               {item.location ? <span className="truncate">· {item.location}</span> : null}
             </span>
           </span>
           {item.calendar ? (
-            <span className="shrink-0 whitespace-nowrap pt-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-white/28">
+            <span className="shrink-0 whitespace-nowrap pt-0.5 text-[0.75rem] font-semibold text-moon/28">
               {item.calendar}
             </span>
           ) : null}
@@ -199,14 +199,14 @@ function WeatherPanel({ panel, spotlight }) {
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="clock-figures text-4xl font-extralight leading-none text-white">
+              <p className="clock-figures text-4xl font-extralight leading-none text-moon">
                 {Math.round(now.temperature)}°
               </p>
-              <p className="mt-1 truncate text-[0.8125rem] text-white/65">{now.condition}</p>
+              <p className="mt-1 truncate text-[0.8125rem] text-moon/65">{now.condition}</p>
             </div>
-            <NowIcon className="h-9 w-9 shrink-0 text-cyan-100/70" aria-hidden="true" />
+            <NowIcon className="h-9 w-9 shrink-0 text-accent/70" aria-hidden="true" />
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[0.6875rem] text-white/45">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem] text-moon/45">
             {now.feelsLike != null ? <span>Feels {Math.round(now.feelsLike)}°</span> : null}
             {now.high != null ? <span>High {Math.round(now.high)}°</span> : null}
             {now.low != null ? <span>Low {Math.round(now.low)}°</span> : null}
@@ -231,12 +231,12 @@ function WeatherPanel({ panel, spotlight }) {
                 ].join(' ')}
                 style={dayTone === 'lit' ? { boxShadow: '0 0 0 1px rgba(116,242,255,0.34), 0 5px 22px -10px rgba(116,242,255,0.7)' } : undefined}
               >
-                <span className="text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-white/45">
+                <span className="text-[0.75rem] font-semibold text-moon/45">
                   {day.title}
                 </span>
-                <Icon className={`h-4 w-4 ${dayTone === 'lit' ? 'text-cyan-100' : 'text-white/60'}`} aria-hidden="true" />
-                <span className="clock-figures text-[0.6875rem] text-white/80">{Math.round(day.hi)}°</span>
-                <span className="clock-figures text-[0.625rem] text-white/35">{Math.round(day.lo)}°</span>
+                <Icon className={`h-4 w-4 ${dayTone === 'lit' ? 'text-accent' : 'text-moon/60'}`} aria-hidden="true" />
+                <span className="clock-figures text-[0.8125rem] text-moon/80">{Math.round(day.hi)}°</span>
+                <span className="clock-figures text-[0.75rem] text-moon/35">{Math.round(day.lo)}°</span>
               </div>
             );
           })}
@@ -261,16 +261,16 @@ function NewsPanel({ panel, spotlight }) {
           title={item.url ? 'Open this story' : undefined}
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-[0.875rem] font-medium leading-snug text-white/90">{item.title}</span>
+            <span className="block text-[0.875rem] font-medium leading-snug text-moon/90">{item.title}</span>
             {item.source ? (
-              <span className="mt-1 block truncate text-[0.625rem] uppercase tracking-[0.12em] text-white/35">
+              <span className="mt-1 block truncate text-[0.75rem] text-moon/35">
                 {item.source}
               </span>
             ) : null}
           </span>
           {item.url ? (
             <ExternalLink
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/25 transition group-hover:text-white/70"
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-moon/25 transition group-hover:text-moon/70"
               aria-hidden="true"
             />
           ) : null}
@@ -287,7 +287,7 @@ function TravelPanel({ panel, spotlight }) {
   return (
     <PanelFrame title={panel.title} subtitle={panel.subtitle} icon={Plane}>
       {panel.meta?.countdown != null ? (
-        <p className="-mt-1 mb-1 shrink-0 text-[0.6875rem] font-medium text-cyan-100/70">
+        <p className="-mt-1 mb-1 shrink-0 text-[0.8125rem] font-medium text-accent/70">
           {panel.meta.countdown === 0 ? 'Leaves today' : `In ${panel.meta.countdown} days`}
         </p>
       ) : null}
@@ -297,18 +297,18 @@ function TravelPanel({ panel, spotlight }) {
         return (
           <Row key={item.id} lit={lit} accent={item.color} litRef={item.id === firstLit ? litRef : null}>
             <Icon
-              className={`mt-0.5 h-3.5 w-3.5 shrink-0 transition-colors ${lit ? 'text-white/80' : 'text-white/35'}`}
+              className={`mt-0.5 h-3.5 w-3.5 shrink-0 transition-colors ${lit ? 'text-moon/80' : 'text-moon/35'}`}
               aria-hidden="true"
             />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[0.875rem] font-medium text-white/90">{item.title}</span>
-              <span className="mt-0.5 block truncate text-[0.6875rem] text-white/45">
+              <span className="block truncate text-[0.875rem] font-medium text-moon/90">{item.title}</span>
+              <span className="mt-0.5 block truncate text-[0.8125rem] text-moon/45">
                 {isList ? [item.destination, item.dates].filter(Boolean).join(' · ') : item.when}
                 {item.place ? ` · ${item.place}` : ''}
               </span>
             </span>
             {isList && item.phase ? (
-              <span className="shrink-0 whitespace-nowrap pt-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-white/28">
+              <span className="shrink-0 whitespace-nowrap pt-0.5 text-[0.75rem] font-semibold text-moon/28">
                 {item.phase}
               </span>
             ) : null}
@@ -340,14 +340,14 @@ function MusicPanel({ panel, spotlight }) {
           />
         ) : (
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-white/[0.06] ring-1 ring-white/10">
-            <Music className="h-6 w-6 text-white/40" aria-hidden="true" />
+            <Music className="h-6 w-6 text-moon/40" aria-hidden="true" />
           </span>
         )}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-base font-medium text-white/90">{track.title}</span>
-          {track.artists ? <span className="mt-0.5 block truncate text-sm text-white/50">{track.artists}</span> : null}
+          <span className="block truncate text-base font-medium text-moon/90">{track.title}</span>
+          {track.artists ? <span className="mt-0.5 block truncate text-sm text-moon/50">{track.artists}</span> : null}
           {panel.meta?.state ? (
-            <span className="mt-1.5 block text-[0.5625rem] font-semibold uppercase tracking-[0.16em] text-emerald-200/60">
+            <span className="mt-1.5 block text-[0.75rem] font-semibold text-emerald-200/60">
               {panel.meta.state}
             </span>
           ) : null}
@@ -373,7 +373,7 @@ function SportsPanel({ panel, spotlight }) {
   return (
     <PanelFrame title={panel.title} subtitle={panel.subtitle} icon={Trophy}>
       {panel.meta?.standing ? (
-        <p className="-mt-1 mb-1 shrink-0 text-[0.6875rem] font-medium text-cyan-100/70">{panel.meta.standing}</p>
+        <p className="-mt-1 mb-1 shrink-0 text-[0.8125rem] font-medium text-accent/70">{panel.meta.standing}</p>
       ) : null}
 
       {fixture ? (
@@ -383,11 +383,11 @@ function SportsPanel({ panel, spotlight }) {
           litRef={fixture.id === firstLit ? litRef : null}
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-[0.5625rem] font-semibold uppercase tracking-[0.16em] text-white/35">
+            <span className="block text-[0.75rem] font-semibold text-moon/35">
               Next up
             </span>
-            <span className="mt-0.5 block truncate text-[0.9375rem] font-medium text-white/90">{fixture.title}</span>
-            <span className="mt-0.5 block truncate text-[0.6875rem] text-white/45">
+            <span className="mt-0.5 block truncate text-[0.9375rem] font-medium text-moon/90">{fixture.title}</span>
+            <span className="mt-0.5 block truncate text-[0.8125rem] text-moon/45">
               {[fixture.when, fixture.venue].filter(Boolean).join(' · ')}
             </span>
           </span>
@@ -410,19 +410,19 @@ function SportsPanel({ panel, spotlight }) {
                 ].join(' ')}
                 style={rowTone === 'lit' ? { background: 'linear-gradient(90deg, rgba(116,242,255,0.16), rgba(116,242,255,0.05))' } : undefined}
               >
-                <span className="clock-figures w-5 shrink-0 text-right text-white/40">{row.rank}</span>
-                <span className={`min-w-0 flex-1 truncate ${row.me ? 'font-semibold text-white' : 'text-white/80'}`}>
+                <span className="clock-figures w-5 shrink-0 text-right text-moon/40">{row.rank}</span>
+                <span className={`min-w-0 flex-1 truncate ${row.me ? 'font-semibold text-moon' : 'text-moon/80'}`}>
                   {row.title}
                 </span>
                 {row.record ? (
-                  <span className="hidden shrink-0 text-[0.6875rem] text-white/35 sm:inline">{row.record}</span>
+                  <span className="hidden shrink-0 text-[0.8125rem] text-moon/35 sm:inline">{row.record}</span>
                 ) : null}
                 {row.played != null ? (
-                  <span className="clock-figures w-6 shrink-0 text-right text-[0.6875rem] text-white/35">
+                  <span className="clock-figures w-6 shrink-0 text-right text-[0.8125rem] text-moon/35">
                     {row.played}
                   </span>
                 ) : null}
-                <span className="clock-figures w-8 shrink-0 text-right font-medium text-white/85">{row.points}</span>
+                <span className="clock-figures w-8 shrink-0 text-right font-medium text-moon/85">{row.points}</span>
               </div>
             );
           })}
@@ -432,8 +432,8 @@ function SportsPanel({ panel, spotlight }) {
       {results.map((r) => (
         <Row key={r.id} lit={spotlight.has(r.id)} accent="#8b9cff" litRef={r.id === firstLit ? litRef : null}>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[0.8125rem] text-white/85">{r.title}</span>
-            {r.when ? <span className="mt-0.5 block truncate text-[0.625rem] text-white/35">{r.when}</span> : null}
+            <span className="block truncate text-[0.8125rem] text-moon/85">{r.title}</span>
+            {r.when ? <span className="mt-0.5 block truncate text-[0.75rem] text-moon/35">{r.when}</span> : null}
           </span>
         </Row>
       ))}
@@ -457,9 +457,9 @@ function ChannelPanel({ panel, spotlight }) {
         {item.live ? (
           <span className="glow-dot h-2 w-2 shrink-0 rounded-full bg-rose-400 text-rose-400" aria-hidden="true" />
         ) : null}
-        <span className="min-w-0 flex-1 truncate text-lg font-light text-white/90">{item.title}</span>
+        <span className="min-w-0 flex-1 truncate text-lg font-light text-moon/90">{item.title}</span>
         {item.live ? (
-          <span className="shrink-0 text-[0.5625rem] font-semibold uppercase tracking-[0.16em] text-rose-200/70">
+          <span className="shrink-0 text-[0.75rem] font-semibold text-rose-200/70">
             Live
           </span>
         ) : null}
@@ -474,7 +474,7 @@ const OUTCOMES = {
   added: { label: 'Added', Icon: Check, tint: 'text-emerald-300', rail: '#34d399' },
   completed: { label: 'Done', Icon: CircleCheck, tint: 'text-emerald-300', rail: '#34d399' },
   updated: { label: 'Updated', Icon: PencilLine, tint: 'text-sky-300', rail: '#7dd3fc' },
-  removed: { label: 'Removed', Icon: Trash2, tint: 'text-white/55', rail: '#94a3b8' },
+  removed: { label: 'Removed', Icon: Trash2, tint: 'text-moon/55', rail: '#94a3b8' },
   noted: { label: 'Noted', Icon: Brain, tint: 'text-violet-300', rail: '#c4b5fd' },
   exists: { label: 'Already there', Icon: Copy, tint: 'text-amber-200', rail: '#fcd34d' },
   unclear: { label: 'Which one?', Icon: TriangleAlert, tint: 'text-amber-200', rail: '#fcd34d' },
@@ -507,18 +507,18 @@ function ActionsPanel({ panel, spotlight }) {
             accent={outcome.rail}
             litRef={item.id === firstLit ? litRef : null}
           >
-            <KindIcon className="mt-0.5 h-4 w-4 shrink-0 text-white/40" aria-hidden="true" />
+            <KindIcon className="mt-0.5 h-4 w-4 shrink-0 text-moon/40" aria-hidden="true" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[0.9375rem] font-medium text-white/90">{item.title}</span>
+              <span className="block truncate text-[0.9375rem] font-medium text-moon/90">{item.title}</span>
               {item.detail ? (
-                <span className="clock-figures mt-0.5 block truncate text-[0.6875rem] text-white/45">{item.detail}</span>
+                <span className="clock-figures mt-0.5 block truncate text-[0.8125rem] text-moon/45">{item.detail}</span>
               ) : null}
               {item.note ? (
-                <span className={`mt-1 block text-[0.6875rem] leading-snug ${outcome.tint}`}>{item.note}</span>
+                <span className={`mt-1 block text-[0.8125rem] leading-snug ${outcome.tint}`}>{item.note}</span>
               ) : null}
             </span>
             <span
-              className={`flex shrink-0 items-center gap-1 whitespace-nowrap pt-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] ${outcome.tint}`}
+              className={`flex shrink-0 items-center gap-1 whitespace-nowrap pt-0.5 text-[0.75rem] font-semibold ${outcome.tint}`}
             >
               <outcome.Icon className="h-3 w-3" aria-hidden="true" />
               {outcome.label}

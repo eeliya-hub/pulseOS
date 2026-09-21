@@ -1,0 +1,421 @@
+<!doctype html>
+<!--
+  Source for "PulseOS Doc.pdf" in the portfolio. Edit here, then regenerate:
+
+    node -e "import('playwright').then(async ({chromium})=>{
+      const b=await chromium.launch(); const p=await b.newPage();
+      await p.goto('file://'+process.cwd()+'/docs/PulseOS-Doc.html',{waitUntil:'load'});
+      await p.pdf({path:'PulseOS Doc.pdf',format:'A4',printBackground:true,
+        margin:{top:'22mm',bottom:'22mm',left:'20mm',right:'20mm'}});
+      await b.close();})"
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PulseOS</title>
+<style>
+  @page { size: A4; }
+  body {
+    font-family: Calibri, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+  }
+  h1 {
+    font-size: 28pt;
+    font-weight: 600;
+    margin: 0 0 4pt;
+    color: #0f2b46;
+  }
+  .sub { color: #5a6a7a; font-size: 11pt; margin: 0 0 22pt; }
+  h2 {
+    font-size: 15pt;
+    font-weight: 600;
+    color: #0f2b46;
+    margin: 20pt 0 6pt;
+    page-break-after: avoid;
+  }
+  h3 {
+    font-size: 12pt;
+    font-weight: 600;
+    color: #23425f;
+    margin: 14pt 0 4pt;
+    page-break-after: avoid;
+  }
+  p { margin: 0 0 9pt; text-align: justify; }
+  ul { margin: 0 0 9pt; padding-left: 20pt; }
+  li { margin-bottom: 3pt; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 12pt; font-size: 10pt; }
+  th, td { border: 1px solid #c8d2dc; padding: 5pt 7pt; text-align: left; vertical-align: top; }
+  th { background: #eef3f8; font-weight: 600; color: #0f2b46; }
+  code { font-family: Consolas, monospace; font-size: 10pt; background: #f2f5f8; padding: 0 3px; }
+  .note { border-left: 3px solid #9fb8cd; padding-left: 10pt; color: #3d5567; margin: 0 0 10pt; }
+</style>
+</head>
+<body>
+
+<h1>PulseOS</h1>
+<p class="sub">Version 2 &mdash; &ldquo;Afterglow&rdquo; &middot; September 2026</p>
+
+<h2>1. Introduction</h2>
+
+<p>Pulse OS is a personal command-centre dashboard that brings the many separate
+services people check every day into a single, calm, unscrolling interface.
+Where a typical routine means opening one app for the weather, another for the
+calendar, another for news, markets, sport, music and travel, Pulse OS gathers
+these domains into one cohesive surface. The aim of the project is to reduce the
+friction and noise of jumping between applications by presenting everything the
+user needs in one glance, in a layout that never requires the page to scroll.</p>
+
+<p>The system is built as a monorepo with a React and Vite frontend and a Node.js
+and Express backend that acts as a secure gateway to a wide range of third-party
+providers. The backend follows a clean, layered architecture that separates
+routing, controllers, services and provider integrations, which keeps each
+external service isolated and the codebase maintainable. The frontend mirrors
+this separation with feature components, state hooks and a single API client.
+Beyond the dashboard itself, the project includes a provider-swappable AI
+assistant with both typed and real-time spoken interfaces and with read and write
+access to the user's own data; live news streaming; real-time market and sports
+data; calendar synchronisation across Google and Apple; live travel data
+including flight tracking and mapping; on-device music playback control with
+time-synced lyrics; and a request rate limiting and usage capping system that
+keeps the application inside free-tier limits.</p>
+
+<p>Version 2, released in September 2026, is a full rebuild of the frontend. The
+first version organised every screen as a grid of frosted glass cards floating on
+a fixed gradient, with centred, letter-spaced titles. Version 2 replaces that
+with a single spatial system shared by every view, a typographic scale, a living
+background whose colour follows the time of day, and a redesigned navigation
+bar. It also substantially extends what the product can do: the travel planner
+became a live, connected feature, the assistant gained real-time voice, and the
+application launcher was promoted from a modal dialogue to a view of its own. One
+feature, the Finance overview, was removed.</p>
+
+<h3>1.5 Project Function and What It Does</h3>
+
+<p>Pulse OS is an all-in-one personal dashboard designed to help a user manage
+their whole day from one screen. From the user's point of view, the app opens to
+a personalised home view that greets them by name and immediately shows the
+weather, a multi-day forecast, their upcoming calendar events, their next work
+shift and a launchpad of their most-used applications. Instead of checking a
+weather app, a calendar app and a news app separately, Pulse OS presents these
+together in one experience.</p>
+
+<p>Beyond the home view, the app supports the user across six further areas: a
+Launchpad that opens real applications on the machine and searches the web; a
+Life Hub for schedules, to-dos, projects and daily habits; a Markets &amp; News
+area with live television news, a stock ticker and configurable news, sport and
+market feeds; a Music player with an immersive full-screen mode; a Travel planner
+with live flight, map and currency data; and an AI assistant that sits at the
+centre of the navigation and can read the user's live data and make changes on
+their behalf, either typed or spoken aloud. The main function of the project is
+to make daily life easier to manage by combining information, planning and
+personal services into a single, unified platform.</p>
+
+<h2>2. Tech Stack Used</h2>
+
+<h3>2.1 Core technologies</h3>
+<ul>
+  <li>JavaScript (ES Modules)</li>
+  <li>React and Vite</li>
+  <li>Tailwind CSS</li>
+  <li>Node.js and Express.js</li>
+  <li>Firebase (Cloud Functions and Hosting ready)</li>
+  <li>WebSockets (<code>ws</code>) for real-time voice</li>
+  <li>hls.js for live television streaming</li>
+  <li>MapLibre GL for mapping</li>
+  <li>lucide-react for iconography</li>
+  <li>Newsreader, Schibsted Grotesk and Vazirmatn typefaces</li>
+</ul>
+
+<h3>2.2 External services</h3>
+<table>
+  <tr><th>Domain</th><th>Provider</th></tr>
+  <tr><td>Weather</td><td>OpenWeather</td></tr>
+  <tr><td>Stocks and cryptocurrency</td><td>Finnhub, CoinGecko</td></tr>
+  <tr><td>News</td><td>GNews with RSS feeds; local news resolved by town or county</td></tr>
+  <tr><td>Sport</td><td>Football-Data.org (football), balldontlie (NBA, NFL), Jolpica/Ergast (Formula 1)</td></tr>
+  <tr><td>Calendar</td><td>Google Calendar (OAuth), Apple iCloud (CalDAV), public <code>.ics</code> feeds</td></tr>
+  <tr><td>Music</td><td>Spotify Web API, Web Playback SDK and Connect; LRCLIB for lyrics</td></tr>
+  <tr><td>Travel</td><td>Google Places or OpenStreetMap, AeroDataBox, OpenFreeMap tiles</td></tr>
+  <tr><td>Web search</td><td>Brave, Tavily, or a keyless open-web provider</td></tr>
+  <tr><td>AI</td><td>Google Gemini (default), OpenAI, Anthropic Claude</td></tr>
+  <tr><td>Voice</td><td>Google Gemini Live API</td></tr>
+</table>
+
+<h3>2.3 Why these choices</h3>
+
+<p>React and Vite were used to build the frontend because they allow a fast,
+modern, component-driven interface with a very quick development feedback loop,
+which suited a project made up of many independent features that each manage
+their own data. Tailwind CSS was used for styling because it made it possible to
+build a consistent visual language quickly and without a large custom stylesheet,
+while still allowing a hand-written layer for the design system described in
+section 3.3. lucide-react provided a clean, consistent icon set, hls.js was used
+to stream live television news directly inside the browser, and MapLibre GL was
+chosen for mapping because it renders vector tiles from the free OpenFreeMap
+service without requiring a commercial mapping key.</p>
+
+<p>On the backend, Node.js and Express were used to build a clear API gateway,
+with each domain given its own route, controller and service so that request
+handling stays separate from the logic that talks to each external provider.
+Firebase was chosen as the deployment target because the backend is structured so
+that the Express application can be wrapped by Cloud Functions without changing
+any route or service, and Firebase Hosting can serve the built frontend.</p>
+
+<p>A deliberately wide set of third-party APIs was integrated to cover each
+domain of the dashboard, and in every case a free tier was chosen. For the AI
+assistant, Google Gemini was selected as the default provider because it offers
+the most generous free tier and supports function calling, with OpenAI and
+Anthropic Claude available as drop-in alternatives selectable per request. For
+real-time voice, the Gemini Live API was used because it handles turn-taking,
+voice activity detection and interruption server-side, and because it accepts the
+same function-calling tool definitions already written for the typed assistant.</p>
+
+<h2>3. Architecture Used</h2>
+
+<h3>3.1 Overall shape</h3>
+
+<p>Pulse OS follows a feature-based, layered architecture across a single
+monorepo managed with npm workspaces, with the frontend and backend kept as
+separate packages. It does not rely on a heavy framework, but responsibilities
+are clearly separated.</p>
+
+<h3>3.2 Backend layering</h3>
+
+<p>On the backend, every incoming request passes through a defined chain: a route
+file maps the URL to a controller, the controller validates input and delegates
+to a service, and the service coordinates one or more providers that each wrap a
+single external API. This means, for example, that the weather route never talks
+to OpenWeather directly &mdash; it goes through a weather controller, a weather
+service, and finally an OpenWeather provider &mdash; so any provider can be
+swapped or extended without touching the rest of the code.</p>
+
+<p>Supporting this are a set of cross-cutting layers. A single configuration
+module reads every environment variable and exposes a central view of the
+application's settings, so nothing else in the codebase reads process variables
+directly. A middleware layer handles CORS, request rate limiting and centralised
+error handling, turning typed application errors into clean JSON responses. A
+utilities layer provides shared tools including a time-to-live cache that serves
+stale data rather than failing when a provider is rate-limited, a persisted token
+store for OAuth sessions, and a persisted usage meter that enforces hard spend
+caps on the metered AI providers.</p>
+
+<p>Importantly, the Express application is constructed separately from the call
+that starts the server, which is what makes the backend ready to run either
+locally or inside Firebase Cloud Functions with no code changes. The real-time
+voice WebSocket is attached in the local server bootstrap rather than in the
+application factory, deliberately, so that the Firebase deployment path remains
+unaffected by it.</p>
+
+<h3>3.3 Frontend layering and the design system</h3>
+
+<p>On the frontend, the interface is organised into feature components, each
+representing a view or a part of one, backed by dedicated state hooks such as
+those for weather, calendar events, life data, market data, news, travel, lyrics
+and the Spotify player. All communication with the backend flows through one API
+client, which is the single place the frontend talks to real integrations.</p>
+
+<p>Version 2 adds a shared spatial system on top of this. Every view is composed
+of the same three parts, defined once in a single module: a <em>sky zone</em>
+that holds what the view is about, set large and directly on the background; a
+<em>horizon</em> that falls at the same height in every view, so that moving
+between tabs does not shift the layout; and a <em>ground</em>, one full-width
+surface that runs from the horizon to the bottom of the window and is divided
+into columns by space and a faint rule rather than broken into floating cards.
+Only genuinely physical objects &mdash; an album sleeve, the live video, the map,
+an application icon &mdash; are still drawn as tiles. A supporting hook measures
+list rows so that a scrolling column always shows a whole number of them and
+never ends on a row cut in half.</p>
+
+<p>The background itself is a component. A sky module writes colour values to
+registered CSS custom properties according to the hour of the day, giving a peach
+dawn, a clear blue day, an ember dusk and an indigo night with stars; because the
+properties are registered, a change of phase crossfades rather than snapping. The
+Music view can temporarily lend the sky the dominant colours of the current album
+sleeve, so the light behind the interface carries meaning rather than decorating
+it. Typography is governed by a fixed eight-step scale, with Newsreader used for
+what is read at a distance and Schibsted Grotesk for what is used up close.</p>
+
+<p>This layered separation on both sides of the application makes each part easy
+to understand, test and maintain, because every feature has a clear and isolated
+purpose, and every view is assembled from the same small set of structural
+pieces.</p>
+
+<h2>4. Full Functionality with Technical Implementation</h2>
+
+<h3>4.1 Shell, navigation and settings</h3>
+
+<p>The application is organised around a persistent navigation bar that gives
+access to seven areas: Home, Launchpad, Life Hub, the AI assistant, Markets &amp;
+News, Music and Travel. In version 2 this bar is drawn as a hairline running the
+full width of the foot of the screen with the tabs standing on it and the current
+tab's label underlined. The assistant is not a button on the line but is rendered
+as the line itself, taking the form of an ECG beat at the centre, with a light
+blip that travels along the rule and eases through the beat. The line and the
+beat are generated as a single measured SVG path so that they cannot drift out of
+alignment.</p>
+
+<p>A settings panel collects the personal details that the rest of the app
+depends on, including the user's display name, their location and their followed
+sports teams. The display name is reused in the greeting and the AI assistant,
+the location drives local weather and local news, and the selected teams populate
+the sports feed. This gives the project a controlled, personalised entry point
+where later features draw on a shared set of preferences rather than asking for
+the same information repeatedly.</p>
+
+<h3>4.2 Home</h3>
+
+<p>The Home screen provides a summary of the user's day. It greets the user by
+name and shows the current weather and a multi-day forecast for their location, a
+timeline of upcoming calendar events, their next highlighted event or work shift,
+and a launch strip of their chosen applications. Weather is retrieved through the
+weather hook, which calls the backend weather service and in turn the OpenWeather
+provider, returning the current conditions, a short human-readable summary and
+the forecast. The upcoming events are drawn from the user's connected calendars.
+The layout is designed so that all of this fits within a single screen without
+scrolling, acting as a launch point into the rest of the app.</p>
+
+<h3>4.3 Launchpad</h3>
+
+<p>The Launchpad lets the user open real applications on their machine directly
+from the dashboard. The backend inspects the system's application directories to
+list installed apps, extracts each application's own icon and serves it as an
+image, and opens an application on request. Because this feature works directly
+with the local operating system, it is designed to run when the backend is hosted
+on the user's own machine.</p>
+
+<p>In version 2 the Launchpad became a view in its own right rather than a modal
+picker. It now shows the user's pinned applications alongside a separate
+collection of saved websites, and provides a single search field that searches
+installed applications, saved sites and the open web together. Web search is
+served by the backend's search service, which can use Brave or Tavily where a key
+is configured and otherwise falls back to a keyless open-web provider.</p>
+
+<h3>4.4 Calendar and Life Hub</h3>
+
+<p>Calendar functionality is handled through a dedicated calendar service that
+supports three sources: Google Calendar over OAuth, Apple iCloud through the
+CalDAV protocol, and subscribed public <code>.ics</code> feeds. A connection panel
+lets the user link or disconnect each provider, paste a public calendar feed, and
+toggle the visibility of individual calendars. Once connected, events sync into
+the app and feed both the home screen's upcoming timeline and the Life Hub
+schedule. The layered provider design means each calendar source is handled by
+its own provider behind a common service interface.</p>
+
+<p>The Life Hub is the planning area of the application. It presents the day's
+schedule alongside a to-do list, a set of projects with their own nested tasks and
+completion progress, and a list of daily habits with a running completion count.
+The life data hook manages this state and its persistence, allowing tasks and
+habits to be created, checked off and cleared, with projects tracking how many of
+their tasks are complete.</p>
+
+<h3>4.5 Markets &amp; News</h3>
+
+<p>The Markets &amp; News area combines several real-time data sources into one
+screen. A live television news stream is played directly in the browser using
+hls.js, with channel controls, a link to the source site and a full-screen
+immersive mode. Between the hero and the ground, a continuously scrolling ticker
+shows live prices for a watchlist of stocks and cryptocurrencies, retrieved
+through the market data hook from the backend's Finnhub and CoinGecko providers.
+A configurable feed panel lets the user switch between news, sport and market
+views. News is gathered on the backend through the GNews provider supplemented by
+RSS feeds, with local news resolved from the user's town or county.</p>
+
+<p>The sport feed supports football, the NBA, the NFL and Formula 1. Depending on
+the selected team or competition, it shows the next fixture and a full standings
+table, such as a Premier League table with the user's team highlighted, or the
+Formula 1 drivers' and constructors' championships with team badges and points.
+On the backend these are served by separate providers &mdash; Football-Data.org
+for football, balldontlie for the NBA and NFL, and the key-free Jolpica (Ergast)
+service for Formula 1 &mdash; each wrapped by its own service so the different
+data shapes are normalised before reaching the interface. The markets feed
+provides a watchlist showing each instrument's price and percentage change, with a
+summary of how many are up or down, sourced live from Finnhub.</p>
+
+<h3>4.6 Music</h3>
+
+<p>The Music area lets the user control playback on their device through Spotify.
+Using the Spotify Web API, the Web Playback SDK and Spotify Connect, the player
+hook manages authentication, transfers playback between devices, and exposes a
+now-playing view with track details, a progress bar and transport controls. The
+user can browse their playlists, see what they have recently played and search the
+full Spotify catalogue. All Spotify communication is proxied through the backend
+so that secret credentials never reach the client.</p>
+
+<p>Version 2 adds a full-screen immersive mode that runs time-synced lyrics,
+fetched from the keyless LRCLIB service, against a background lit by the album's
+own colours. If the machine is left idle while something is playing, this
+immersive player takes over as the screensaver in place of the idle clock.</p>
+
+<h3>4.7 Travel</h3>
+
+<p>In version 1 the Travel planner was deliberately kept local to the device: a
+countdown to an upcoming trip, with flight and hotel details, a packing list and
+an itinerary all typed in by hand. Version 2 connects it to live data and it is
+now the largest functional change in the release.</p>
+
+<p>A trip now shows real flight information &mdash; airline, route, scheduled
+times, distance and time in the air &mdash; retrieved through the backend's
+flights and schedule providers. The destination is drawn on a real vector map
+rendered with MapLibre GL over free OpenFreeMap tiles, showing the route,
+airports, saved places and accommodation. Alongside this the view presents live
+local time and weather for the destination, a currency converter working from
+live rates, and practical destination facts such as plug type, voltage, driving
+side, dialling code and emergency numbers. Places can be searched and added
+directly into a day-by-day itinerary. The packing checklist and trip state remain
+on the device.</p>
+
+<h3>4.8 The AI assistant</h3>
+
+<p>At the centre of the navigation sits the AI assistant, which is more than a
+simple chat feature. It runs an agent loop: the conversation is sent to the model
+together with a set of tool definitions and a system prompt, and while the model
+responds with tool calls, the app executes each tool, feeds the result back, and
+continues until the model returns a final answer, up to a fixed number of steps.
+This allows the assistant to read the user's live data &mdash; their weather,
+calendar, tasks, markets or music &mdash; and to make changes on their behalf,
+rather than only producing text. On the backend, the AI service resolves which
+provider to use, defaulting to Google Gemini but able to switch to OpenAI or
+Anthropic Claude per request, and each provider is wrapped so their different
+message and function-calling formats are handled behind a common interface.</p>
+
+<p>Version 2 adds a real-time spoken interface to the same assistant. The browser
+opens a WebSocket to the Express server, which bridges that connection to the
+Gemini Live API; microphone audio is captured by an AudioWorklet and sent as 16
+kHz PCM, and the model's speech returns at 24 kHz. Turn-taking, voice activity
+detection and interruption are handled server-side, so the user can speak over
+the assistant naturally. Crucially, the voice session reuses exactly the same
+tool definitions as the typed assistant and executes them against the same live
+application state, so speaking to Pulse and typing to it can do the same things.
+Double-tapping the space bar anywhere in the application starts a voice
+conversation.</p>
+
+<h3>4.9 Rate limiting and usage capping</h3>
+
+<p>The project includes a request rate limiting and usage capping system designed
+to keep the application safe to run and free to operate. Every API route passes
+through an in-memory rate limiter that caps requests per client to absorb runaway
+polling, with tighter limits on the AI route and on any request that changes
+state. Separately, a persisted usage meter enforces hard totals on the metered AI
+providers, checking a provider's daily and monthly request and token budgets
+before each call so a cap can be reached but never exceeded. The default Gemini
+budgets are deliberately set beneath the provider's free-tier limits, meaning the
+AI assistant can run without ever incurring a charge, and because the counters are
+written to disk they survive restarts rather than resetting. The server also boots
+with no API keys at all: any integration that is not configured returns a clear
+"not configured" response rather than crashing, and a status endpoint reports
+exactly which integrations are live.</p>
+
+<h3>4.10 Removed in version 2</h3>
+
+<p>The Finance overview present in version 1 &mdash; liquid balance, net worth,
+income and expenses, a monthly spending trend, accounts, upcoming bills and
+savings goals &mdash; was removed. It was held entirely in local storage and
+populated by hand, and unlike every other domain in the application there was no
+responsible way to make it live without asking a user to supply banking
+credentials to a personal project. Rather than retain a view that only worked
+convincingly as a demonstration, it was cut from the product.</p>
+
+</body>
+</html>

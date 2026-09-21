@@ -17,13 +17,13 @@ function parseInline(text) {
     const tok = match[0];
     if (tok.startsWith('**') || tok.startsWith('__')) {
       nodes.push(
-        <strong key={key} className="font-semibold text-white">
+        <strong key={key} className="font-semibold text-moon">
           {tok.slice(2, -2)}
         </strong>,
       );
     } else if (tok[0] === '`') {
       nodes.push(
-        <code key={key} className="rounded bg-white/12 px-1 py-0.5 font-mono text-[0.85em] text-cyan-100">
+        <code key={key} className="rounded bg-white/12 px-1 py-0.5 font-mono text-[0.85em] text-accent">
           {tok.slice(1, -1)}
         </code>,
       );
@@ -62,8 +62,8 @@ function formatText(text) {
     if (heading) {
       const cls =
         heading[1].length <= 2
-          ? 'mb-1 mt-2 text-[1.02rem] font-semibold text-white first:mt-0'
-          : 'mb-1 mt-1.5 text-sm font-semibold text-white/90 first:mt-0';
+          ? 'mb-1 mt-2 text-[1.02rem] font-semibold text-moon first:mt-0'
+          : 'mb-1 mt-1.5 text-sm font-semibold text-moon/90 first:mt-0';
       return (
         <p key={key} className={cls}>
           {parseInline(heading[2])}
@@ -76,7 +76,7 @@ function formatText(text) {
     if (bullet) {
       return (
         <div key={key} className="mb-1 flex gap-2">
-          <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-cyan-200/70" aria-hidden="true" />
+          <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-accent/70" aria-hidden="true" />
           <span className="min-w-0 flex-1">{parseInline(bullet[1])}</span>
         </div>
       );
@@ -87,7 +87,7 @@ function formatText(text) {
     if (numbered) {
       return (
         <div key={key} className="mb-1 flex gap-2">
-          <span className="shrink-0 font-semibold text-cyan-100/80">{numbered[1]}.</span>
+          <span className="shrink-0 font-semibold text-accent/80">{numbered[1]}.</span>
           <span className="min-w-0 flex-1">{parseInline(numbered[2])}</span>
         </div>
       );
@@ -97,7 +97,7 @@ function formatText(text) {
     const quote = line.match(/^\s*>\s+(.+)$/);
     if (quote) {
       return (
-        <p key={key} className="mb-1.5 border-l-2 border-white/20 pl-2.5 italic text-white/75">
+        <p key={key} className="mb-1.5 border-l-2 border-white/20 pl-2.5 italic text-moon/75">
           {parseInline(quote[1])}
         </p>
       );
@@ -117,7 +117,7 @@ function LoadingDots() {
       {[0, 150, 300].map((delay) => (
         <div
           key={delay}
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-cyan-100/60"
+          className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent/60"
           style={{ animationDelay: `${delay}ms` }}
         />
       ))}
@@ -139,37 +139,34 @@ export function ChatThread({ messages, isLoading, toolActivity, userInitial = 'E
   }, [messages, isLoading]);
 
   return (
-    <div ref={ref} className={`glass-scroll min-h-0 flex-1 space-y-4 overflow-y-auto ${className}`}>
+    <div ref={ref} className={`glass-scroll min-h-0 flex-1 space-y-6 overflow-y-auto ${className}`}>
       {messages.map((message, index) => {
         const isUser = message.role === 'user';
         return (
-          <div
-            key={`${message.role}-${index}`}
-            className={`fade-in flex gap-3 ${isUser ? 'justify-end' : ''}`}
-            style={{ '--delay': '0ms' }}
-          >
+          <div key={`${message.role}-${index}`} className={`fade-in flex gap-3.5 ${isUser ? 'justify-end' : ''}`}>
             {!isUser ? (
-              <span className="orb-button grid h-8 w-8 shrink-0 place-items-center rounded-full">
-                <Sparkles className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+              <span className="orb-button mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full">
+                <Sparkles className="h-3.5 w-3.5 text-moon" aria-hidden="true" />
               </span>
             ) : null}
 
-            <div
-              className={`max-w-[75%] border border-white/10 p-3.5 text-sm leading-6 text-white/88 shadow-lg backdrop-blur-md ${
-                isUser ? 'rounded-2xl rounded-tr-md bg-white/16' : 'rounded-2xl rounded-tl-md bg-white/6'
-              }`}
-            >
-              {isUser ? (
-                // A quick prompt shows its title; the full instruction still
-                // went to Pulse and is there on hover.
-                <p title={message.label ? message.text : undefined}>{message.label || message.text}</p>
-              ) : (
-                formatText(message.text)
-              )}
-            </div>
+            {isUser ? (
+              // A quick prompt shows its title; the full instruction still
+              // went to Pulse and is there on hover.
+              <p
+                title={message.label ? message.text : undefined}
+                className="max-w-[80%] rounded-[1.35rem] rounded-br-md bg-moon/[0.12] px-4 py-2.5 text-[0.9375rem] leading-relaxed text-moon"
+              >
+                {message.label || message.text}
+              </p>
+            ) : (
+              <div className="min-w-0 max-w-[92%] pt-0.5 text-[0.9375rem] leading-[1.7] text-moon/90">
+                {formatText(message.text)}
+              </div>
+            )}
 
             {isUser ? (
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/18 text-sm font-semibold shadow-lg">
+              <span className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/[0.08] text-[0.75rem] font-semibold text-moon/70">
                 {userInitial}
               </span>
             ) : null}
@@ -178,14 +175,12 @@ export function ChatThread({ messages, isLoading, toolActivity, userInitial = 'E
       })}
 
       {isLoading ? (
-        <div className="fade-in flex gap-3">
-          <span className="orb-button grid h-8 w-8 shrink-0 place-items-center rounded-full">
-            <Sparkles className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+        <div className="fade-in flex items-center gap-3.5">
+          <span className="orb-button grid h-7 w-7 shrink-0 place-items-center rounded-full">
+            <Sparkles className="h-3.5 w-3.5 text-moon" aria-hidden="true" />
           </span>
-          <div className="flex items-center gap-2.5 rounded-2xl rounded-tl-md border border-white/10 bg-white/5 px-4 py-3 shadow-lg backdrop-blur-md">
-            <LoadingDots />
-            {toolActivity ? <span className="text-xs font-medium text-white/60">{toolActivity}…</span> : null}
-          </div>
+          <LoadingDots />
+          {toolActivity ? <span className="text-[0.875rem] text-dim">{toolActivity}</span> : null}
         </div>
       ) : null}
     </div>

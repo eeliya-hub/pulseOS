@@ -1,9 +1,8 @@
-import { Check, Globe, Pin, Plus, Search, Settings2, Star, X } from 'lucide-react';
+import { Check, Globe, MoreVertical, Pin, Plus, Search, Settings2, Star, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import GlassCard from '../components/GlassCard.jsx';
 import LaunchIcon, { AppIcon, SiteIcon } from '../components/LaunchIcon.jsx';
-import ViewHeader from '../components/ViewHeader.jsx';
+import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { useDragSort } from '../hooks/useDragSort.js';
 import { useLaunchpadMeta } from '../hooks/useLaunchpadMeta.js';
 import { useSettings } from '../hooks/useSettings.js';
@@ -23,15 +22,6 @@ import { searchResults } from '../services/launchpad/search.js';
 
 const rgba = ([r, g, b], a) => `rgba(${r}, ${g}, ${b}, ${a})`;
 const ALL = '__all__';
-
-const ago = (at) => {
-  const mins = Math.round((Date.now() - at) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
-};
 
 /**
  * Each tile is lit by its own app's colour, read out of the icon. Resolving that
@@ -69,28 +59,23 @@ function Tile({ item, accent, editing, launching, folder, pinned, drag, onOpen, 
         onClick={onOpen}
         aria-label={`Open ${label}`}
         className={[
-          'relative flex w-full flex-col items-center gap-2 overflow-hidden rounded-2xl border border-white/8 bg-white/[0.035] px-2 py-4 transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
-          'group-data-[dragging]:border-white/30 group-data-[dragging]:bg-white/[0.11] group-data-[dragging]:shadow-[0_26px_50px_-12px_rgba(3,5,16,0.75)]',
+          'relative flex w-full flex-col items-center gap-2.5 rounded-[1.25rem] px-2 pb-3 pt-4 transition-colors duration-300 hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
+          'group-data-[dragging]:bg-white/[0.1] group-data-[dragging]:shadow-[0_26px_50px_-12px_rgba(3,5,16,0.75)]',
           // Room at the bottom for the folder chip, so it isn't sat on the name.
-          editing ? 'pb-9' : '',
+          editing ? 'pb-10' : '',
         ].join(' ')}
-        style={{ boxShadow: `0 12px 34px -18px ${rgba(accent, launching ? 0.95 : 0.45)}` }}
       >
-        {/* The app's colour, pooled under its icon. Faint at rest so the grid
-            reads as a spectrum; full on hover so the target is unmistakable. */}
+        {/* The app's own colour, pooled behind its icon — only when you reach it. */}
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-30 transition-opacity duration-300 group-hover:opacity-100"
-          style={{
-            background: `radial-gradient(120% 78% at 50% 8%, ${rgba(accent, 0.34)} 0%, ${rgba(accent, 0.09)} 45%, transparent 72%)`,
-            opacity: launching ? 1 : undefined,
-          }}
+          className="pointer-events-none absolute left-1/2 top-3 h-20 w-20 -translate-x-1/2 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+          style={{ background: rgba(accent, 0.6), opacity: launching ? 1 : undefined }}
         />
         <LaunchIcon
           item={item}
-          className="relative h-[2.85rem] w-[2.85rem] transition-transform duration-300 group-hover:scale-[1.08]"
+          className="relative h-[3.75rem] w-[3.75rem] transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-[1.05]"
         />
-        <span className="relative w-full truncate px-1 text-center text-[0.6875rem] font-medium text-white/55 transition-colors group-hover:text-white/95">
+        <span className="relative w-full truncate px-1 text-center text-[0.8125rem] text-haze transition-colors group-hover:text-moon">
           {launching ? 'Opening…' : label}
         </span>
       </button>
@@ -102,29 +87,27 @@ function Tile({ item, accent, editing, launching, folder, pinned, drag, onOpen, 
             onClick={onRemove}
             data-no-drag=""
             aria-label={`Remove ${label}`}
-            className="absolute right-1 top-1 z-10 grid h-5 w-5 place-items-center rounded-full bg-rose-300/25 text-rose-100 ring-1 ring-rose-200/40 backdrop-blur transition hover:bg-rose-300/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            className="absolute right-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-ink/85 text-moon/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] transition hover:text-fall focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
           >
-            <X className="h-2.5 w-2.5" aria-hidden="true" />
+            <X className="h-3 w-3" aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={onPin}
             data-no-drag=""
             aria-label={pinned ? `Stop highlighting ${label}` : `Highlight ${label}`}
-            className={`absolute left-1 top-1 z-10 grid h-5 w-5 place-items-center rounded-full ring-1 backdrop-blur transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${
-              pinned
-                ? 'bg-cyan-200/35 text-cyan-50 ring-cyan-200/50'
-                : 'bg-black/45 text-white/50 ring-white/15 hover:text-white'
+            className={`absolute left-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
+              pinned ? 'bg-moon text-ink' : 'bg-ink/85 text-moon/60 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] hover:text-moon'
             }`}
           >
-            <Pin className="h-2.5 w-2.5" aria-hidden="true" />
+            <Pin className="h-3 w-3" aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={onCycleFolder}
             data-no-drag=""
             aria-label={`Move ${label} to another folder`}
-            className="absolute inset-x-2 bottom-1.5 z-10 truncate rounded-full bg-black/50 px-2 py-0.5 text-[0.5rem] font-semibold uppercase tracking-[0.14em] text-white/70 ring-1 ring-white/15 backdrop-blur transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            className="pill absolute inset-x-2 bottom-2 z-10 h-6 truncate px-2 text-[0.8125rem] text-moon/75"
           >
             {folder || 'Loose'}
           </button>
@@ -150,7 +133,7 @@ function ResultIcon({ result }) {
   if (result.kind === 'url') return <SiteIcon url={result.url} className="h-8 w-8" />;
   return (
     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[0.6rem] bg-white/10 ring-1 ring-white/10">
-      <Search className="h-3.5 w-3.5 text-cyan-100/70" aria-hidden="true" />
+      <Search className="h-3.5 w-3.5 text-accent/70" aria-hidden="true" />
     </span>
   );
 }
@@ -203,12 +186,12 @@ function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
         aria-label="Add to launchpad"
       >
         <div className="flex shrink-0 items-center justify-between">
-          <h2 className="display-type text-lg font-light text-white/90">Add to your launchpad</h2>
+          <h2 className="display-type text-lg font-light text-moon/90">Add to your launchpad</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-lg p-1.5 text-white/45 transition hover:bg-white/10 hover:text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="rounded-lg p-1.5 text-moon/45 transition hover:bg-white/10 hover:text-moon/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -224,7 +207,7 @@ function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
               type="button"
               onClick={() => setTab(id)}
               className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                tab === id ? 'bg-white/12 text-white/95' : 'text-white/45 hover:text-white/75'
+                tab === id ? 'bg-white/12 text-moon/95' : 'text-moon/45 hover:text-moon/75'
               }`}
             >
               {name}
@@ -235,20 +218,20 @@ function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
         {tab === 'apps' ? (
           <>
             <label className="mt-3 flex shrink-0 items-center gap-2 rounded-xl bg-white/5 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/25">
-              <Search className="h-3.5 w-3.5 shrink-0 text-white/35" aria-hidden="true" />
+              <Search className="h-3.5 w-3.5 shrink-0 text-moon/35" aria-hidden="true" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search installed apps"
                 aria-label="Search installed apps"
-                className="w-full bg-transparent text-sm text-white/90 placeholder:text-white/30 focus:outline-none"
+                className="w-full bg-transparent text-sm text-moon/90 placeholder:text-moon/30 focus:outline-none"
               />
             </label>
             <div className="glass-scroll mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
               {installed.length === 0 ? (
-                <p className="py-8 text-center text-xs text-white/40">Reading your Applications folders…</p>
+                <p className="py-8 text-center text-xs text-moon/40">Reading your Applications folders…</p>
               ) : filtered.length === 0 ? (
-                <p className="py-8 text-center text-xs text-white/40">No apps match “{query}”.</p>
+                <p className="py-8 text-center text-xs text-moon/40">No apps match “{query}”.</p>
               ) : (
                 <div className="grid grid-cols-3 gap-1.5">
                   {filtered.map(({ name }) => {
@@ -259,12 +242,12 @@ function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
                         type="button"
                         onClick={() => toggleApp(name)}
                         className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
-                          on ? 'bg-cyan-200/12 ring-1 ring-cyan-200/25' : 'hover:bg-white/6'
+                          on ? 'bg-accent/12 ring-1 ring-accent/25' : 'hover:bg-white/6'
                         }`}
                       >
                         <AppIcon app={name} className="h-7 w-7" />
-                        <span className="min-w-0 flex-1 truncate text-xs text-white/80">{name}</span>
-                        {on ? <Check className="h-3.5 w-3.5 shrink-0 text-cyan-100" aria-hidden="true" /> : null}
+                        <span className="min-w-0 flex-1 truncate text-xs text-moon/80">{name}</span>
+                        {on ? <Check className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" /> : null}
                       </button>
                     );
                   })}
@@ -280,7 +263,7 @@ function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
                 onChange={(e) => setSiteName(e.target.value)}
                 placeholder="Name (optional)"
                 aria-label="Site name"
-                className="w-1/3 rounded-xl bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/25"
+                className="w-1/3 rounded-xl bg-white/5 px-3 py-2 text-sm text-moon/90 ring-1 ring-white/10 placeholder:text-moon/30 focus:outline-none focus:ring-white/25"
               />
               <input
                 value={siteUrl}
@@ -288,34 +271,34 @@ function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
                 onKeyDown={(e) => e.key === 'Enter' && addSite()}
                 placeholder="figma.com"
                 aria-label="Web address"
-                className="min-w-0 flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-white/90 ring-1 ring-white/10 placeholder:text-white/30 focus:outline-none focus:ring-white/25"
+                className="min-w-0 flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-moon/90 ring-1 ring-white/10 placeholder:text-moon/30 focus:outline-none focus:ring-white/25"
               />
               <button
                 type="button"
                 onClick={addSite}
-                className="shrink-0 rounded-xl bg-cyan-200/15 px-3.5 py-2 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="shrink-0 rounded-xl bg-accent/15 px-3.5 py-2 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
                 Add
               </button>
             </div>
-            {error ? <p className="mt-2 text-[0.6875rem] text-rose-200/85">{error}</p> : null}
+            {error ? <p className="mt-2 text-[0.8125rem] text-rose-200/85">{error}</p> : null}
 
             <div className="mt-3 space-y-1.5">
               {sites.length === 0 ? (
-                <p className="py-6 text-center text-xs text-white/40">
+                <p className="py-6 text-center text-xs text-moon/40">
                   No sites yet — add one above and it gets a tile like any app.
                 </p>
               ) : (
                 sites.map((site) => (
                   <div key={site.url} className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-2.5 py-2">
-                    <Globe className="h-4 w-4 shrink-0 text-cyan-100/60" aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate text-xs text-white/80">{site.name}</span>
-                    <span className="hidden truncate text-[0.625rem] text-white/35 sm:block">{hostOf(site.url)}</span>
+                    <Globe className="h-4 w-4 shrink-0 text-accent/60" aria-hidden="true" />
+                    <span className="min-w-0 flex-1 truncate text-xs text-moon/80">{site.name}</span>
+                    <span className="hidden truncate text-[0.75rem] text-moon/35 sm:block">{hostOf(site.url)}</span>
                     <button
                       type="button"
                       onClick={() => onChange(selected.filter((i) => !(isSite(i) && i.url === site.url)))}
                       aria-label={`Remove ${site.name}`}
-                      className="rounded-lg p-1 text-white/35 transition hover:bg-white/10 hover:text-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                      className="rounded-lg p-1 text-moon/35 transition hover:bg-white/10 hover:text-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
@@ -334,39 +317,46 @@ function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
 /* ── Cards ───────────────────────────────────────────────────────────────── */
 
 /** Top-left: the one app you chose to keep front and centre. */
-function HighlightCard({ item, count, onOpen, onChoose }) {
+function HighlightCard({ item, onOpen, onChoose }) {
   const accent = useAccent(item);
+  const label = itemLabel(item);
   return (
-    <GlassCard delay={60} noPadding className="group relative overflow-hidden">
+    <div className="relative flex shrink-0 items-center gap-5 pb-1">
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{ background: `radial-gradient(90% 120% at 12% 50%, ${rgba(accent, 0.32)} 0%, transparent 72%)` }}
+        className="pointer-events-none absolute -left-6 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full blur-3xl"
+        style={{ background: rgba(accent, 0.45) }}
       />
+
+      {/* The whole block is the way in: tap it and the app opens. The menu
+          beside it is a sibling, not a child — a button inside a button is
+          invalid markup and swallows its own clicks. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Open ${label}`}
+        className="group relative -mx-3 -my-2 flex min-w-0 items-center gap-5 rounded-[1.5rem] px-3 py-2 text-left transition-colors duration-300 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+      >
+        <LaunchIcon
+          item={item}
+          className="h-[5.5rem] w-[5.5rem] shrink-0 transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-[1.03]"
+        />
+        <span className="min-w-0">
+          <span className="t-eyebrow block">Highlighted</span>
+          <span className="t-title mt-1 block max-w-[15rem] truncate text-[2.125rem]">{label}</span>
+        </span>
+      </button>
+
       <button
         type="button"
         onClick={onChoose}
         aria-label="Choose a different app to highlight"
-        className="absolute right-2 top-2 z-10 rounded-lg px-2 py-1 text-[0.5625rem] font-semibold uppercase tracking-[0.14em] text-white/0 transition hover:bg-white/10 hover:text-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 group-hover:text-white/45"
+        title="Choose a different app"
+        className="pill relative h-8 w-8 shrink-0 px-0 text-moon/70"
       >
-        Change
+        <MoreVertical className="h-4 w-4" aria-hidden="true" />
       </button>
-      <div className="relative flex h-full items-center gap-4 px-4 py-4">
-        <LaunchIcon item={item} className="h-[3.75rem] w-[3.75rem] shrink-0" />
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <p className="text-[0.5rem] font-semibold uppercase tracking-[0.24em] text-white/40">Highlighted</p>
-          <p className="truncate text-base font-medium text-white/95">{itemLabel(item)}</p>
-          <button
-            type="button"
-            onClick={onOpen}
-            className="self-start rounded-lg px-3 py-1.5 text-[0.6875rem] font-semibold text-white/90 ring-1 transition hover:brightness-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-            style={{ background: rgba(accent, 0.2), '--tw-ring-color': rgba(accent, 0.4) }}
-          >
-            {count ? `Open · ${count}\u00d7` : 'Open'}
-          </button>
-        </div>
-      </div>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -393,12 +383,12 @@ function HighlightPicker({ items, current, onPick, onClose }) {
         aria-label="Choose the highlighted app"
       >
         <div className="flex shrink-0 items-center justify-between">
-          <h2 className="display-type text-lg font-light text-white/90">Highlight an app</h2>
+          <h2 className="display-type text-lg font-light text-moon/90">Highlight an app</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-lg p-1.5 text-white/45 transition hover:bg-white/10 hover:text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="rounded-lg p-1.5 text-moon/45 transition hover:bg-white/10 hover:text-moon/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -414,11 +404,11 @@ function HighlightPicker({ items, current, onPick, onClose }) {
                   type="button"
                   onClick={() => onPick(item)}
                   className={`flex flex-col items-center gap-1.5 rounded-xl px-1.5 py-2.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
-                    on ? 'bg-cyan-200/12 ring-1 ring-cyan-200/25' : 'hover:bg-white/6'
+                    on ? 'bg-accent/12 ring-1 ring-accent/25' : 'hover:bg-white/6'
                   }`}
                 >
                   <LaunchIcon item={item} className="h-8 w-8" />
-                  <span className="w-full truncate text-center text-[0.625rem] text-white/70">{itemLabel(item)}</span>
+                  <span className="w-full truncate text-center text-[0.75rem] text-moon/70">{itemLabel(item)}</span>
                 </button>
               );
             })}
@@ -429,7 +419,7 @@ function HighlightPicker({ items, current, onPick, onClose }) {
           <button
             type="button"
             onClick={() => onPick(null)}
-            className="mt-3 shrink-0 rounded-xl px-3 py-2 text-xs font-medium text-white/45 transition hover:bg-white/8 hover:text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="mt-3 shrink-0 rounded-xl px-3 py-2 text-xs font-medium text-moon/45 transition hover:bg-white/8 hover:text-moon/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             Clear the highlight
           </button>
@@ -443,26 +433,30 @@ function HighlightPicker({ items, current, onPick, onClose }) {
 /** Top-right: the websites you saved, as a row of favicon tiles. */
 function SitesCard({ sites, launching, onOpen, onAdd, editing, onRemove, sort }) {
   return (
-    <GlassCard delay={100} className="flex min-h-0 flex-col overflow-hidden">
-      <p className="shrink-0 text-[0.5rem] font-semibold uppercase tracking-[0.24em] text-white/40">Saved websites</p>
-      <div
-        ref={sort.setScroller}
-        className="glass-scroll mt-2 flex min-h-0 flex-1 items-center gap-2 overflow-x-auto"
-      >
+    <div className="flex shrink-0 flex-col">
+      <ColumnHead
+        label="Saved websites"
+        action={
+          <button type="button" onClick={onAdd} aria-label="Save a website" className="pill h-7 w-7 px-0 text-moon/75">
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        }
+      />
+      <div ref={sort.setScroller} className="cascade mt-2 grid grid-cols-3 gap-1">
         {sites.map((site, i) => (
           <div
             key={site.url}
             {...sort.itemProps(i)}
-            className="group relative shrink-0 cursor-pointer select-none active:cursor-grabbing data-[dragging]:cursor-grabbing"
+            className="group relative cursor-pointer select-none active:cursor-grabbing data-[dragging]:cursor-grabbing"
           >
             <button
               type="button"
               onClick={() => onOpen(site)}
               aria-label={`Open ${itemLabel(site)}`}
-              className="flex w-[5.5rem] flex-col items-center gap-1.5 rounded-xl px-1.5 py-2 transition hover:-translate-y-0.5 hover:bg-white/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 group-data-[dragging]:bg-white/12 group-data-[dragging]:shadow-[0_20px_40px_-12px_rgba(3,5,16,0.75)] group-data-[dragging]:ring-1 group-data-[dragging]:ring-white/25"
+              className="flex w-full flex-col items-center gap-1.5 rounded-[1rem] px-1 py-2.5 transition hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 group-data-[dragging]:bg-white/[0.1] group-data-[dragging]:shadow-[0_20px_40px_-12px_rgba(3,5,16,0.75)]"
             >
-              <SiteIcon url={site.url} className="h-9 w-9" />
-              <span className="w-full truncate text-center text-[0.625rem] text-white/55 transition group-hover:text-white/90">
+              <SiteIcon url={site.url} className="h-10 w-10" />
+              <span className="w-full truncate text-center text-[0.75rem] text-haze transition group-hover:text-moon">
                 {launching === itemKey(site) ? 'Opening…' : itemLabel(site)}
               </span>
             </button>
@@ -472,57 +466,19 @@ function SitesCard({ sites, launching, onOpen, onAdd, editing, onRemove, sort })
                 onClick={() => onRemove(site)}
                 data-no-drag=""
                 aria-label={`Remove ${itemLabel(site)}`}
-                className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-full bg-rose-300/25 text-rose-100 ring-1 ring-rose-200/40 backdrop-blur transition hover:bg-rose-300/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-ink/85 text-moon/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] transition hover:text-fall focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
               >
                 <X className="h-2.5 w-2.5" aria-hidden="true" />
               </button>
             ) : null}
           </div>
         ))}
-        <button
-          type="button"
-          onClick={onAdd}
-          aria-label="Save a website"
-          className="flex w-[5.5rem] shrink-0 flex-col items-center gap-1.5 rounded-xl border border-dashed border-white/12 px-1.5 py-2 text-white/30 transition hover:border-white/25 hover:bg-white/5 hover:text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-        >
-          <span className="grid h-9 w-9 place-items-center">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <span className="text-[0.625rem] font-medium">Add site</span>
-        </button>
+        {sites.length === 0 ? <p className="col-span-3 px-1 py-2 text-[0.875rem] text-dim">Sites you save sit here.</p> : null}
       </div>
-    </GlassCard>
+    </div>
   );
 }
 
-/** Bottom-left: the last things you opened, newest first. */
-function RecentCard({ recents, usage, onOpen }) {
-  return (
-    <GlassCard delay={140} className="flex min-h-0 flex-col overflow-hidden">
-      <p className="shrink-0 text-[0.5rem] font-semibold uppercase tracking-[0.24em] text-white/40">Recently opened</p>
-      <div className="glass-scroll mt-2 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
-        {recents.length === 0 ? (
-          <p className="pt-6 text-center text-[0.6875rem] leading-relaxed text-white/35">
-            Open something and it lands here.
-          </p>
-        ) : (
-          recents.map((item) => (
-            <button
-              key={itemKey(item)}
-              type="button"
-              onClick={() => onOpen(item)}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/8 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            >
-              <LaunchIcon item={item} className="h-7 w-7" />
-              <span className="min-w-0 flex-1 truncate text-xs text-white/75">{itemLabel(item)}</span>
-              <span className="shrink-0 text-[0.5625rem] text-white/30">{ago(usage[itemKey(item)].lastAt)}</span>
-            </button>
-          ))
-        )}
-      </div>
-    </GlassCard>
-  );
-}
 
 /* ── View ────────────────────────────────────────────────────────────────── */
 
@@ -629,14 +585,6 @@ export default function Launchpad() {
 
   const highlight = items.find((i) => itemKey(i) === meta.highlighted) ?? null;
 
-  const recents = useMemo(
-    () =>
-      [...items]
-        .filter((i) => meta.usage[itemKey(i)]?.lastAt)
-        .sort((a, b) => meta.usage[itemKey(b)].lastAt - meta.usage[itemKey(a)].lastAt)
-        .slice(0, 8),
-    [items, meta.usage],
-  );
 
   const onSearchKey = (e) => {
     if (e.key === 'ArrowDown') {
@@ -653,155 +601,128 @@ export default function Launchpad() {
   };
 
   return (
-    <div className="relative flex h-full flex-col gap-3">
-      <ViewHeader
-        lead="Launch"
-        accent="pad"
-        subtitle={`${apps.length} apps · ${sites.length} sites`}
-        action={
-          <button
-            type="button"
-            onClick={() => setEditing((v) => !v)}
-            aria-label={editing ? 'Done arranging' : 'Arrange launchpad'}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
-              editing
-                ? 'bg-cyan-200/15 text-cyan-50 ring-1 ring-cyan-200/25'
-                : 'text-white/40 hover:bg-white/8 hover:text-white/80'
-            }`}
-          >
-            {editing ? 'Done' : <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />}
-          </button>
-        }
-      />
+    <div className="relative flex h-full flex-col">
+      {/* ── Sky: find anything, and the app you reach for most ─────────────── */}
+      <SkyZone className="z-20 flex items-end justify-between gap-10">
+        <div className="min-w-0 flex-1">
+          <p className="t-lede">
+            {apps.length} apps, {sites.length} sites
+          </p>
+          <h1 className="t-hero mt-1">Launchpad</h1>
 
-      {/* ── Search: apps anywhere on the machine, your saved sites, a typed
-             address, or Google. ── */}
-      <div className="relative z-20 shrink-0">
-        <label className="theme-card flex items-center gap-2.5 rounded-2xl px-4 py-2.5 focus-within:border-white/25">
-          <Search className="h-4 w-4 shrink-0 text-white/35" aria-hidden="true" />
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onSearchKey}
-            placeholder="Search your Mac, open a site, or search the web…"
-            aria-label="Search apps, websites and the web"
-            className="w-full bg-transparent text-sm text-white/90 placeholder:text-white/30 focus:outline-none"
-          />
-          {query ? (
-            <span className="hidden shrink-0 items-center gap-1.5 text-[0.625rem] text-white/40 md:flex">
-              <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-sans text-white/60">↑↓</kbd>
-              <kbd className="rounded bg-white/10 px-1.5 py-0.5 font-sans text-white/60">↵</kbd>
-            </span>
-          ) : null}
-        </label>
+          {/* Search: apps anywhere on the machine, your saved sites, a typed
+              address, or Google. */}
+          <div className="relative mt-6 flex max-w-[46rem] items-center gap-2">
+            <label className="relative flex h-14 flex-1 items-center gap-3 rounded-full bg-white/[0.07] px-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)] backdrop-blur-xl transition focus-within:bg-white/[0.1] focus-within:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]">
+              <Search className="h-5 w-5 shrink-0 text-moon/45" aria-hidden="true" />
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={onSearchKey}
+                placeholder="Search your Mac, open a site, or search the web"
+                aria-label="Search apps, websites and the web"
+                className="w-full bg-transparent text-[1.0625rem] text-moon placeholder:text-moon/40 focus:outline-none"
+              />
+              {query ? (
+                <span className="hidden shrink-0 items-center gap-1.5 text-[0.75rem] text-dim md:flex">
+                  <kbd className="rounded-md bg-white/10 px-1.5 py-0.5 font-sans text-moon/60">↑↓</kbd>
+                  <kbd className="rounded-md bg-white/10 px-1.5 py-0.5 font-sans text-moon/60">↵</kbd>
+                </span>
+              ) : null}
+            </label>
+            <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              aria-label={editing ? 'Done arranging' : 'Arrange launchpad'}
+              className={editing ? 'pill pill-lit h-14 px-5 text-[0.9375rem]' : 'pill h-14 w-14 px-0 text-moon/75'}
+            >
+              {editing ? 'Done' : <Settings2 className="h-4 w-4" aria-hidden="true" />}
+            </button>
 
-        {query.trim() ? (
-          <div className="theme-popover glass-scroll fade-in absolute inset-x-0 top-full z-30 mt-1.5 max-h-[24rem] overflow-y-auto rounded-2xl p-1.5">
-            {results.map((result, i) => (
-              <div key={result.id} className="group/row flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => openResult(result)}
-                  onMouseEnter={() => setCursor(i)}
-                  className={`flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2.5 py-2 text-left transition focus:outline-none ${
-                    i === cursor ? 'bg-white/12' : 'hover:bg-white/6'
-                  }`}
-                >
-                  <ResultIcon result={result} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm text-white/90">{result.label}</span>
-                    <span className="block truncate text-[0.625rem] text-white/40">{result.sub}</span>
-                  </span>
-                  <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-white/45">
-                    {KIND_LABEL[result.kind]}
-                  </span>
-                  <span className="flex-1" aria-hidden="true" />
-                </button>
-                {result.kind === 'app' || result.kind === 'url' ? (
-                  <button
-                    type="button"
-                    onClick={() => addFromSearch(result)}
-                    aria-label={`Add ${result.label} to launchpad`}
-                    title="Add to launchpad"
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/25 opacity-0 transition hover:bg-white/10 hover:text-cyan-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 group-hover/row:opacity-100"
-                  >
-                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                ) : null}
+            {query.trim() ? (
+              <div className="theme-popover glass-scroll launcher-rise absolute inset-x-0 top-full z-30 mt-2 max-h-[24rem] overflow-y-auto rounded-[1.5rem] p-2">
+                {results.map((result, i) => (
+                  <div key={result.id} className="group/row flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openResult(result)}
+                      onMouseEnter={() => setCursor(i)}
+                      className={`flex min-w-0 flex-1 items-center gap-3 rounded-[1rem] px-3 py-2.5 text-left transition focus:outline-none ${
+                        i === cursor ? 'bg-white/[0.1]' : 'hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <ResultIcon result={result} />
+                      <span className="min-w-0">
+                        <span className="block truncate text-[0.9375rem] text-moon">{result.label}</span>
+                        <span className="block truncate text-[0.75rem] text-dim">{result.sub}</span>
+                      </span>
+                      <span className="pill ml-auto h-6 shrink-0 px-2.5 text-[0.8125rem] text-moon/60">{KIND_LABEL[result.kind]}</span>
+                    </button>
+                    {result.kind === 'app' || result.kind === 'url' ? (
+                      <button
+                        type="button"
+                        onClick={() => addFromSearch(result)}
+                        aria-label={`Add ${result.label} to launchpad`}
+                        title="Add to launchpad"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-moon/30 opacity-0 transition hover:bg-white/10 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 group-hover/row:opacity-100"
+                      >
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : null}
           </div>
-        ) : null}
-      </div>
+        </div>
 
-      {/* ── The bento ── */}
-      <div className="grid min-h-0 flex-1 grid-cols-[1fr_2.6fr] grid-rows-[1fr_2.5fr] gap-3">
         {highlight ? (
           <HighlightCard
             item={highlight}
-            count={meta.usage[itemKey(highlight)]?.count ?? 0}
             onOpen={() => open(highlight)}
             onChoose={() => setChoosing(true)}
           />
         ) : (
-          <GlassCard delay={60} className="grid place-items-center">
-            <button
-              type="button"
-              onClick={() => items.length && setChoosing(true)}
-              disabled={items.length === 0}
-              className="rounded-xl px-4 py-3 text-center text-xs text-white/40 transition enabled:hover:bg-white/6 enabled:hover:text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            >
-              {items.length ? (
-                <>
-                  <Star className="mx-auto mb-1.5 h-4 w-4" aria-hidden="true" />
-                  Highlight an app →
-                </>
-              ) : (
-                'Nothing on the launchpad yet.'
-              )}
-            </button>
-          </GlassCard>
+          <button
+            type="button"
+            onClick={() => items.length && setChoosing(true)}
+            disabled={items.length === 0}
+            className="pill mb-1 h-11 shrink-0 px-5 disabled:opacity-40"
+          >
+            <Star className="h-4 w-4" aria-hidden="true" />
+            {items.length ? 'Highlight an app' : 'Nothing on the launchpad yet'}
+          </button>
         )}
+      </SkyZone>
 
-        <SitesCard
-          sites={sites}
-          sort={siteSort}
-          launching={launching}
-          editing={editing}
-          onOpen={open}
-          onRemove={remove}
-          onAdd={() => setAdding('sites')}
-        />
-
-        <RecentCard recents={recents} usage={meta.usage} onOpen={open} />
-
-        {/* Apps, filed into the folders the user made. */}
-        <GlassCard delay={180} className="flex min-h-0 flex-col overflow-hidden">
-          <div className="flex shrink-0 flex-wrap items-center gap-1">
-            {[[ALL, 'All'], ...meta.folders.map((f) => [f, f])].map(([id, name]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setFolder(id)}
-                className={`rounded-full px-3 py-1 text-[0.6875rem] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
-                  folder === id
-                    ? 'bg-white/14 text-white/95 ring-1 ring-white/20'
-                    : 'text-white/40 hover:bg-white/6 hover:text-white/75'
-                }`}
-              >
-                {name}
-              </button>
-            ))}
+      {/* ── Ground: your apps, filed into folders; saved sites and recents ─── */}
+      <Ground className="grid grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="flex min-h-0 min-w-0 flex-col pr-8 pt-7">
+          <div className="col-head justify-start gap-2">
+            <div className="pill-group">
+              {[[ALL, 'All'], ...meta.folders.map((f) => [f, f])].map(([id, name]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setFolder(id)}
+                  aria-pressed={folder === id}
+                  className="pill h-8 px-3.5 text-[0.8125rem]"
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => {
                 const name = window.prompt('Name the folder');
                 if (name) meta.addFolder(name);
               }}
-              className="rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-cyan-100/55 transition hover:bg-white/6 hover:text-cyan-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="pill h-8 px-3.5 text-[0.8125rem] text-moon/70"
             >
-              + Folder
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Folder
             </button>
             {editing && meta.folders.includes(folder) ? (
               <button
@@ -810,37 +731,22 @@ export default function Launchpad() {
                   meta.removeFolder(folder);
                   setFolder(ALL);
                 }}
-                className="rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-rose-200/60 transition hover:text-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="pill h-8 px-3.5 text-[0.8125rem] text-fall"
               >
                 Delete folder
               </button>
             ) : null}
           </div>
 
-          {/* Symmetric breathing room: padding on the scroller rather than a top
-              margin, so the gap under the tabs matches the gap at the bottom. */}
-          <div ref={appSort.setScroller} className="glass-scroll min-h-0 flex-1 overflow-y-auto py-2.5 pr-1">
+          <div ref={appSort.setScroller} className="glass-scroll mt-3 min-h-0 flex-1 overflow-y-auto pb-4 pr-1">
             {visibleApps.length === 0 ? (
-              <div className="grid h-full place-items-center">
-                <button
-                  type="button"
-                  onClick={() => setAdding('apps')}
-                  className="rounded-xl px-4 py-3 text-xs text-white/40 transition hover:bg-white/6 hover:text-white/80"
-                >
-                  {folder === ALL
-                    ? 'No apps yet — add some →'
-                    : `Nothing in “${folder}” yet — arrange, then tap a tile's folder chip.`}
-                </button>
-              </div>
+              <button type="button" onClick={() => setAdding('apps')} className="pill mt-3 h-10 px-4">
+                {folder === ALL
+                  ? 'No apps yet. Add some'
+                  : `Nothing in “${folder}” yet. Arrange, then tap a tile's folder chip.`}
+              </button>
             ) : (
-              // Centred in the space under the tabs, so a part-full last row
-              // leaves the same gap below the grid as there is above it.
-              // `min-h-full` on a flex column is the safe way to do that inside a
-              // scroller: once the grid is taller than the card the wrapper grows
-              // to fit, so justify-center stops applying rather than clipping the
-              // first row out of reach.
-              <div className="flex min-h-full flex-col justify-center">
-              <div className="grid grid-cols-4 gap-2.5 md:grid-cols-5 xl:grid-cols-6">
+              <div className="cascade grid grid-cols-[repeat(auto-fill,minmax(7.25rem,1fr))] gap-1.5">
                 {visibleApps.map((item, i) => (
                   <TileWithAccent
                     key={itemKey(item)}
@@ -860,17 +766,30 @@ export default function Launchpad() {
                   type="button"
                   onClick={() => setAdding('apps')}
                   aria-label="Add apps"
-                  className="flex min-h-[6.5rem] flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-white/12 text-white/30 transition hover:border-white/25 hover:bg-white/5 hover:text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="flex min-h-[7.5rem] flex-col items-center justify-center gap-2.5 rounded-[1.25rem] text-moon/40 transition hover:bg-white/[0.05] hover:text-moon/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
                 >
-                  <Plus className="h-5 w-5" aria-hidden="true" />
-                  <span className="text-[0.625rem] font-medium">Add</span>
+                  <span className="grid h-[3.75rem] w-[3.75rem] place-items-center rounded-[1rem] shadow-[inset_0_0_0_1.5px_rgba(226,230,248,0.18)]">
+                    <Plus className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="text-[0.8125rem]">Add</span>
                 </button>
-              </div>
               </div>
             )}
           </div>
-        </GlassCard>
-      </div>
+        </div>
+
+        <div className="ground-rule flex min-h-0 flex-col gap-6 pl-8 pt-7">
+          <SitesCard
+            sites={sites}
+            sort={siteSort}
+            launching={launching}
+            editing={editing}
+            onOpen={open}
+            onRemove={remove}
+            onAdd={() => setAdding('sites')}
+          />
+        </div>
+      </Ground>
 
       {choosing ? (
         <HighlightPicker

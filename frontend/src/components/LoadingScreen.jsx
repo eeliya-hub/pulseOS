@@ -1,36 +1,40 @@
-// Full-screen launch loader shown while the app preloads its data sources.
+import PulseMark from './PulseMark.jsx';
+import Sky from './Sky.jsx';
+
+/**
+ * The app waking up: the mark draws its beat while the data comes in, and the
+ * whole screen dissolves into the dashboard once it's ready.
+ */
 export default function LoadingScreen({ progress = 0, label = '', exiting = false }) {
   const pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
   return (
     <div
       className={[
-        'fixed inset-0 z-[100] flex flex-col items-center justify-center bg-midnight text-white transition-opacity duration-500',
+        'fixed inset-0 z-[100] grid place-items-center text-moon transition-opacity duration-700',
         exiting ? 'pointer-events-none opacity-0' : 'opacity-100',
       ].join(' ')}
     >
-      <div className="ambient-layer" aria-hidden="true" />
-      <div className="ambient-sheen" aria-hidden="true" />
-      <div className="ambient-stars" aria-hidden="true" />
+      <Sky />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 px-8">
-        <div className="flex items-center gap-3">
-          <span className="glow-dot h-2.5 w-2.5 rounded-full bg-cyan-200 text-cyan-200" aria-hidden="true" />
-          <span className="display-type text-2xl font-light tracking-[0.35em] text-white/90">
-            PULSE<span className="cyan-name">OS</span>
-          </span>
+      <div
+        className={[
+          'relative z-10 flex w-[21rem] max-w-[80vw] flex-col items-center transition-transform duration-700',
+          exiting ? 'scale-[1.04]' : 'scale-100',
+        ].join(' ')}
+        style={{ transitionTimingFunction: 'var(--ease-out)' }}
+      >
+        <PulseMark animated className="h-14 w-32 text-accent" />
+        <p className="display-type mt-4 text-[3.25rem] leading-none text-moon">Pulse</p>
+
+        <div className="mt-9 h-[2px] w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-moon transition-[width] duration-500 ease-out"
+            style={{ width: `${pct}%` }}
+          />
         </div>
-
-        <div className="w-64 max-w-[70vw]">
-          <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-blue-400 shadow-[0_0_12px_rgba(103,232,249,0.5)] transition-[width] duration-500 ease-out"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="mt-2.5 flex items-center justify-between text-[0.625rem] font-medium uppercase tracking-[0.2em] text-white/45">
-            <span className="truncate">{label || 'Loading'}</span>
-            <span className="clock-figures shrink-0 text-white/60">{pct}%</span>
-          </div>
+        <div className="mt-3 flex w-full items-center justify-between text-[0.8125rem] text-haze">
+          <span className="truncate">{label || 'Waking up'}</span>
+          <span className="clock-figures shrink-0 text-dim">{pct}%</span>
         </div>
       </div>
     </div>

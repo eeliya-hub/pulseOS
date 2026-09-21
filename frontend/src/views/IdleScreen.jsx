@@ -2,38 +2,35 @@ import SettingsButton from '../components/SettingsButton.jsx';
 import { useSettings } from '../hooks/useSettings.js';
 import { formatClock, formatLongDate, getGreeting } from '../utils/dateTime.js';
 
+/**
+ * The screen at rest: the time, large enough to read from across a room, set
+ * against the hour's sky. Everything else is a whisper around it — the greeting
+ * above in the hour's own colour, the date below in the display face, and the
+ * way back out kept to the smallest thing on the screen.
+ */
 export default function IdleScreen({ now }) {
   const { settings } = useSettings();
+  const clock = formatClock(now).replace(' : ', ':');
+
   return (
-    <section className="relative z-10 grid h-dvh place-items-center px-4 text-center">
-      <div
-        className="breathe pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(116,242,255,0.09) 0%, rgba(140,120,220,0.06) 42%, transparent 68%)',
-        }}
-        aria-hidden="true"
-      />
-
-      <div className="fade-in relative flex flex-col items-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.5em] text-white/44">
-          {getGreeting(now)}
-        </p>
-        <p className="cyan-name mt-2 text-sm font-medium uppercase tracking-[0.34em]">
-          {settings.name}
+    <section className="relative z-10 grid h-dvh place-items-center px-6 text-center">
+      <div className="view-enter flex flex-col items-center">
+        <p className="t-eyebrow text-[1.0625rem]">
+          {getGreeting(now)}, <span className="text-moon/80">{settings.name}</span>
         </p>
 
-        <p className="clock-figures mt-6 text-[clamp(5.5rem,13vw,10rem)] font-extralight leading-none text-white text-glow">
-          {formatClock(now)}
+        {/* The hour itself. Each minute resolves in rather than snapping over. */}
+        <p
+          key={clock}
+          data-view-hero=""
+          className="display-figures figure-tick mt-10 text-[clamp(7rem,17vw,14rem)] leading-[0.92] tracking-[-0.04em] text-moon"
+        >
+          {clock}
         </p>
 
-        <p className="display-type mt-6 text-lg font-light tracking-[0.06em] text-white/72 md:text-xl">
-          {formatLongDate(now)}
-        </p>
+        <p className="display-type mt-8 text-[1.625rem] leading-none text-moon/70">{formatLongDate(now)}</p>
 
-        <p className="mt-14 animate-pulse text-[0.625rem] font-medium uppercase tracking-[0.4em] text-white/28">
-          Touch anywhere to wake
-        </p>
+        <p className="breathe t-micro mt-16 text-moon/45">Touch anywhere to wake</p>
       </div>
 
       {/* Delicate settings affordance — tucked in the corner, ignored by wake */}

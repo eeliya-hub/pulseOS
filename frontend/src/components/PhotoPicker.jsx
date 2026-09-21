@@ -86,24 +86,24 @@ export default function PhotoPicker({ photos = [], onChange, query, placeId = nu
                 title={index === 0 ? 'Cover photo' : 'Make cover photo'}
                 className={[
                   'block h-16 w-24 overflow-hidden rounded-xl ring-1 transition focus:outline-none focus-visible:ring-2',
-                  index === 0 ? 'ring-cyan-200/60' : 'ring-white/12 hover:ring-white/30',
+                  index === 0 ? 'ring-accent/60' : 'ring-white/12 hover:ring-white/30',
                 ].join(' ')}
               >
                 <img src={placePhotoUrl(photo, 320)} alt="" className="h-full w-full object-cover" />
               </button>
               {index === 0 && (
                 <span
-                  className="pointer-events-none absolute left-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#0b1024]/80 text-cyan-100"
+                  className="pointer-events-none absolute left-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#0b1024]/80 text-accent"
                   title="Cover"
                 >
-                  <Star className="h-2.5 w-2.5 fill-cyan-100" aria-hidden="true" />
+                  <Star className="h-2.5 w-2.5 fill-accent" aria-hidden="true" />
                 </span>
               )}
               <button
                 type="button"
                 onClick={() => remove(photo)}
                 aria-label="Remove photo"
-                className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#0b1024]/80 text-white/70 opacity-0 transition hover:text-rose-300 focus:opacity-100 focus:outline-none group-hover:opacity-100"
+                className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-[#0b1024]/80 text-moon/70 opacity-0 transition hover:text-rose-300 focus:opacity-100 focus:outline-none group-hover:opacity-100"
               >
                 <X className="h-2.5 w-2.5" aria-hidden="true" />
               </button>
@@ -120,10 +120,10 @@ export default function PhotoPicker({ photos = [], onChange, query, placeId = nu
               type="button"
               onClick={() => add(photo)}
               aria-label="Add this photo"
-              className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl opacity-70 ring-1 ring-white/10 transition hover:opacity-100 hover:ring-cyan-200/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl opacity-70 ring-1 ring-white/10 transition hover:opacity-100 hover:ring-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               <img src={placePhotoUrl(photo, 240)} alt="" loading="lazy" className="h-full w-full object-cover" />
-              <span className="absolute inset-x-0 bottom-0 bg-[#0b1024]/70 py-0.5 text-center text-[0.5625rem] font-semibold uppercase tracking-[0.1em] text-white/80">
+              <span className="absolute inset-x-0 bottom-0 bg-[#0b1024]/70 py-0.5 text-center text-[0.75rem] font-semibold text-moon/80">
                 Add
               </span>
             </button>
@@ -136,7 +136,7 @@ export default function PhotoPicker({ photos = [], onChange, query, placeId = nu
           type="button"
           onClick={suggest}
           disabled={status === 'loading' || (!subject && !placeId)}
-          className="soft-button inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[0.6875rem] font-semibold text-white/75 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
+          className="soft-button inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[0.8125rem] font-semibold text-moon/75 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
         >
           {status === 'loading' ? (
             <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -145,7 +145,7 @@ export default function PhotoPicker({ photos = [], onChange, query, placeId = nu
           )}
           {photos.length ? 'Find more photos' : 'Find photos'}
         </button>
-        <span className="truncate text-[0.5625rem] uppercase tracking-[0.14em] text-white/25">
+        <span className="truncate text-[0.75rem] text-moon/25">
           {status === 'empty' && 'No photos found'}
           {status === 'error' && 'Photo search unavailable'}
           {status === 'idle' && source === 'google' && 'Google Places'}

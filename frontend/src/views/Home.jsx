@@ -1,20 +1,23 @@
 import {
-  CalendarDays,
   Check,
   Cloud,
   CloudRain,
+  Droplets,
   ImagePlus,
+  Leaf,
   Plus,
   Settings2,
   Sparkles,
   Sun,
+  Thermometer,
   Trash2,
+  Wind,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import GlassCard from '../components/GlassCard.jsx';
 import LaunchIcon, { AppIcon, SiteIcon } from '../components/LaunchIcon.jsx';
+import { Column, Ground, SkyZone } from '../components/Stage.jsx';
 import SettingsButton from '../components/SettingsButton.jsx';
 import { loadedUntil, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { calendarColor, dateKey, keyToDate, occursOn, useLifeData } from '../hooks/useLifeData.js';
@@ -63,9 +66,6 @@ function startsIn(offset, time, now) {
   const dys = Math.round(hrs / 24);
   return `in ${dys} day${dys === 1 ? '' : 's'}`;
 }
-
-// Subtle tint from a 6-digit hex colour (e.g. for the highlighted badge).
-const tint = (hex, alpha = '22') => (/^#[0-9a-f]{6}$/i.test(hex || '') ? `${hex}${alpha}` : 'rgba(255,255,255,0.06)');
 
 // Read an uploaded image, downscale it, and return a small JPEG data URL so it
 // stays well within localStorage limits.
@@ -160,18 +160,6 @@ const DEFAULT_DAILY = [
 
 const dailyIcon = { rain: CloudRain, sun: Sun, cloud: Cloud };
 
-// Horizontal breathing room around the launchpad icon grid (not the gaps
-// between icons). Any CSS length, e.g. '0.5rem', '1rem', '12px'.
-const LAUNCHPAD_PADDING = '0.85rem';
-
-// Home bento row heights: "<weather row> <launchpad row>". The weather row also
-// sets how tall the day-by-day bars can grow (raise the first value for taller
-// bars); the launchpad row sets the space above & below the launchpad icons.
-const HOME_GRID_ROWS = '1.6fr 1fr';
-
-// Bar height scaled to the visible range of daily highs.
-const barHeight = (temp, min, max) => 28 + (72 * (temp - min)) / ((max - min) || 1);
-
 export default function Home({ onAskPulse }) {
   const { weather } = useWeather();
   const { settings, update } = useSettings();
@@ -180,9 +168,11 @@ export default function Home({ onAskPulse }) {
   const life = useLifeData();
   const calendar = useCalendarEvents();
   const daily = weather?.daily?.length ? weather.daily : DEFAULT_DAILY;
-  const dailyHis = daily.map((d) => d.hi);
-  const dailyMin = Math.min(...dailyHis);
-  const dailyMax = Math.max(...dailyHis);
+  // One scale for every day's range bar, so the days read against each other.
+  const rangeMin = Math.min(...daily.map((d) => d.lo));
+  const rangeMax = Math.max(...daily.map((d) => d.hi));
+  const rangeSpan = Math.max(1, rangeMax - rangeMin);
+  const NowIcon = dailyIcon[daily[0]?.icon] ?? Cloud;
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 30000);
@@ -223,308 +213,310 @@ export default function Home({ onAskPulse }) {
     setAskText('');
   };
 
+  const todayCount = upcoming.filter((e) => e.offset === 0).length;
+
   return (
     <div className="flex h-full flex-col">
-      <header className="relative shrink-0 pb-4 pt-5 text-center">
-        <h1 className="display-type text-3xl font-extralight tracking-wide text-white/95 md:text-[2.65rem]">
-          {getGreeting(now)}, <span className="cyan-name font-light">{settings.name}</span>
-        </h1>
-        <p className="mt-2.5 text-[0.625rem] font-medium uppercase tracking-[0.32em] text-white/36">
-          A calm start · {upcoming.filter((e) => e.offset === 0).length} today
-        </p>
+      {/* ── Sky: the day, the weather now, and what's next ─────────────────── */}
+      <SkyZone className="grid grid-cols-[minmax(0,2.35fr)_minmax(0,0.82fr)] items-end">
+        {/* The right cell repeats the Ground's column fractions below
+            (1.05 + 1.3 | 0.82) so the event block lines up exactly with the
+            Launch column: its left edge on the rule, its right edge on the
+            column's. Change one and change the other. */}
+        <div className="min-w-0">
+          <h1 className="t-hero truncate">
+            {getGreeting(now)}, <span className="name-mark">{settings.name}</span>
+          </h1>
+          <p className="t-lede mt-3">
+            {todayCount === 0
+              ? 'Nothing else on today'
+              : todayCount === 1
+                ? 'One thing on today'
+                : `${todayCount} things on today`}
+          </p>
 
-        {onAskPulse && (
-          <form
-            className="group relative mx-auto mt-4 w-full max-w-xl"
-            onSubmit={(event) => {
-              event.preventDefault();
-              askPulse();
-            }}
-          >
-            <label htmlFor="home-ask-pulse" className="sr-only">
-              Ask Pulse
-            </label>
-            <Sparkles
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/60"
-              aria-hidden="true"
-            />
-            <input
-              id="home-ask-pulse"
-              type="text"
-              value={askText}
-              onChange={(event) => setAskText(event.target.value)}
-              placeholder="Ask Pulse anything…"
-              className="w-full rounded-full border border-white/12 bg-white/7 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-cyan-100/30 focus:bg-white/10 focus:shadow-[0_0_20px_rgba(116,242,255,0.08)]"
-            />
-          </form>
-        )}
-
-        <SettingsButton className="absolute right-0 top-5" />
-      </header>
-
-      <div className="flex min-h-0 flex-1 items-center">
-        <section
-          className="grid h-[37rem] max-h-full w-full grid-cols-12 gap-4"
-          style={{ gridTemplateRows: HOME_GRID_ROWS }}
-        >
-        <GlassCard tone="cyan" className="col-span-7 flex min-h-0 flex-col overflow-hidden">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
-                Weather · {weather?.location ?? 'London'}
-              </p>
-              <div className="mt-2 flex items-end gap-4">
-                <p className="display-type text-5xl font-extralight leading-none text-white text-glow md:text-6xl">
-                  {weather?.temperature ?? 17}°
-                </p>
-                <div className="pb-1.5">
-                  <p className="display-type text-xl font-light text-white/90">
-                    {weather?.condition ?? 'Soft rain clearing'}
-                  </p>
-                  <p className="mt-1 max-w-sm text-xs leading-5 text-white/52">
-                    Unsettled today, then drier and brighter through midweek.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <span className="soft-row glow-ring grid h-11 w-11 shrink-0 place-items-center rounded-2xl">
-              <CloudRain className="h-5 w-5 text-white/90" strokeWidth={1.5} aria-hidden="true" />
-            </span>
-          </div>
-
-          <div className="mt-3 flex min-h-0 flex-1 items-stretch justify-between gap-1.5">
-            {daily.map((slot, index) => {
-              const Icon = dailyIcon[slot.icon] ?? Cloud;
-              return (
-                <div
-                  key={slot.date ?? index}
-                  className={[
-                    'flex flex-1 flex-col items-center justify-end gap-1 rounded-2xl py-2 transition-colors',
-                    index === 0 ? 'soft-row' : 'hover:bg-white/4',
-                  ].join(' ')}
-                >
-                  <span className="clock-figures text-sm font-semibold text-white/90">{slot.hi}°</span>
-                  <div className="relative flex w-full flex-1 items-end justify-center">
-                    <div className="h-full w-1.5 rounded-full bg-white/8" />
-                    <div
-                      className={[
-                        'absolute bottom-0 left-1/2 w-1.5 -translate-x-1/2 rounded-full bg-gradient-to-t from-cyan-300/80 to-white/80',
-                        index === 0 ? 'glow-dot text-cyan-200' : '',
-                      ].join(' ')}
-                      style={{ height: `${barHeight(slot.hi, dailyMin, dailyMax)}%` }}
-                    />
-                  </div>
-                  <span className="clock-figures text-[0.6875rem] font-medium text-white/45">{slot.lo}°</span>
-                  <Icon className="h-4 w-4 text-white/60" strokeWidth={1.7} aria-hidden="true" />
-                  <span className="text-[0.625rem] font-medium uppercase tracking-[0.12em] text-white/40">
-                    {index === 0 ? 'Today' : slot.day}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 grid grid-cols-4 divide-x divide-white/10 border-t border-white/10 pt-3">
-            <WeatherStat label="Feels" value={`${weather?.feelsLike ?? 17}°`} />
-            <WeatherStat label="Rain" value={weather?.precipitation ?? '38%'} />
-            <WeatherStat label="Wind" value={weather?.wind ?? '9 mph SW'} />
-            <WeatherStat label="Air" value={weather?.airQuality ?? 24} />
-          </div>
-        </GlassCard>
-
-        <GlassCard delay={120} className="col-span-5 row-span-2 flex min-h-0 flex-col overflow-hidden">
-          <div className="mb-1">
-            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Upcoming</p>
-          </div>
-
-          <div className="relative min-h-0 flex-1 pr-1">
-            {next5.length === 0 ? (
-              <div className="flex h-full items-center justify-center px-6 text-center text-xs text-white/40">
-                {calendar.loading ? 'Syncing calendars…' : 'Nothing upcoming'}
-              </div>
-            ) : (
-              <>
-                {/* Continuous timeline spine; dots sit on it per event. */}
-                <div className="pointer-events-none absolute bottom-4 left-[3.95rem] top-4 w-px bg-gradient-to-b from-cyan-200/45 via-white/12 to-transparent" />
-                <div className="flex h-full flex-col justify-between py-1">
-                  {next5.map((event) => (
-                  <div
-                    key={event.id}
-                    className="grid grid-cols-[2.9rem_1.15rem_1fr] items-start gap-2 rounded-xl py-1.5 pr-1 transition-colors hover:bg-white/[0.04]"
-                  >
-                    <div className="pt-0.5 text-right leading-tight">
-                      {event.allDay ? (
-                        <>
-                          <p className="text-sm font-semibold text-white/85">{relDay(event.offset, event.key)}</p>
-                          <p className="text-[0.625rem] font-medium uppercase tracking-[0.08em] text-white/35">all day</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="clock-figures text-sm font-semibold text-white/85">{event.time}</p>
-                          <p className="text-[0.625rem] font-medium uppercase tracking-[0.08em] text-cyan-100/45">
-                            {relDay(event.offset, event.key)}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                    <div className="flex justify-center pt-[0.4rem]">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full ring-2 ring-white/10"
-                        style={{ backgroundColor: event.color }}
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <div className="min-w-0 pt-0.5">
-                      <p className="display-type truncate text-[1.05rem] font-normal leading-tight text-white">
-                        {event.title}
-                      </p>
-                      {event.meta && <p className="mt-0.5 truncate text-xs text-white/45">{event.meta}</p>}
-                    </div>
-                  </div>
-                  ))}
-                </div>
-              </>
+          <div className="mt-8 flex items-center gap-2">
+            {onAskPulse && (
+              <form
+                className="group relative w-[30rem] max-w-full"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  askPulse();
+                }}
+              >
+                <label htmlFor="home-ask-pulse" className="sr-only">
+                  Ask Pulse
+                </label>
+                <Sparkles
+                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-accent"
+                  aria-hidden="true"
+                />
+                <input
+                  id="home-ask-pulse"
+                  type="text"
+                  value={askText}
+                  onChange={(event) => setAskText(event.target.value)}
+                  placeholder="Ask Pulse anything"
+                  className="h-11 w-full rounded-full bg-white/[0.07] pl-11 pr-4 text-[0.9375rem] text-moon shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] outline-none backdrop-blur-md transition placeholder:text-moon/45 focus:bg-white/[0.11] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                />
+              </form>
             )}
+            <SettingsButton />
           </div>
+        </div>
 
-          <div className="mt-3 shrink-0 border-t border-white/10 pt-3">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">{pinned.label}</p>
+        {/* What's next — what it is and when it starts across the top, then its
+            icon beside the detail: title, when, and where over two lines. */}
+        <div className="w-full min-w-0 pb-1">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              {pinnedEvent ? (
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: pinnedEvent.color }}
+                  aria-hidden="true"
+                />
+              ) : null}
+              <p className="t-label truncate">{pinned.label}</p>
               <button
                 type="button"
                 onClick={() => setShowPinnedConfig(true)}
                 aria-label="Configure pinned event"
-                className="text-white/35 transition hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="pill h-7 w-7 shrink-0 px-0 text-moon/70"
               >
                 <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
             {pinnedEvent ? (
-              <div className="glow-ring relative flex items-center gap-3 overflow-hidden rounded-2xl bg-white/[0.05] p-3 pl-4 ring-1 ring-white/10">
-                <span
-                  className="absolute inset-y-0 left-0 w-1.5"
-                  style={{ backgroundColor: pinnedEvent.color }}
-                  aria-hidden="true"
-                />
-                {pinned.image ? (
-                  <img
-                    src={pinned.image}
-                    alt=""
-                    className="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-white/15"
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowPinnedConfig(true)}
-                    aria-label="Add an image"
-                    className="grid h-14 w-14 shrink-0 place-items-center rounded-xl ring-1 ring-white/10 transition hover:ring-white/25"
-                    style={{ backgroundColor: tint(pinnedEvent.color, '26') }}
-                  >
-                    <CalendarDays className="h-6 w-6 text-white/55" aria-hidden="true" />
-                  </button>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <p className="display-type min-w-0 flex-1 truncate text-[1.05rem] font-medium leading-tight text-white">
-                      {pinned.title || pinnedEvent.title}
-                    </p>
-                    <span className="clock-figures shrink-0 text-sm font-medium text-cyan-100/85">
-                      {pinnedEvent.timeLabel || 'All day'}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-white/50">
-                    {dateLabel(pinnedEvent.key)}
-                    <span className="text-white/25"> · </span>
-                    <span className="text-cyan-100/60">{startsIn(pinnedEvent.offset, pinnedEvent.time, now)}</span>
-                    {pinnedEvent.meta ? <span className="text-white/40"> · {pinnedEvent.meta}</span> : null}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowPinnedConfig(true)}
-                className="soft-row flex w-full items-center justify-center rounded-2xl p-3 text-xs text-white/40 transition hover:text-white/70"
+              <p
+                key={startsIn(pinnedEvent.offset, pinnedEvent.time, now)}
+                className="display-figures figure-tick shrink-0 text-[1.125rem] italic leading-none text-accent"
               >
-                {pinned.match ? `No upcoming “${pinned.match}”` : 'Pick an event to track →'}
-              </button>
-            )}
+                {startsIn(pinnedEvent.offset, pinnedEvent.time, now)}
+              </p>
+            ) : null}
           </div>
 
-          {showPinnedConfig && (
-            <PinnedConfig
-              pinned={pinned}
-              events={eventChoices}
-              onSave={(next) => update({ pinned: next })}
-              onClose={() => setShowPinnedConfig(false)}
-            />
+          {pinnedEvent ? (
+            <div className="mt-3.5 flex items-start gap-4">
+              {pinned.image ? (
+                <img
+                  src={pinned.image}
+                  alt=""
+                  className="h-[5.25rem] w-[5.25rem] shrink-0 rounded-[1.1rem] object-cover shadow-2xl ring-1 ring-white/15"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <p className="t-title truncate text-[1.75rem] leading-[1.15]">{pinned.title || pinnedEvent.title}</p>
+                <p className="t-body mt-1 truncate text-[1rem] text-moon/90">
+                  {dateLabel(pinnedEvent.key)},&ensp;
+                  <span className="clock-figures">{pinnedEvent.timeLabel || 'All day'}</span>
+                </p>
+                {pinnedEvent.meta ? <p className="t-micro mt-1 truncate italic">{pinnedEvent.meta}</p> : null}
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setShowPinnedConfig(true)} className="pill mt-4 h-9 px-4">
+              {pinned.match ? `No upcoming “${pinned.match}”` : 'Pick an event to track'}
+            </button>
           )}
-        </GlassCard>
+        </div>
+      </SkyZone>
 
-        <GlassCard delay={200} className="col-span-7 flex min-h-0 flex-col overflow-hidden">
-          <div className="flex items-center justify-between">
-            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Launchpad</p>
+      {/* ── Ground: what's coming, the week's weather, and your apps ───────── */}
+      <Ground className="grid grid-cols-[1.05fr_1.3fr_0.82fr]">
+        <Column label="Upcoming" className="pr-8 pt-7">
+          {next5.length === 0 ? (
+            <p className="mt-7 text-[0.9375rem] text-dim">{calendar.loading ? 'Syncing calendars…' : 'Nothing upcoming'}</p>
+          ) : (
+            <ol className="cascade relative mt-[1.375rem]">
+              <span
+                className="pointer-events-none absolute bottom-6 left-[4.85rem] top-5 w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent"
+                aria-hidden="true"
+              />
+              {next5.map((event) => (
+                <li
+                  key={event.id}
+                  className="ground-row grid grid-cols-[3.6rem_1.5rem_minmax(0,1fr)] items-start gap-2 py-2.5 pr-2"
+                >
+                  <div className="text-right leading-tight">
+                    <p className="text-[1rem] font-medium text-moon">{relDay(event.offset, event.key)}</p>
+                    <p className="clock-figures t-micro mt-0.5">{event.allDay ? 'All day' : event.time}</p>
+                  </div>
+                  <span
+                    className="relative z-10 mx-auto mt-[0.4rem] h-2.5 w-2.5 rounded-full shadow-[0_0_0_4px_rgba(10,13,28,0.95)]"
+                    style={{ backgroundColor: event.color }}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0">
+                    <p className="t-title truncate text-[1.25rem]">{event.title}</p>
+                    {event.meta ? <p className="t-meta mt-0.5 truncate">{event.meta}</p> : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Column>
+
+        <Column label="Forecast" className="ground-rule px-8 pt-7" bodyClassName="flex min-h-0 flex-col pb-2">
+          {/* What it's doing right now, at the head of the week it belongs to. */}
+          <div className="mt-[1.6875rem] flex shrink-0 items-center gap-4">
+            <NowIcon className="h-9 w-9 shrink-0 text-moon/85" strokeWidth={1.3} aria-hidden="true" />
+            <p className="display-figures text-[3rem] leading-none text-moon">{weather?.temperature ?? 17}°</p>
+            <div className="min-w-0 leading-tight">
+              <p className="t-body truncate text-[1.0625rem] text-moon">
+                {weather?.condition ?? 'Soft rain clearing'} in {weather?.location ?? 'London'}
+              </p>
+              <p className="t-meta clock-figures mt-1.5">
+                High <span className="temp-hi">{weather?.high ?? daily[0]?.hi}°</span>&ensp;Low{' '}
+                <span className="temp-lo">{weather?.low ?? daily[0]?.lo}°</span>
+                {weather?.sunset ? (
+                  <>
+                    &ensp;Sunset <span className="text-moon/75">{weather.sunset}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="mt-6 h-px shrink-0 bg-gradient-to-r from-white/[0.2] via-white/[0.16] to-white/[0.07]"
+            aria-hidden="true"
+          />
+
+          <ul className="cascade mt-6 shrink-0 space-y-[1.15rem]">
+            {daily.map((slot, index) => {
+              const Icon = dailyIcon[slot.icon] ?? Cloud;
+              const left = ((slot.lo - rangeMin) / rangeSpan) * 100;
+              const width = Math.max(4, ((slot.hi - slot.lo) / rangeSpan) * 100);
+              const nowAt =
+                index === 0 && weather?.temperature != null
+                  ? Math.min(100, Math.max(0, ((weather.temperature - rangeMin) / rangeSpan) * 100))
+                  : null;
+              return (
+                <li
+                  key={slot.date ?? index}
+                  className="grid grid-cols-[3.25rem_1.25rem_2.25rem_minmax(0,1fr)_2.25rem] items-center gap-3"
+                >
+                  <span
+                    className={
+                      index === 0 ? 'text-[0.9375rem] font-medium text-accent' : 'text-[0.9375rem] text-moon/70'
+                    }
+                  >
+                    {index === 0 ? 'Today' : slot.day}
+                  </span>
+                  <Icon className="h-4 w-4 text-moon/45" strokeWidth={1.6} aria-hidden="true" />
+                  <span className="clock-figures temp-lo text-right text-[0.9375rem]">{slot.lo}°</span>
+                  <span className="relative h-[5px] rounded-full bg-white/[0.045]">
+                    <span
+                      className="bar-grow absolute inset-y-0 rounded-full"
+                      style={{
+                        left: `${left}%`,
+                        width: `${width}%`,
+                        background:
+                          'linear-gradient(90deg, color-mix(in srgb, var(--accent) 38%, transparent), color-mix(in srgb, var(--moon) 70%, transparent))',
+                      }}
+                    />
+                    {nowAt != null ? (
+                      <span
+                        className="absolute top-1/2 h-[0.8rem] w-[2px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-moon shadow-[0_0_6px_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                        style={{ left: `${nowAt}%` }}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </span>
+                  <span className="clock-figures temp-hi text-[0.9375rem]">{slot.hi}°</span>
+                </li>
+              );
+            })}
+          </ul>
+          {/* The four readings on one line: the icon says which, so the words
+              don't have to. Each keeps its name for screen readers and hover. */}
+          <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-white/[0.05] pt-6">
+            <WeatherStat icon={Thermometer} tint="#ffb4a2" label="Feels like" value={`${weather?.feelsLike ?? 17}°`} />
+            <WeatherStat icon={Droplets} tint="#8fc7ff" label="Rain" value={weather?.precipitation ?? '38%'} />
+            <WeatherStat icon={Wind} tint="#c7d2f0" label="Wind" value={weather?.wind ?? '9 mph SW'} />
+            <WeatherStat icon={Leaf} tint="#8fe0b8" label="Air quality" value={weather?.airQuality ?? 24} />
+          </div>
+        </Column>
+
+        <Column
+          label="Launch"
+          action={
             <button
               type="button"
               onClick={() => setShowLaunchpad(true)}
               aria-label="Choose launchpad apps"
-              className="text-white/35 transition hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="pill h-7 w-7 px-0 text-moon/70"
             >
               <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
-          </div>
-          <div
-            className="mx-auto flex w-full max-w-[46rem] flex-1 flex-col justify-center"
-            style={{ padding: LAUNCHPAD_PADDING }}
-          >
-            {launchpad.length === 0 ? (
-              <button
-                type="button"
-                onClick={() => setShowLaunchpad(true)}
-                className="mx-auto rounded-xl px-4 py-3 text-xs text-white/45 transition hover:text-white/75"
-              >
-                Choose apps &amp; sites to add →
-              </button>
-            ) : (
-              <div className="grid grid-cols-5 items-start gap-x-2 gap-y-3">
-                {launchpad.slice(0, 10).map((item) => {
-                  const label = itemLabel(item);
-                  return (
-                    <button
-                      key={itemKey(item)}
-                      type="button"
-                      onClick={() => launchItem(item)}
-                      className="group flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1 transition hover:-translate-y-1 hover:bg-white/6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                      aria-label={`Open ${label}`}
-                    >
-                      <LaunchIcon item={item} />
-                      <span className="w-full truncate text-center text-[0.625rem] font-medium text-white/45 transition group-hover:text-white/80">
-                        {label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {showLaunchpad && (
-            <LaunchpadPicker selected={launchpad} onChange={(apps) => update({ launchpad: apps })} onClose={() => setShowLaunchpad(false)} />
+          }
+          className="ground-rule pl-8 pt-7"
+        >
+          {launchpad.length === 0 ? (
+            <button type="button" onClick={() => setShowLaunchpad(true)} className="pill mt-7 h-9 px-4">
+              Choose apps and sites to add
+            </button>
+          ) : (
+            <div className="cascade mt-[0.625rem] grid grid-cols-3 gap-x-2 gap-y-2">
+              {launchpad.slice(0, 12).map((item) => {
+                const label = itemLabel(item);
+                return (
+                  <button
+                    key={itemKey(item)}
+                    type="button"
+                    onClick={() => launchItem(item)}
+                    aria-label={`Open ${label}`}
+                    className="group flex min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-2.5 transition hover:bg-white/[0.05] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+                  >
+                    <LaunchIcon
+                      item={item}
+                      className="h-12 w-12 transition-transform duration-300 group-hover:-translate-y-0.5"
+                    />
+                    <span className="w-full truncate text-center text-[0.75rem] text-haze transition group-hover:text-moon">
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
-        </GlassCard>
-        </section>
-      </div>
+        </Column>
+      </Ground>
+
+      {showPinnedConfig && (
+        <PinnedConfig
+          pinned={pinned}
+          events={eventChoices}
+          onSave={(next) => update({ pinned: next })}
+          onClose={() => setShowPinnedConfig(false)}
+        />
+      )}
+      {showLaunchpad && (
+        <LaunchpadPicker
+          selected={launchpad}
+          onChange={(apps) => update({ launchpad: apps })}
+          onClose={() => setShowLaunchpad(false)}
+        />
+      )}
     </div>
   );
 }
 
-function WeatherStat({ label, value }) {
+function WeatherStat({ icon: Icon, tint, label, value }) {
   return (
-    <div className="px-3 first:pl-0">
-      <p className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-white/38">
-        {label}
+    <div className="flex min-w-0 items-center gap-2" title={label}>
+      <Icon
+        className="h-[1.05rem] w-[1.05rem] shrink-0"
+        style={{ color: tint, opacity: 0.75 }}
+        strokeWidth={1.7}
+        aria-hidden="true"
+      />
+      <p className="clock-figures truncate text-[0.9375rem] text-moon">
+        <span className="sr-only">{label}: </span>
+        {value}
       </p>
-      <p className="weather-metric clock-figures mt-0.5 text-base font-medium">{value}</p>
     </div>
   );
 }
@@ -573,12 +565,12 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
       <div className="absolute inset-0 bg-[#070b18]/70 backdrop-blur-sm" aria-hidden="true" />
       <div className="theme-card fade-in relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-3xl p-5">
         <div className="mb-4 flex shrink-0 items-center justify-between">
-          <h2 className="display-type text-lg font-light text-white text-glow">Highlight event</h2>
+          <h2 className="display-type text-lg font-light text-moon text-glow">Highlight event</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close event highlight settings"
-            className="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="grid h-8 w-8 place-items-center rounded-full text-moon/50 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -588,31 +580,31 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
           {/* Left — the tracker config */}
           <div className="space-y-3">
             <label className="block">
-              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.75rem] font-semibold text-moon/42">
                 Category
               </span>
               <input
                 value={draft.label}
                 onChange={(event) => patch({ label: event.target.value })}
                 placeholder="My next shift"
-                className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+                className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
               />
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.75rem] font-semibold text-moon/42">
                 Display title
               </span>
               <input
                 value={draft.title}
                 onChange={(event) => patch({ title: event.target.value })}
                 placeholder={selected?.title || draft.match || 'Shift at B&Q'}
-                className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+                className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
               />
             </label>
 
             <div>
-              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.75rem] font-semibold text-moon/42">
                 Image
               </span>
               <div className="flex items-center gap-3">
@@ -620,11 +612,11 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
                   <img src={draft.image} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-white/15" />
                 ) : (
                   <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-white/8 ring-1 ring-white/10">
-                    <ImagePlus className="h-5 w-5 text-white/40" aria-hidden="true" />
+                    <ImagePlus className="h-5 w-5 text-moon/40" aria-hidden="true" />
                   </div>
                 )}
                 <div className="flex flex-col items-start gap-1.5">
-                  <label className="cursor-pointer rounded-lg bg-white/8 px-3 py-1.5 text-xs font-semibold text-white/80 ring-1 ring-white/12 transition hover:bg-white/12">
+                  <label className="cursor-pointer rounded-lg bg-white/8 px-3 py-1.5 text-xs font-semibold text-moon/80 ring-1 ring-white/12 transition hover:bg-white/12">
                     {draft.image ? 'Change image' : 'Upload image'}
                     <input type="file" accept="image/*" onChange={onFile} className="hidden" />
                   </label>
@@ -632,7 +624,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
                     <button
                       type="button"
                       onClick={() => patch({ image: '' })}
-                      className="text-[0.6875rem] font-medium text-rose-300/80 transition hover:text-rose-300"
+                      className="text-[0.8125rem] font-medium text-rose-300/80 transition hover:text-rose-300"
                     >
                       Remove
                     </button>
@@ -642,14 +634,14 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
             </div>
 
             <label className="block">
-              <span className="mb-1.5 block text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
+              <span className="mb-1.5 block text-[0.75rem] font-semibold text-moon/42">
                 Match title
               </span>
               <input
                 value={draft.match}
                 onChange={(event) => patch({ match: event.target.value })}
                 placeholder="Select or type an event title"
-                className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+                className="w-full rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
               />
             </label>
 
@@ -660,13 +652,13 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
               aria-pressed={draft.excludeFromUpcoming}
             >
               <span className="min-w-0">
-                <span className="block text-sm font-medium text-white/82">Hide from Upcoming</span>
-                <span className="mt-0.5 block text-[0.6875rem] text-white/42">Hides every occurrence from the list.</span>
+                <span className="block text-sm font-medium text-moon/82">Hide from Upcoming</span>
+                <span className="mt-0.5 block text-[0.8125rem] text-moon/42">Hides every occurrence from the list.</span>
               </span>
               <span
                 className={[
                   'relative h-5 w-9 shrink-0 rounded-full ring-1 transition',
-                  draft.excludeFromUpcoming ? 'bg-cyan-200/25 ring-cyan-200/35' : 'bg-white/8 ring-white/14',
+                  draft.excludeFromUpcoming ? 'bg-accent/25 ring-accent/35' : 'bg-white/8 ring-white/14',
                 ].join(' ')}
                 aria-hidden="true"
               >
@@ -682,12 +674,12 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
 
           {/* Right — pick from your calendar events */}
           <div className="flex min-h-0 flex-col">
-            <span className="mb-1.5 block shrink-0 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">
+            <span className="mb-1.5 block shrink-0 text-[0.75rem] font-semibold text-moon/42">
               Events
             </span>
             <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
               {events.length === 0 ? (
-                <p className="rounded-2xl bg-white/[0.04] px-3 py-5 text-center text-xs text-white/40">
+                <p className="rounded-2xl bg-white/[0.04] px-3 py-5 text-center text-xs text-moon/40">
                   No upcoming calendar events.
                 </p>
               ) : (
@@ -701,8 +693,8 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
                       className={[
                         'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
                         active
-                          ? 'bg-cyan-200/12 text-white ring-1 ring-cyan-200/25'
-                          : 'bg-white/[0.04] text-white/74 hover:bg-white/[0.07] hover:text-white',
+                          ? 'bg-accent/12 text-moon ring-1 ring-accent/25'
+                          : 'bg-white/[0.04] text-moon/74 hover:bg-white/[0.07] hover:text-moon',
                       ].join(' ')}
                     >
                       <span
@@ -712,12 +704,12 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{event.title}</span>
-                        <span className="mt-0.5 block truncate text-[0.6875rem] text-white/45">
+                        <span className="mt-0.5 block truncate text-[0.8125rem] text-moon/45">
                           {event.time || 'all day'} · {relDay(event.offset, event.key)}
                           {event.meta ? ` · ${event.meta}` : ''}
                         </span>
                       </span>
-                      {active ? <Check className="h-4 w-4 shrink-0 text-cyan-100" aria-hidden="true" /> : null}
+                      {active ? <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" /> : null}
                     </button>
                   );
                 })
@@ -730,7 +722,7 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
           <button
             type="button"
             onClick={() => patch({ match: '', title: '' })}
-            className="rounded-xl px-3 py-2 text-xs font-medium text-white/45 transition hover:bg-white/8 hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="rounded-xl px-3 py-2 text-xs font-medium text-moon/45 transition hover:bg-white/8 hover:text-moon/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             Track next event
           </button>
@@ -738,14 +730,14 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-3 py-2 text-xs font-medium text-white/45 transition hover:bg-white/8 hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="rounded-xl px-3 py-2 text-xs font-medium text-moon/45 transition hover:bg-white/8 hover:text-moon/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={save}
-              className="rounded-xl bg-cyan-200/15 px-3 py-2 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="rounded-xl bg-accent/15 px-3 py-2 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               Save
             </button>
@@ -812,14 +804,14 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
       <div className="absolute inset-0 bg-[#070b18]/70 backdrop-blur-sm" aria-hidden="true" />
       <div className="theme-card fade-in relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-3xl p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="display-type text-lg font-light text-white text-glow">Launchpad</h2>
+          <h2 className="display-type text-lg font-light text-moon text-glow">Launchpad</h2>
           <div className="flex items-center gap-3">
-            <span className="text-[0.6875rem] font-medium text-white/40">{selected.length}/10</span>
+            <span className="text-[0.8125rem] font-medium text-moon/40">{selected.length}/10</span>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              className="grid h-8 w-8 place-items-center rounded-full text-moon/50 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -837,7 +829,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
               onClick={() => setTab(id)}
               className={[
                 'flex-1 rounded-lg px-3 py-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-                tab === id ? 'bg-white/12 text-white ring-1 ring-white/10' : 'text-white/50 hover:text-white/80',
+                tab === id ? 'bg-white/12 text-moon ring-1 ring-white/10' : 'text-moon/50 hover:text-moon/80',
               ].join(' ')}
             >
               {label}
@@ -852,14 +844,14 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search apps…"
-              className="mb-3 w-full shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+              className="mb-3 w-full shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
             />
 
             <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
               {apps === null ? (
-                <p className="py-10 text-center text-xs text-white/40">Reading your applications…</p>
+                <p className="py-10 text-center text-xs text-moon/40">Reading your applications…</p>
               ) : filtered.length === 0 ? (
-                <p className="py-10 text-center text-xs text-white/40">No apps found.</p>
+                <p className="py-10 text-center text-xs text-moon/40">No apps found.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                   {filtered.map((a) => {
@@ -871,14 +863,14 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                         onClick={() => toggle(a.name)}
                         className={[
                           'flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-                          on ? 'bg-cyan-200/12 ring-1 ring-cyan-200/25' : 'hover:bg-white/[0.06]',
+                          on ? 'bg-accent/12 ring-1 ring-accent/25' : 'hover:bg-white/[0.06]',
                         ].join(' ')}
                       >
                         <AppIcon app={a.name} className="h-8 w-8" />
-                        <span className={`min-w-0 flex-1 truncate text-xs ${on ? 'text-white' : 'text-white/70'}`}>
+                        <span className={`min-w-0 flex-1 truncate text-xs ${on ? 'text-moon' : 'text-moon/70'}`}>
                           {a.name}
                         </span>
-                        {on && <Check className="h-4 w-4 shrink-0 text-cyan-100" aria-hidden="true" />}
+                        {on && <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />}
                       </button>
                     );
                   })}
@@ -886,7 +878,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
               )}
             </div>
 
-            <p className="mt-3 shrink-0 text-[0.625rem] text-white/38">
+            <p className="mt-3 shrink-0 text-[0.75rem] text-moon/38">
               Pick up to 10 items. Icons come straight from each app; tap a launchpad tile to open it.
             </p>
           </>
@@ -898,7 +890,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                   value={siteName}
                   onChange={(e) => setSiteName(e.target.value)}
                   placeholder="Name (optional)"
-                  className="w-1/3 shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+                  className="w-1/3 shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
                 />
                 <input
                   value={siteUrl}
@@ -913,24 +905,24 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                     }
                   }}
                   placeholder="figma.com"
-                  className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-cyan-100/40 focus:bg-white/12"
+                  className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
                 />
                 <button
                   type="button"
                   onClick={addSite}
                   disabled={atLimit || !siteUrl.trim()}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-cyan-200/15 px-3 py-2 text-xs font-semibold text-cyan-50 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent/15 px-3 py-2 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                   Add
                 </button>
               </div>
-              {siteError && <p className="text-[0.6875rem] font-medium text-rose-300/80">{siteError}</p>}
+              {siteError && <p className="text-[0.8125rem] font-medium text-rose-300/80">{siteError}</p>}
             </div>
 
             <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
               {sites.length === 0 ? (
-                <p className="py-10 text-center text-xs text-white/40">
+                <p className="py-10 text-center text-xs text-moon/40">
                   No websites yet — add one above to pin it to your launchpad.
                 </p>
               ) : (
@@ -942,16 +934,16 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                     >
                       <SiteIcon url={site.url} className="h-8 w-8" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium text-white">
+                        <span className="block truncate text-xs font-medium text-moon">
                           {site.name || hostOf(site.url)}
                         </span>
-                        <span className="block truncate text-[0.6875rem] text-white/40">{hostOf(site.url)}</span>
+                        <span className="block truncate text-[0.8125rem] text-moon/40">{hostOf(site.url)}</span>
                       </span>
                       <button
                         type="button"
                         onClick={() => removeSite(site.url)}
                         aria-label={`Remove ${site.name || hostOf(site.url)}`}
-                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/35 transition hover:bg-white/10 hover:text-rose-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-moon/35 transition hover:bg-white/10 hover:text-rose-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                       >
                         <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
@@ -961,7 +953,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
               )}
             </div>
 
-            <p className="mt-3 shrink-0 text-[0.625rem] text-white/38">
+            <p className="mt-3 shrink-0 text-[0.75rem] text-moon/38">
               Pick up to 10 items total. Websites open in your default browser.
             </p>
           </>

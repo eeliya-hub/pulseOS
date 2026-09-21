@@ -101,7 +101,7 @@ export default function MiniPlayer() {
         type="button"
         onPointerDown={startDrag}
         aria-label="Move player"
-        className="grid h-9 w-5 shrink-0 cursor-grab touch-none place-items-center rounded-md text-white/30 transition hover:text-white/60 active:cursor-grabbing"
+        className="grid h-9 w-5 shrink-0 cursor-grab touch-none place-items-center rounded-md text-moon/30 transition hover:text-moon/60 active:cursor-grabbing"
       >
         <GripVertical className="h-4 w-4" aria-hidden="true" />
       </button>
@@ -112,19 +112,19 @@ export default function MiniPlayer() {
           <img src={state.image} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="grid h-full w-full place-items-center bg-white/8">
-            <Music2 className="h-4 w-4 text-white/40" aria-hidden="true" />
+            <Music2 className="h-4 w-4 text-moon/40" aria-hidden="true" />
           </div>
         )}
         {/* thin progress line under the art */}
         <span className="absolute inset-x-0 bottom-0 h-0.5 bg-white/15" aria-hidden="true">
-          <span className="block h-full bg-cyan-200" style={{ width: `${progress * 100}%` }} />
+          <span className="block h-full bg-accent" style={{ width: `${progress * 100}%` }} />
         </span>
       </div>
 
       {/* Meta */}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold text-white/90">{state.track}</p>
-        <p className="truncate text-[0.6875rem] text-white/45">{playbackError || state.artists || '—'}</p>
+        <p className="truncate text-xs font-semibold text-moon/90">{state.track}</p>
+        <p className="truncate text-[0.8125rem] text-moon/45">{playbackError || state.artists || '—'}</p>
       </div>
 
       {/* Controls */}
@@ -133,7 +133,7 @@ export default function MiniPlayer() {
           type="button"
           onClick={controls.previous}
           aria-label="Previous track"
-          className="grid h-7 w-7 place-items-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white focus:outline-none"
+          className="grid h-7 w-7 place-items-center rounded-full text-moon/60 transition hover:bg-white/10 hover:text-moon focus:outline-none"
         >
           <SkipBack className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true" />
         </button>
@@ -141,7 +141,7 @@ export default function MiniPlayer() {
           type="button"
           onClick={controls.toggle}
           aria-label={paused ? 'Play' : 'Pause'}
-          className="orb-button grid h-8 w-8 place-items-center rounded-full text-white transition-transform hover:scale-105 focus:outline-none"
+          className="orb-button grid h-8 w-8 place-items-center rounded-full text-moon transition-transform hover:scale-105 focus:outline-none"
         >
           {paused ? (
             <Play className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true" />
@@ -153,7 +153,7 @@ export default function MiniPlayer() {
           type="button"
           onClick={controls.next}
           aria-label="Next track"
-          className="grid h-7 w-7 place-items-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white focus:outline-none"
+          className="grid h-7 w-7 place-items-center rounded-full text-moon/60 transition hover:bg-white/10 hover:text-moon focus:outline-none"
         >
           <SkipForward className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true" />
         </button>
@@ -163,7 +163,7 @@ export default function MiniPlayer() {
         type="button"
         onClick={() => setDismissed(true)}
         aria-label="Hide mini player"
-        className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-white/30 transition hover:bg-white/10 hover:text-white/70 focus:outline-none"
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-moon/30 transition hover:bg-white/10 hover:text-moon/70 focus:outline-none"
       >
         <X className="h-3.5 w-3.5" aria-hidden="true" />
       </button>

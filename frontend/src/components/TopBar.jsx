@@ -1,29 +1,27 @@
-import { Zap } from 'lucide-react';
 import { formatClock, formatShortDate } from '../utils/dateTime.js';
+import PulseMark from './PulseMark.jsx';
 
-export default function TopBar({ activeLabel, now }) {
+/**
+ * The line across the top of every view: whose dashboard this is, and the time.
+ * Which view you're on is said by the view itself, not repeated here.
+ */
+export default function TopBar({ now }) {
   return (
-    <header className="relative z-20 flex shrink-0 items-center justify-between px-6 pb-1 pt-4 md:px-8">
-      <div className="flex items-center gap-2.5">
-        <span className="glow-ring grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-tr from-cyan-300/80 to-purple-400/80">
-          <Zap className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-        </span>
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/85">
-          Pulse
-        </p>
-        <span className="h-1 w-1 rounded-full bg-white/25" aria-hidden="true" />
-        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.22em] text-white/40">
-          {activeLabel}
-        </p>
+    <header className="relative z-20 shrink-0 px-5 pb-1 pt-4 md:px-8">
+      {/* Same column as the views, so the mark, the titles and the panes share one left edge. */}
+      <div className="mx-auto flex max-w-[80rem] items-center justify-between">
+      <div className="flex items-center gap-2">
+        <PulseMark className="h-[1.05rem] w-[2.6rem] text-accent" />
+        <p className="display-type text-[1.3rem] leading-none text-moon">Pulse</p>
       </div>
 
-      <div className="flex items-center gap-3 text-white/70">
-        <p className="text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-white/40">
-          {formatShortDate(now)}
-        </p>
-        <p className="clock-figures text-lg font-semibold text-white/90">
-          {formatClock(now)}
-        </p>
+      {/* The date reads as a line of type; the time is a figure, set in the
+          display face so it carries at a glance from across the room. */}
+      <div className="flex items-center gap-4">
+        <p className="t-label text-right leading-tight text-haze">{formatShortDate(now)}</p>
+        <span className="h-7 w-px shrink-0 bg-white/15" aria-hidden="true" />
+        <p className="display-figures text-[2rem] leading-none text-moon">{formatClock(now).replace(' : ', ':')}</p>
+      </div>
       </div>
     </header>
   );

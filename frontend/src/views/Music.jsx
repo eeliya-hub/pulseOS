@@ -19,9 +19,12 @@ import { useEffect, useState } from 'react';
 import GlassCard from '../components/GlassCard.jsx';
 import MusicImmersive from '../components/MusicImmersive.jsx';
 import ViewHeader from '../components/ViewHeader.jsx';
+import { Column, Ground, SkyZone } from '../components/Stage.jsx';
 import { useSpotifyPlayer } from '../hooks/useSpotifyPlayer.js';
+import useWholeRows from '../hooks/useWholeRows.js';
 import { api } from '../services/api/backendClient.js';
 import { albumPalette, DEFAULT_PALETTE, rgba } from '../services/music/albumPalette.js';
+import { setSkyOverride } from '../hooks/useSky.js';
 import { peek, put } from '../services/warmCache.js';
 
 const fmt = (ms) => {
@@ -64,10 +67,9 @@ function DeviceButton({ devices, activeId, thisTabId, playingOn, pendingId, onPi
         aria-expanded={open}
         title={playingOn ? `Playing on ${playingOn}` : 'Play on this dashboard'}
         className={[
-          'soft-button grid h-8 w-8 place-items-center rounded-full transition',
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+          'pill h-11 w-11 px-0',
           // Tinted while the music is somewhere else, so it reads at a glance.
-          playingOn ? 'text-cyan-200' : 'text-white/80',
+          playingOn ? 'pill-accent' : '',
         ].join(' ')}
       >
         {pendingId ? (
@@ -85,10 +87,8 @@ function DeviceButton({ devices, activeId, thisTabId, playingOn, pendingId, onPi
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-40 cursor-default"
           />
-          <div className="absolute bottom-full right-0 z-50 mb-2 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#141a2e]/95 p-1 shadow-xl backdrop-blur-xl">
-            <p className="px-2.5 py-1.5 text-[0.5625rem] font-semibold uppercase tracking-[0.16em] text-white/32">
-              Play on
-            </p>
+          <div className="theme-popover launcher-rise absolute bottom-full right-0 z-50 mb-2 w-60 overflow-hidden rounded-[1.25rem] p-1.5">
+            <p className="px-2.5 py-1.5 text-[0.75rem] font-semibold text-moon/32">Play on</p>
             {options.map((d) => {
               const Icon = DEVICE_ICONS[d.type] ?? Speaker;
               const on = d.id === current.id;
@@ -106,14 +106,14 @@ function DeviceButton({ devices, activeId, thisTabId, playingOn, pendingId, onPi
                   }}
                   className={[
                     'flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs transition',
-                    on ? 'bg-cyan-200/12 text-cyan-50' : 'text-white/65 hover:bg-white/[0.06] hover:text-white',
+                    on ? 'bg-accent/12 text-accent' : 'text-moon/65 hover:bg-white/[0.06] hover:text-moon',
                     pending ? 'cursor-default' : '',
                   ].join(' ')}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span className="truncate">{d.name}</span>
                   {pending ? (
-                    <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-cyan-200/80" aria-hidden="true" />
+                    <Loader2 className="ml-auto h-3.5 w-3.5 shrink-0 animate-spin text-accent/80" aria-hidden="true" />
                   ) : on ? (
                     <Check className="ml-auto h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   ) : null}
@@ -190,6 +190,25 @@ export default function Music() {
     };
   }, [state?.image]);
 
+  // While Music is in front and something is playing, the sky behind the whole
+  // dashboard takes the sleeve's colours — deepened, so the panes still read —
+  // and hands them back to the hour when you leave or the music stops.
+  useEffect(() => {
+    if (!state?.track || palette === DEFAULT_PALETTE) {
+      setSkyOverride(null);
+      return undefined;
+    }
+    const deepen = (rgb, f) => rgba(rgb.map((v) => Math.round(v * f)), 1);
+    setSkyOverride({
+      a: deepen(palette.base, 0.34),
+      b: deepen(palette.accent, 0.62),
+      c: deepen(palette.glow, 0.48),
+      accent: rgba(palette.glow, 1),
+      stars: 0,
+    });
+    return () => setSkyOverride(null);
+  }, [palette, state?.track]);
+
   // Debounced catalogue search across all of Spotify (deduped server-side).
   useEffect(() => {
     const q = query.trim();
@@ -211,6 +230,9 @@ export default function Music() {
 
   const isSearch = query.trim().length > 0;
   const shown = isSearch ? results : recent;
+  // Both lists show only whole rows, so nothing is left cut off at the foot.
+  const playlistRows = useWholeRows(playlists.length);
+  const trackRows = useWholeRows(shown.length);
 
   // ── Gated states ────────────────────────────────────────────────
   if (status === 'needs-auth') {
@@ -222,7 +244,7 @@ export default function Music() {
           <button
             type="button"
             onClick={authorize}
-            className="orb-button mt-5 rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            className="orb-button mt-5 rounded-full px-6 py-2.5 text-sm font-semibold text-moon transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
             Connect Spotify
           </button>
@@ -245,314 +267,259 @@ export default function Music() {
   const progress = durationMs ? Math.min(position / durationMs, 1) : 0;
   const hasTrack = Boolean(state?.track);
 
+  const whereLine = playingOn
+    ? `Playing on ${playingOn}`
+    : status === 'ready' && deviceId
+      ? 'Playing on this device'
+      : status === 'needs-auth'
+        ? 'Connect Spotify to start'
+        : // A failed handshake is a final state, not a slow one: this browser
+          // can't play in-tab (no Premium, or no DRM support). Spotify Connect
+          // still works, so point at that instead of a message that never resolves.
+          status === 'error'
+          ? devices.length
+            ? 'Pick a device to play on'
+            : 'In-app playback unavailable'
+          : 'Connecting to Spotify…';
+
   return (
     <div className="flex h-full flex-col">
-      <ViewHeader
-        lead="Your"
-        accent="Music"
-        subtitle={
-          playingOn
-            ? `Playing on ${playingOn}`
-            : status === 'ready' && deviceId
-              ? 'Playing on this device'
-              : status === 'needs-auth'
-                ? 'Connect Spotify to start'
-                : // A failed handshake is a final state, not a slow one: this
-                  // browser can't play in-tab (no Premium, or no DRM support).
-                  // Spotify Connect still works, so point at that instead of
-                  // showing a spinner message that will never resolve.
-                  status === 'error'
-                  ? devices.length
-                    ? 'Pick a device to play on'
-                    : 'In-app playback unavailable'
-                  : 'Connecting to Spotify…'
-        }
-      />
+      {/* ── Sky: what's playing, as big as the room ───────────────────────── */}
+      <SkyZone className="relative flex items-end gap-10">
+        <div
+          className="breathe pointer-events-none absolute -left-24 -top-24 h-[34rem] w-[34rem] rounded-full transition-[background] duration-1000"
+          style={{
+            background: `radial-gradient(circle, ${rgba(palette.glow, 0.22)} 0%, ${rgba(palette.accent, 0.1)} 42%, transparent 70%)`,
+          }}
+          aria-hidden="true"
+        />
 
-
-
-      <div className="my-auto grid max-h-[24rem] min-h-0 w-full flex-1 grid-cols-[43rem_1fr] grid-rows-[15.75rem_7.25rem] gap-4">
-        {/* ── Now playing ─────────────────────────────────────────── */}
-        <GlassCard
-          tone="cyan"
-          className="group relative col-start-1 row-start-1 flex min-w-0 items-center overflow-hidden !shadow-none"
+        <button
+          type="button"
+          onClick={() => hasTrack && setImmersive(true)}
+          disabled={!hasTrack}
+          aria-label="Open immersive player"
+          title={hasTrack ? 'Open immersive player' : undefined}
+          className="group relative shrink-0 rounded-[1.75rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:cursor-default"
         >
-          <div
-            className="breathe pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full transition-[background] duration-1000"
-            style={{
-              background: `radial-gradient(circle, ${rgba(palette.glow, 0.16)} 0%, ${rgba(palette.accent, 0.09)} 45%, transparent 70%)`,
-            }}
-            aria-hidden="true"
-          />
+          <div className="lift relative h-[16.5rem] w-[16.5rem] overflow-hidden rounded-[1.75rem] bg-white/[0.06] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.85)] ring-1 ring-white/12">
+            {state?.image ? (
+              <img
+                src={state.image}
+                alt=""
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+              />
+            ) : (
+              <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-white/[0.12] via-transparent to-accent/10">
+                <Music2 className="h-14 w-14 text-moon/35" strokeWidth={1.2} aria-hidden="true" />
+              </div>
+            )}
+            {hasTrack ? (
+              <span className="absolute inset-0 grid place-items-center bg-black/40 opacity-0 backdrop-blur-[2px] transition-opacity duration-300 group-hover:opacity-100">
+                <Expand className="h-6 w-6 text-moon" aria-hidden="true" />
+              </span>
+            ) : null}
+          </div>
+        </button>
 
-          <div className="relative z-10 flex w-full items-center gap-7 px-2">
+        <div className="relative min-w-0 flex-1 pb-1">
+          <div className="flex items-center gap-3">
+            <p className="t-label">{hasTrack && !paused ? 'Now playing' : hasTrack ? 'Paused' : 'Nothing playing'}</p>
+            {hasTrack && !paused ? <Equaliser color={rgba(palette.glow, 0.9)} /> : null}
+            <span className="t-meta truncate">{whereLine}</span>
+          </div>
+          <h1 className="t-hero mt-2 line-clamp-2 text-[3.5rem]">{state?.track || 'Pick something to play'}</h1>
+          <p className="t-lede mt-2 truncate text-[1.25rem]">
+            {playbackError || state?.artists || 'A playlist below, or search for anything'}
+          </p>
+
+          <div className="mt-6 flex items-center gap-4">
+            <span className="clock-figures w-10 shrink-0 text-right text-[0.8125rem] text-dim">{fmt(position)}</span>
             <button
               type="button"
-              onClick={() => hasTrack && setImmersive(true)}
-              disabled={!hasTrack}
-              aria-label="Open immersive player"
-              title={hasTrack ? 'Open immersive player' : undefined}
-              className="relative shrink-0 rounded-[1.5rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:cursor-default"
+              aria-label="Seek"
+              onClick={(e) => {
+                if (!durationMs) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                controls.seek(Math.round(((e.clientX - rect.left) / rect.width) * durationMs));
+              }}
+              className="group/seek relative h-1.5 flex-1 cursor-pointer rounded-full bg-white/[0.1]"
             >
-              <div
-                className="breathe absolute -inset-4 rounded-[2rem] transition-[background] duration-1000"
-                style={{ background: `radial-gradient(circle, ${rgba(palette.glow, 0.2)}, transparent 70%)` }}
-                aria-hidden="true"
+              <span
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{ width: `${progress * 100}%`, background: rgba(palette.glow, 0.95) }}
               />
-              <div className="theme-card glow-ring relative h-32 w-32 overflow-hidden rounded-[1.5rem]">
-                {state?.image ? (
-                  <img
-                    src={state.image}
-                    alt=""
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <>
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-cyan-100/12" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Music2 className="h-9 w-9 text-white/45" strokeWidth={1.5} aria-hidden="true" />
-                    </div>
-                  </>
-                )}
-                {hasTrack ? (
-                  <span className="absolute inset-0 grid place-items-center bg-black/45 opacity-0 backdrop-blur-[2px] transition-opacity duration-300 group-hover:opacity-100">
-                    <Expand className="h-5 w-5 text-white" aria-hidden="true" />
-                  </span>
-                ) : null}
-              </div>
+              <span
+                className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-moon shadow-[0_0_0_4px_rgba(10,13,28,0.35)] transition-transform group-hover/seek:scale-110"
+                style={{ left: `${progress * 100}%` }}
+              />
+            </button>
+            <span className="clock-figures w-10 shrink-0 text-[0.8125rem] text-dim">{fmt(durationMs)}</span>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3">
+            <button type="button" onClick={controls.previous} aria-label="Previous track" className="pill h-11 w-11 px-0">
+              <SkipBack className="h-4 w-4" fill="currentColor" aria-hidden="true" />
+            </button>
+            <button type="button" onClick={controls.toggle} aria-label={paused ? 'Play' : 'Pause'} className="pill pill-lit h-14 w-14 px-0">
+              {paused ? (
+                <Play className="ml-0.5 h-5 w-5" fill="currentColor" aria-hidden="true" />
+              ) : (
+                <Pause className="h-5 w-5" fill="currentColor" aria-hidden="true" />
+              )}
+            </button>
+            <button type="button" onClick={controls.next} aria-label="Next track" className="pill h-11 w-11 px-0">
+              <SkipForward className="h-4 w-4" fill="currentColor" aria-hidden="true" />
             </button>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-[0.625rem] font-semibold uppercase tracking-[0.3em] text-white/42">
-                  {hasTrack && !paused ? 'Now playing' : hasTrack ? 'Paused' : 'Now playing'}
-                </p>
-                {hasTrack && !paused ? <Equaliser color={rgba(palette.glow, 0.9)} /> : null}
-              </div>
-              <h1 className="display-type mt-1 truncate text-3xl font-extralight tracking-wide text-white text-glow">
-                {state?.track || 'Nothing playing'}
-              </h1>
-              <p className="mt-1 truncate text-sm font-light text-white/58">
-                {playbackError || state?.artists || 'Pick a playlist or track to start'}
-              </p>
-
-              <div className="mt-4">
-                <button
-                  type="button"
-                  aria-label="Seek"
-                  onClick={(e) => {
-                    if (!durationMs) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    controls.seek(Math.round(((e.clientX - rect.left) / rect.width) * durationMs));
-                  }}
-                  className="relative block h-1 w-full cursor-pointer rounded-full bg-white/10"
-                >
-                  <div
-                    className="glow-dot absolute left-0 top-0 h-1 rounded-full"
-                    style={{ width: `${progress * 100}%`, background: rgba(palette.glow, 0.95), color: rgba(palette.glow, 1) }}
-                  />
-                  <div
-                    className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)]"
-                    style={{ left: `${progress * 100}%` }}
-                  />
-                </button>
-                <div className="mt-1.5 flex justify-between text-[0.625rem] font-medium text-white/42">
-                  <span className="clock-figures">{fmt(position)}</span>
-                  <span className="clock-figures">{fmt(durationMs)}</span>
-                </div>
-              </div>
-
-              <div className="mt-3.5 flex items-center gap-5">
-                <button
-                  type="button"
-                  onClick={controls.previous}
-                  aria-label="Previous track"
-                  className="text-white/55 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                >
-                  <SkipBack className="h-5 w-5" fill="currentColor" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={controls.toggle}
-                  aria-label={paused ? 'Play' : 'Pause'}
-                  className="orb-button flex h-11 w-11 items-center justify-center rounded-full text-white transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                >
-                  {paused ? (
-                    <Play className="ml-0.5 h-4 w-4" fill="currentColor" aria-hidden="true" />
-                  ) : (
-                    <Pause className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={controls.next}
-                  aria-label="Next track"
-                  className="text-white/55 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                >
-                  <SkipForward className="h-5 w-5" fill="currentColor" aria-hidden="true" />
-                </button>
-
-                <div className="ml-auto flex items-center gap-2">
-                  <DeviceButton
-                    devices={devices}
-                    activeId={activeDeviceId}
-                    thisTabId={deviceId}
-                    playingOn={playingOn}
-                    pendingId={transferringTo}
-                    onPick={(id) => controls.transferTo(id)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setImmersive(true)}
-                    disabled={!hasTrack}
-                    aria-label="Immersive view"
-                    title="Immersive view"
-                    className="soft-button grid h-8 w-8 place-items-center rounded-full text-white/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-35"
-                  >
-                    <Expand className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
+            <div className="ml-auto flex items-center gap-2">
+              <DeviceButton
+                devices={devices}
+                activeId={activeDeviceId}
+                thisTabId={deviceId}
+                playingOn={playingOn}
+                pendingId={transferringTo}
+                onPick={(id) => controls.transferTo(id)}
+              />
+              <button
+                type="button"
+                onClick={() => setImmersive(true)}
+                disabled={!hasTrack}
+                aria-label="Immersive view"
+                title="Immersive view"
+                className="pill h-11 w-11 px-0 disabled:opacity-35"
+              >
+                <Expand className="h-4 w-4" aria-hidden="true" />
+              </button>
             </div>
           </div>
-        </GlassCard>
+        </div>
+      </SkyZone>
 
-        {/* ── Search + list ───────────────────────────────────────── */}
-        <GlassCard
-          tone="purple"
-          className="col-start-2 row-start-1 row-span-2 flex min-h-0 flex-col overflow-hidden !shadow-none"
+      {/* ── Ground: your playlists, and what you've been playing ─────────── */}
+      <Ground className="grid grid-cols-[1.45fr_1fr]">
+        <Column label="Your playlists" className="pr-8 pt-7">
+          {playlists.length === 0 ? (
+            <p className="mt-2 text-[0.9375rem] text-dim">{status === 'ready' ? 'No playlists found' : 'Loading playlists…'}</p>
+          ) : (
+            <div ref={playlistRows.frameRef} className="h-full">
+              <div
+                ref={playlistRows.listRef}
+                style={{ height: playlistRows.height }}
+                className="whole-rows glass-scroll cascade grid scroll-pt-2 grid-cols-5 content-start gap-x-4 gap-y-5 overflow-y-auto pr-2 pt-2"
+              >
+                {playlists.map((list) => (
+                  <button
+                    key={list.id}
+                    type="button"
+                    onClick={() => controls.playContext({ contextUri: list.uri })}
+                    aria-label={`Play ${list.name}`}
+                    className="group/list min-w-0 text-left focus:outline-none"
+                  >
+                    <span className="relative block aspect-square overflow-hidden rounded-[1rem] bg-white/[0.06] shadow-[0_18px_40px_-20px_rgba(0,0,0,0.85)] ring-1 ring-white/10 transition-transform duration-500 group-hover/list:-translate-y-1 group-focus-visible/list:ring-2 group-focus-visible/list:ring-accent/60">
+                      {list.image ? (
+                        <img
+                          src={list.image}
+                          alt=""
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover/list:scale-105"
+                        />
+                      ) : (
+                        <ListMusic className="absolute inset-0 m-auto h-8 w-8 text-moon/30" aria-hidden="true" />
+                      )}
+                      <span className="absolute bottom-2 right-2 grid h-9 w-9 translate-y-1 place-items-center rounded-full bg-moon text-ink opacity-0 shadow-lg transition-all duration-300 group-hover/list:translate-y-0 group-hover/list:opacity-100">
+                        <Play className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden="true" />
+                      </span>
+                    </span>
+                    <span className="t-body mt-2 block truncate">{list.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </Column>
+
+        <Column
+          label={isSearch ? 'Search results' : 'Recently played'}
+          action={<span className="clock-figures text-[0.8125rem] text-dim">{searching ? '···' : shown.length}</span>}
+          className="ground-rule pl-8 pt-7"
+          bodyClassName="flex min-h-0 flex-col"
         >
-          <div className="relative shrink-0">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35"
-              aria-hidden="true"
-            />
+          <div className="relative mt-1 shrink-0">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-moon/40" aria-hidden="true" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search all of Spotify"
-              className="w-full rounded-full bg-white/6 py-2.5 pl-9 pr-9 text-sm text-white ring-1 ring-white/10 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/40"
+              className="h-10 w-full rounded-full bg-white/[0.06] pl-11 pr-10 text-[0.9375rem] text-moon shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] placeholder:text-moon/40 focus:outline-none focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
             />
             {isSearch ? (
               <button
                 type="button"
                 onClick={() => setQuery('')}
                 aria-label="Clear search"
-                className="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white focus:outline-none"
+                className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-moon/45 transition hover:bg-white/10 hover:text-moon focus:outline-none"
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             ) : null}
           </div>
 
-          <div className="mb-1 mt-3 flex shrink-0 items-center justify-between px-1">
-            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
-              {isSearch ? 'Search results' : 'Recently played'}
-            </p>
-            <span className="clock-figures text-[0.6875rem] font-medium text-white/40">
-              {searching ? '···' : shown.length}
-            </span>
-          </div>
-
-          <div className="glass-scroll min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
-            {shown.map((track, index) => {
-              const isCurrent = state?.track === track.track;
-              return (
-                <button
-                  key={`${track.uri}-${index}`}
-                  type="button"
-                  onClick={() => controls.playContext({ uris: [track.uri] })}
-                  className={[
-                    'group/row flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left transition',
-                    isCurrent ? 'bg-white/10' : 'hover:bg-white/6',
-                  ].join(' ')}
-                >
-                  <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-white/8">
-                    {track.image ? (
-                      <img src={track.image} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <Music2 className="absolute inset-0 m-auto h-4 w-4 text-white/30" aria-hidden="true" />
-                    )}
-                    <span
-                      className={[
-                        'absolute inset-0 grid place-items-center bg-black/50 transition-opacity',
-                        isCurrent ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100',
-                      ].join(' ')}
-                    >
-                      {isCurrent && !paused ? (
-                        <Equaliser color="rgb(190,245,255)" />
+          <div ref={trackRows.frameRef} className="mt-3 min-h-0 flex-1">
+            <div
+              ref={trackRows.listRef}
+              style={{ height: trackRows.height }}
+              className="whole-rows glass-scroll cascade overflow-y-auto pr-1"
+            >
+              {shown.map((track, index) => {
+                const isCurrent = state?.track === track.track;
+                return (
+                  <button
+                    key={`${track.uri}-${index}`}
+                    type="button"
+                    onClick={() => controls.playContext({ uris: [track.uri] })}
+                    className={[
+                      'group/row flex w-full items-center gap-3 rounded-[0.9rem] p-2 text-left transition-colors',
+                      isCurrent ? 'bg-white/[0.08]' : 'hover:bg-white/[0.045]',
+                    ].join(' ')}
+                  >
+                    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[0.6rem] bg-white/[0.06]">
+                      {track.image ? (
+                        <img src={track.image} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <Play className="ml-0.5 h-3 w-3 text-white" fill="currentColor" aria-hidden="true" />
+                        <Music2 className="absolute inset-0 m-auto h-4 w-4 text-moon/30" aria-hidden="true" />
                       )}
+                      <span
+                        className={[
+                          'absolute inset-0 grid place-items-center bg-black/50 transition-opacity',
+                          isCurrent ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100',
+                        ].join(' ')}
+                      >
+                        {isCurrent && !paused ? (
+                          <Equaliser color={rgba(palette.glow, 0.95)} />
+                        ) : (
+                          <Play className="ml-0.5 h-3.5 w-3.5 text-moon" fill="currentColor" aria-hidden="true" />
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={[
-                        'truncate text-sm font-medium',
-                        isCurrent ? 'text-cyan-100' : 'text-white/85',
-                      ].join(' ')}
-                    >
-                      {track.track}
-                    </p>
-                    <p className="truncate text-xs text-white/45">{artistsOf(track)}</p>
-                  </div>
-                  <span className="clock-figures shrink-0 text-[0.6875rem] text-white/40">{fmt(track.durationMs)}</span>
-                </button>
-              );
-            })}
-            {shown.length === 0 && (
-              <p className="px-2.5 py-3 text-xs text-white/40">
-                {isSearch ? (searching ? 'Searching…' : 'No tracks found') : 'No recent tracks yet.'}
-              </p>
-            )}
-          </div>
-        </GlassCard>
-
-        {/* ── Playlists ───────────────────────────────────────────── */}
-        <div className="hide-scrollbar col-start-1 row-start-2 flex min-w-0 gap-3 overflow-x-auto pt-1">
-          {playlists.length === 0 ? (
-            <div className="flex h-28 w-full items-center justify-center rounded-2xl border border-dashed border-white/12 text-xs text-white/35">
-              {status === 'ready' ? 'No playlists found' : 'Loading playlists…'}
+                    <span className="min-w-0 flex-1">
+                      <span className={['block truncate text-[0.9375rem]', isCurrent ? 'text-accent' : 'text-moon/90'].join(' ')}>
+                        {track.track}
+                      </span>
+                      <span className="block truncate text-[0.8125rem] text-dim">{artistsOf(track)}</span>
+                    </span>
+                    <span className="clock-figures shrink-0 text-[0.8125rem] text-dim">{fmt(track.durationMs)}</span>
+                  </button>
+                );
+              })}
+              {shown.length === 0 && (
+                <p className="px-2 py-3 text-[0.9375rem] text-dim">
+                  {isSearch ? (searching ? 'Searching…' : 'No tracks found') : 'No recent tracks yet.'}
+                </p>
+              )}
             </div>
-          ) : (
-            playlists.map((list, index) => (
-              <GlassCard
-                key={list.id}
-                delay={140 + index * 60}
-                noPadding
-                hover
-                className="group/list relative h-28 w-40 shrink-0 overflow-hidden !shadow-none"
-              >
-                {list.image ? (
-                  <img
-                    src={list.image}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover opacity-70 transition-all duration-500 group-hover/list:scale-105 group-hover/list:opacity-90"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/18 to-purple-200/10" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <button
-                  type="button"
-                  onClick={() => controls.playContext({ contextUri: list.uri })}
-                  className="absolute inset-0 flex items-end justify-between p-3.5 text-left focus:outline-none"
-                  aria-label={`Play ${list.name}`}
-                >
-                  <h4 className="display-type flex items-center gap-1.5 pr-2 text-sm font-normal leading-tight text-white group-hover/list:text-glow">
-                    <ListMusic className="h-3.5 w-3.5 shrink-0 text-white/60" aria-hidden="true" />
-                    <span className="line-clamp-2">{list.name}</span>
-                  </h4>
-                  <span className="glow-ring flex h-8 w-8 shrink-0 translate-y-2 items-center justify-center rounded-full bg-white/10 opacity-0 backdrop-blur-md transition-all group-hover/list:translate-y-0 group-hover/list:opacity-100">
-                    <Play className="ml-0.5 h-3 w-3" fill="white" aria-hidden="true" />
-                  </span>
-                </button>
-              </GlassCard>
-            ))
-          )}
-        </div>
-      </div>
+          </div>
+        </Column>
+      </Ground>
 
       {immersive && <MusicImmersive onClose={() => setImmersive(false)} />}
     </div>
@@ -577,14 +544,14 @@ function Equaliser({ color = 'currentColor' }) {
 function ConnectScreen({ title, body, action }) {
   return (
     <div className="flex h-full flex-col">
-      <ViewHeader lead="Your" accent="Music" subtitle="Spotify" />
+      <ViewHeader lead="Music" subtitle="Spotify" />
       <div className="my-auto flex flex-1 items-center justify-center">
         <GlassCard tone="cyan" className="max-w-md text-center">
           <div className="glow-ring mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/8">
-            <Music2 className="h-7 w-7 text-cyan-100" strokeWidth={1.5} aria-hidden="true" />
+            <Music2 className="h-7 w-7 text-accent" strokeWidth={1.5} aria-hidden="true" />
           </div>
-          <h2 className="display-type text-2xl font-light text-white text-glow">{title}</h2>
-          <p className="mt-2 text-sm font-light leading-relaxed text-white/58">{body}</p>
+          <h2 className="display-type text-2xl font-light text-moon text-glow">{title}</h2>
+          <p className="mt-2 text-sm font-light leading-relaxed text-moon/58">{body}</p>
           {action}
         </GlassCard>
       </div>

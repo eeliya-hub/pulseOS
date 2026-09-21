@@ -14,12 +14,12 @@ import {
   Star,
   Sun,
   Ticket,
-  TrendingUp,
   X,
+  Moon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import GlassCard from '../components/GlassCard.jsx';
+import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { AddRow, EditableDate, EditableTime, RemoveButton } from '../components/InlineEdit.jsx';
 import { flightTimes, formatDuration } from '../services/travel/flightTimes.js';
 import ItineraryItemEditor from '../components/ItineraryItemEditor.jsx';
@@ -33,7 +33,6 @@ import { useTripLive } from '../hooks/useTripLive.js';
 import { categoryOf, emptyTrip, useTravelStore } from '../hooks/useTravelStore.js';
 import { useSettings } from '../hooks/useSettings.js';
 
-const QUICK_AMOUNTS = [20, 50, 100, 250];
 const DAY_MS = 86400000;
 
 /* ── Formatting helpers ───────────────────────────────────────────────────── */
@@ -246,95 +245,74 @@ export default function Travel() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header — trip switcher on the left, the active trip in the middle */}
-      <header className="relative shrink-0 pb-3 pt-1 text-center">
-        <h1 className="display-type text-3xl font-extralight tracking-wide text-white/95 md:text-4xl">
-          {trip.name}
-          {destination?.city ? (
-            <>
-              {' '}
-              <span className="cyan-name font-light">{destination.city}</span>
-            </>
+      {/* ── Sky: the trip, the place and the flight out ─────────────────── */}
+      <SkyZone className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-10">
+        {/* The destination itself, faint behind everything the sky holds. */}
+        {destination?.photo?.url ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-2 -top-24 left-[calc(50%-50vw)] right-[calc(50%-50vw)] -z-10 overflow-hidden"
+          >
+            <img src={destination.photo.url} alt="" className="h-full w-full object-cover opacity-[0.2]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-ink/40 via-transparent to-ink/60" />
+          </div>
+        ) : null}
+
+        <div className="min-w-0">
+          {trips.length > 1 ? (
+            <div className="hide-scrollbar mb-3 flex max-w-[42rem] items-center gap-1.5 overflow-x-auto">
+              {trips.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={t.id === trip.id}
+                  onClick={() => {
+                    store.selectTrip(t.id);
+                    setActiveDayId(null);
+                    setActiveFlightId(null);
+                  }}
+                  className="pill h-8 shrink-0 px-3.5 text-[0.8125rem]"
+                >
+                  {t.destination?.flag ? `${t.destination.flag} ` : ''}
+                  {t.name}
+                </button>
+              ))}
+            </div>
           ) : null}
-        </h1>
-        <p className="mt-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.32em] text-white/36">
-          {phase?.label}
-          {trip.start ? ` · ${fmtDate(trip.start)} – ${fmtDate(trip.end)}` : ''}
-        </p>
 
-        <div className="hide-scrollbar absolute left-0 top-0 flex max-w-[45%] items-center gap-1.5 overflow-x-auto">
-          {trips.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => {
-                store.selectTrip(t.id);
-                setActiveDayId(null);
-                setActiveFlightId(null);
-              }}
-              className={[
-                'shrink-0 rounded-full px-3 py-1 text-[0.6875rem] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
-                t.id === trip.id ? 'accent-pill glow-ring' : 'soft-button text-white/55',
-              ].join(' ')}
-            >
-              {t.destination?.flag ? `${t.destination.flag} ` : ''}
-              {t.name}
+          <p className="t-lede flex flex-wrap items-baseline gap-x-3">
+            <span className="t-eyebrow">{phase?.label}</span>
+            <span className="text-moon/85">
+              {destination?.flag ? `${destination.flag} ` : ''}
+              {destination?.city ?? 'Pick a destination'}
+              {destination?.country ? `, ${destination.country}` : ''}
+            </span>
+            {trip.start ? (
+              <span className="clock-figures text-dim">
+                {fmtDate(trip.start)} – {fmtDate(trip.end)}
+              </span>
+            ) : null}
+          </p>
+          <h1 className="t-hero mt-1 truncate">{trip.name}</h1>
+
+          <TripFacts destination={destination} phase={phase} clock={clock} weather={live.weather} />
+
+          <div className="mt-5 flex items-center gap-2">
+            <button type="button" onClick={() => setEditingTrip('new')} className="pill h-9 px-4">
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Trip
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setEditingTrip('edit')}
+              aria-label="Trip settings"
+              className="pill h-9 w-9 px-0 text-moon/75"
+            >
+              <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+            <CurrencyConverter trip={trip} destination={destination} fx={live.fx} amount={amount} onAmount={setAmount} />
+          </div>
         </div>
-
-        <div className="absolute right-0 top-0 flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setEditingTrip('new')}
-            className="soft-button inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            Trip
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditingTrip('edit')}
-            aria-label="Trip settings"
-            className="soft-button grid h-7 w-7 place-items-center rounded-full text-white/60 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </div>
-      </header>
-
-      {/* Three rows of twelve: hero + map + flight, then the itinerary spanning
-          down beside the stay, currency and packing cards. 41rem is what's left
-          under the header at the design scale, so the bento fills the screen
-          without ever pushing the dock off it. */}
-      <section className="my-auto grid max-h-[41rem] min-h-0 w-full flex-1 grid-cols-12 grid-rows-[1.25fr_1fr_1fr] gap-4">
-        <TripHero destination={destination} phase={phase} clock={clock} weather={live.weather} />
-
-        <GlassCard delay={80} className="relative col-span-4 row-span-2 min-h-0 overflow-hidden" noPadding>
-          <TripMap
-            points={mapPoints}
-            flight={flightLive}
-            showRoute={mapFilters.flight}
-            showAirports={mapFilters.airports}
-            center={destination}
-            className="rounded-3xl"
-          />
-          <MapFilters
-            value={mapFilters}
-            onChange={setMapFilters}
-            days={trip.itinerary}
-            day={mapDay}
-            onDay={setMapDay}
-          />
-          <button
-            type="button"
-            onClick={() => setMapOpen(true)}
-            aria-label="Expand map"
-            className="absolute right-3 top-3 z-[500] grid h-8 w-8 place-items-center rounded-xl border border-white/12 bg-[#101630]/75 text-white/75 backdrop-blur-md transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </GlassCard>
 
         <FlightCard
           trip={trip}
@@ -345,6 +323,32 @@ export default function Travel() {
           onAdd={store.addFlight}
           onRemove={store.removeFlight}
         />
+      </SkyZone>
+
+      {/* ── Ground: the map, the plan, and the practical things ───────────── */}
+      <Ground className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+        <div className="flex min-h-0 min-w-0 flex-col pb-4 pr-8 pt-7">
+          <ColumnHead label="Where you're going" />
+          <div className="relative mt-2 min-h-0 flex-1 overflow-hidden rounded-[1.5rem] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.9)] ring-1 ring-white/10">
+            <TripMap
+              points={mapPoints}
+              flight={flightLive}
+              showRoute={mapFilters.flight}
+              showAirports={mapFilters.airports}
+              center={destination}
+              className="rounded-[1.5rem]"
+            />
+            <MapFilters value={mapFilters} onChange={setMapFilters} days={trip.itinerary} day={mapDay} onDay={setMapDay} />
+            <button
+              type="button"
+              onClick={() => setMapOpen(true)}
+              aria-label="Expand map"
+              className="pill absolute right-3 top-3 z-[500] h-9 w-9 bg-ink/70 px-0 text-moon/80 backdrop-blur-md"
+            >
+              <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
 
         <ItineraryCard
           trip={trip}
@@ -365,23 +369,17 @@ export default function Travel() {
           onOpenItem={(dayId, itemId) => setEditingItem({ dayId, itemId })}
         />
 
-        <StayCard trip={trip} onPick={() => setPickingStay(true)} onClear={() => store.patchTrip({ stay: null })} />
-
-        <CurrencyCard
-          trip={trip}
-          destination={destination}
-          fx={live.fx}
-          amount={amount}
-          onAmount={setAmount}
-        />
-
-        <PackingCard
-          trip={trip}
-          onToggle={(id, done) => store.patchPacking(id, { done })}
-          onAdd={store.addPacking}
-          onRemove={store.removePacking}
-        />
-      </section>
+        <div className="ground-rule flex min-h-0 min-w-0 flex-col pb-2 pl-8 pt-7">
+          <ColumnHead label="Details" />
+          <StayCard trip={trip} onPick={() => setPickingStay(true)} onClear={() => store.patchTrip({ stay: null })} />
+          <PackingCard
+            trip={trip}
+            onToggle={(id, done) => store.patchPacking(id, { done })}
+            onAdd={store.addPacking}
+            onRemove={store.removePacking}
+          />
+        </div>
+      </Ground>
 
       {editingTrip && (
         <TripEditor
@@ -451,88 +449,56 @@ export default function Travel() {
 
 /* ── Trip hero ────────────────────────────────────────────────────────────── */
 
-function TripHero({ destination, phase, clock, weather }) {
-  const photo = destination?.photo?.url ?? null;
+/**
+ * The place at a glance, read out in the sky under the trip's name: the time
+ * there, the weather there, how long you're staying — and the small things you
+ * look up on the first day.
+ */
+function TripFacts({ destination, phase, clock, weather }) {
   const Icon = weatherIcon[weather?.daily?.[0]?.icon] ?? Cloud;
-
+  const offset = clock?.offsetHours;
   return (
-    <GlassCard tone="cyan" className="relative col-span-5 flex min-h-0 flex-col justify-between overflow-hidden">
-      {photo ? (
-        <>
-          <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" />
-          <div
-            className="absolute inset-0 bg-gradient-to-tr from-[#0b1024]/95 via-[#0b1024]/82 to-[#0b1024]/55"
-            aria-hidden="true"
-          />
-        </>
-      ) : (
-        <div
-          className="breathe pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(116,242,255,0.12), transparent 68%)' }}
-          aria-hidden="true"
+    <div className="mt-5">
+      <div className="flex flex-wrap items-center gap-x-9 gap-y-3">
+        <Readout
+          icon={Clock}
+          value={clock?.time ?? '--:--'}
+          label={offset != null ? `Local time, ${offset >= 0 ? `+${offset}` : offset}h` : 'Local time'}
         />
-      )}
-
-      <div className="relative z-10 min-w-0">
-        <span className="accent-pill inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.2em]">
-          <Plane className="h-3 w-3" aria-hidden="true" />
-          {phase?.label}
-        </span>
-        <h2 className="display-type mt-2 flex min-w-0 items-baseline gap-2 text-3xl font-extralight tracking-wide text-white text-glow">
-          <span className="truncate">{destination?.city ?? 'Pick a destination'}</span>
-          {destination?.flag ? <span className="shrink-0 text-xl">{destination.flag}</span> : null}
-        </h2>
-        <p className="mt-1 truncate text-sm font-light text-white/55">
-          {destination?.country ?? 'Open trip settings to search for one'}
-          {phase?.nights ? <span className="text-white/35"> · {phase.nights} nights</span> : null}
-        </p>
-        {destination?.blurb && !destination?.sockets ? (
-          <p className="mt-1 truncate text-[0.6875rem] leading-5 text-white/42">{destination.blurb}</p>
-        ) : null}
+        <Readout
+          icon={Icon}
+          value={weather?.temperature != null ? `${weather.temperature}°` : '—'}
+          label={
+            weather?.condition
+              ? `${weather.condition}${weather.high != null ? `, ${weather.high}° / ${weather.low}°` : ''}`
+              : 'Weather there'
+          }
+        />
+        {phase?.nights ? <Readout icon={Moon} value={phase.nights} label="nights" /> : null}
       </div>
-
-      <div className="relative z-10 grid grid-cols-2 gap-3">
-        {/* Local time */}
-        <div className="soft-row flex items-center gap-2.5 rounded-2xl p-2.5">
-          <Clock className="h-4 w-4 shrink-0 text-cyan-100/80" aria-hidden="true" />
-          <div className="min-w-0">
-            <p className="clock-figures text-lg font-light leading-none text-white">{clock?.time ?? '--:--'}</p>
-            <p className="mt-1 truncate text-[0.625rem] text-white/45">{clock?.date ?? 'Local time'}</p>
-          </div>
-          {clock?.offsetHours != null ? (
-            <span className="ml-auto shrink-0 text-[0.625rem] font-medium text-white/40">
-              {clock.offsetHours >= 0 ? `+${clock.offsetHours}` : clock.offsetHours}h
-            </span>
-          ) : null}
-        </div>
-
-        {/* Weather there */}
-        <div className="soft-row flex items-center gap-2.5 rounded-2xl p-2.5">
-          <Icon className="h-5 w-5 shrink-0 text-cyan-100/80" strokeWidth={1.6} aria-hidden="true" />
-          <div className="min-w-0">
-            <p className="clock-figures text-lg font-light leading-none text-white">
-              {weather?.temperature != null ? `${weather.temperature}°` : '—'}
-            </p>
-            <p className="mt-1 truncate text-[0.625rem] text-white/45">{weather?.condition ?? 'Weather'}</p>
-          </div>
-          {weather?.high != null ? (
-            <span className="clock-figures ml-auto shrink-0 text-[0.625rem] font-medium text-white/40">
-              {weather.high}° / {weather.low}°
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Country facts — the small stuff you look up on the first day */}
       {destination?.sockets ? (
-        <div className="relative z-10 mt-2.5 flex items-center gap-x-4 overflow-hidden border-t border-white/10 pt-2 text-[0.5625rem] text-white/45">
-          <Fact label="Plug" value={`Type ${destination.sockets} · ${destination.voltage}V`} />
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.8125rem]">
+          <Fact label="Plug" value={`Type ${destination.sockets}, ${destination.voltage}V`} />
           <Fact label="Drives" value={destination.drivingSide} />
           <Fact label="Dial" value={destination.callingCode} />
           <Fact label="Emergency" value={destination.emergency} />
         </div>
+      ) : destination?.blurb ? (
+        <p className="mt-3 max-w-[40rem] truncate text-[0.8125rem] text-dim">{destination.blurb}</p>
       ) : null}
-    </GlassCard>
+    </div>
+  );
+}
+
+function Readout({ icon: Icon, value, label }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Icon className="h-5 w-5 shrink-0 text-moon/70" strokeWidth={1.5} aria-hidden="true" />
+      <div className="leading-tight">
+        <p className="display-figures text-[1.875rem] leading-none text-moon">{value}</p>
+        <p className="mt-1 text-[0.75rem] text-dim">{label}</p>
+      </div>
+    </div>
   );
 }
 
@@ -540,8 +506,8 @@ function Fact({ label, value }) {
   if (!value) return null;
   return (
     <span className="inline-flex items-baseline gap-1.5">
-      <span className="font-semibold uppercase tracking-[0.14em] text-white/32">{label}</span>
-      <span className="text-white/70">{value}</span>
+      <span className="text-dim">{label}</span>
+      <span className="text-moon/80">{value}</span>
     </span>
   );
 }
@@ -573,10 +539,10 @@ function MapFilters({ value, onChange, days = [], day = 'all', onDay, className 
             onClick={() => onChange({ ...value, [layer.key]: !on })}
             aria-pressed={on}
             className={[
-              'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] backdrop-blur-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+              'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.75rem] font-semibold backdrop-blur-md transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
               on
-                ? 'border-white/12 bg-[#101630]/75 text-white/80'
-                : 'border-white/8 bg-[#101630]/45 text-white/35 line-through decoration-white/30',
+                ? 'border-white/12 bg-[#101630]/75 text-moon/80'
+                : 'border-white/8 bg-[#101630]/45 text-moon/35 line-through decoration-white/30',
             ].join(' ')}
           >
             <span
@@ -596,7 +562,7 @@ function MapFilters({ value, onChange, days = [], day = 'all', onDay, className 
           <select
             value={day}
             onChange={(event) => onDay(event.target.value)}
-            className="cursor-pointer appearance-none rounded-full border border-white/12 bg-[#101630]/75 py-0.5 pl-2 pr-5 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] text-white/80 outline-none backdrop-blur-md focus:border-cyan-100/40"
+            className="cursor-pointer appearance-none rounded-full border border-white/12 bg-[#101630]/75 py-0.5 pl-2 pr-5 text-[0.75rem] font-semibold text-moon/80 outline-none backdrop-blur-md focus:border-accent/40"
           >
             <option value="all">All days</option>
             {days.map((d) => (
@@ -606,7 +572,7 @@ function MapFilters({ value, onChange, days = [], day = 'all', onDay, className 
             ))}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute right-1.5 h-2.5 w-2.5 text-white/50"
+            className="pointer-events-none absolute right-1.5 h-2.5 w-2.5 text-moon/50"
             aria-hidden="true"
           />
         </label>
@@ -642,11 +608,11 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
               : `${Math.abs(away)} days ago`;
 
   return (
-    <GlassCard delay={140} className="relative col-span-3 flex min-h-0 flex-col overflow-hidden">
+    <div className="theme-card lift relative flex min-h-[16.5rem] w-[29rem] shrink-0 flex-col overflow-hidden rounded-[1.75rem] p-5">
       <AircraftPhoto photo={airline?.photo} label={airline?.name} />
 
       <div className="relative z-20 flex shrink-0 items-center gap-2">
-        <p className="flex shrink-0 items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+        <p className="flex shrink-0 items-center gap-1.5 t-label">
           <Plane className="h-3.5 w-3.5" aria-hidden="true" />
           Flight
         </p>
@@ -660,8 +626,8 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
                 type="button"
                 onClick={() => onSelect(f.id)}
                 className={[
-                  'shrink-0 rounded-full px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.1em] transition focus:outline-none',
-                  f.id === flight?.id ? 'bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-200/25' : 'text-white/35 hover:text-white/70',
+                  'shrink-0 rounded-full px-2 py-0.5 text-[0.75rem] font-semibold transition focus:outline-none',
+                  f.id === flight?.id ? 'bg-accent/15 text-accent ring-1 ring-accent/25' : 'text-moon/35 hover:text-moon/70',
                 ].join(' ')}
               >
                 {f.label}
@@ -676,7 +642,7 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
             onClick={() => setAddingLeg((open) => !open)}
             aria-label="Add a flight"
             aria-expanded={addingLeg}
-            className="text-white/35 transition hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="text-moon/35 transition hover:text-moon/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -700,7 +666,7 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
                     if (created) onSelect(created.id);
                     setAddingLeg(false);
                   }}
-                  className="rounded-lg px-2 py-1 text-left text-[0.625rem] font-semibold uppercase tracking-[0.1em] text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none"
+                  className="rounded-lg px-2 py-1 text-left text-[0.75rem] font-semibold text-moon/70 transition hover:bg-white/10 hover:text-moon focus:outline-none"
                 >
                   {label}
                 </button>
@@ -725,27 +691,27 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
               placeholder="BA117"
               aria-label="Flight number"
               size={6}
-              className="editable-field editable-auto clock-figures min-w-[3.5rem] max-w-[7rem] bg-transparent text-lg font-medium tracking-wide text-white outline-none placeholder:text-white/25"
+              className="editable-field editable-auto clock-figures min-w-[3.5rem] max-w-[7rem] bg-transparent text-lg font-medium tracking-wide text-moon outline-none placeholder:text-moon/25"
             />
             {when ? (
-              <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-white/60 ring-1 ring-white/12">
+              <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[0.75rem] font-semibold text-moon/60 ring-1 ring-white/12">
                 {when}
               </span>
             ) : null}
             <RemoveButton onClick={() => onRemove(flight.id)} label="Remove flight" className="ml-auto" />
           </div>
 
-          <div className="relative z-10 mt-0.5 flex shrink-0 items-center gap-1.5 text-[0.625rem]">
+          <div className="relative z-10 mt-0.5 flex shrink-0 items-center gap-1.5 text-[0.75rem]">
             <EditableDate
               value={flight.date}
               onChange={(value) => onPatch(flight.id, { date: value })}
               aria-label="Flight date"
-              className="text-cyan-100/60"
+              className="text-accent/60"
             />
-            <span className="text-white/20" aria-hidden="true">
+            <span className="text-moon/20" aria-hidden="true">
               ·
             </span>
-            <span className="min-w-0 truncate text-white/45">
+            <span className="min-w-0 truncate text-moon/45">
               {airline?.name ?? (flight.code ? 'No route on file for this number' : 'Enter a flight number')}
             </span>
           </div>
@@ -761,9 +727,9 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
                 onTime={(value) => onPatch(flight.id, { departTime: value })}
                 timeLabel="Departure time"
               />
-              <span className="mb-2 flex flex-1 items-center gap-1.5 text-white/25" aria-hidden="true">
+              <span className="mb-2 flex flex-1 items-center gap-1.5 text-moon/25" aria-hidden="true">
                 <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/30" />
-                <PlaneGlyph className="h-3 w-3 shrink-0 text-cyan-100/75" />
+                <PlaneGlyph className="h-3 w-3 shrink-0 text-accent/75" />
                 <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/30" />
               </span>
               <Airport
@@ -791,7 +757,7 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
           </div>
         </>
       )}
-    </GlassCard>
+    </div>
   );
 }
 
@@ -867,7 +833,7 @@ function AircraftPhoto({ photo, label }) {
           href={photo.link ?? undefined}
           target="_blank"
           rel="noreferrer"
-          className="absolute bottom-1.5 right-2.5 z-10 text-[0.5rem] uppercase tracking-[0.1em] text-white/25 transition hover:text-white/50"
+          className="absolute bottom-1.5 right-2.5 z-10 text-[0.75rem] text-moon/25 transition hover:text-moon/50"
         >
           © {photo.photographer} · {photo.credit}
         </a>
@@ -880,19 +846,19 @@ function Airport({ code, city, align = 'left', time, onTime, timeLabel, estimate
   const right = align === 'right';
   return (
     <div className={right ? 'text-right' : ''}>
-      <p className="clock-figures text-xl font-light leading-none text-white">{code ?? '···'}</p>
-      <p className="mt-1 max-w-[6rem] truncate text-[0.625rem] text-white/40">{city ?? ''}</p>
+      <p className="clock-figures text-xl font-light leading-none text-moon">{code ?? '···'}</p>
+      <p className="mt-1 max-w-[6rem] truncate text-[0.75rem] text-moon/40">{city ?? ''}</p>
       {onTime ? (
-        <p className={`mt-1 flex items-baseline gap-1 text-[0.6875rem] ${right ? 'justify-end' : ''}`}>
+        <p className={`mt-1 flex items-baseline gap-1 text-[0.8125rem] ${right ? 'justify-end' : ''}`}>
           <EditableTime
             value={time ?? ''}
             onChange={onTime}
             placeholder="--:--"
             aria-label={timeLabel}
-            className={estimated ? 'text-cyan-100/45' : 'text-cyan-100/80'}
+            className={estimated ? 'text-accent/45' : 'text-accent/80'}
           />
           {dayOffset ? (
-            <span className="text-[0.5625rem] font-semibold text-amber-200/70">
+            <span className="text-[0.8125rem] font-semibold text-amber-200/70">
               {dayOffset > 0 ? `+${dayOffset}` : dayOffset}d
             </span>
           ) : null}
@@ -905,8 +871,8 @@ function Airport({ code, city, align = 'left', time, onTime, timeLabel, estimate
 function Stat({ label, value }) {
   return (
     <div>
-      <p className="text-[0.5625rem] font-semibold uppercase tracking-[0.14em] text-white/32">{label}</p>
-      <p className="clock-figures mt-0.5 text-[0.8125rem] font-medium text-white/85">{value}</p>
+      <p className="text-[0.75rem] font-semibold text-moon/32">{label}</p>
+      <p className="clock-figures mt-0.5 text-[0.8125rem] font-medium text-moon/85">{value}</p>
     </div>
   );
 }
@@ -929,15 +895,17 @@ function ItineraryCard({
   const done = items.filter((item) => item.done).length;
 
   return (
-    <GlassCard delay={200} className="col-span-5 row-span-2 flex min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between">
-        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Itinerary</p>
-        {day ? (
-          <span className="clock-figures text-[0.6875rem] font-medium text-white/45">
-            {done}/{items.length}
-          </span>
-        ) : null}
-      </div>
+    <div className="ground-rule flex min-h-0 min-w-0 flex-col px-8 pb-4 pt-7">
+      <ColumnHead
+        label="Itinerary"
+        action={
+          day ? (
+            <span className="t-meta clock-figures">
+              {done}/{items.length}
+            </span>
+          ) : null
+        }
+      />
 
       <div className="hide-scrollbar mt-2.5 flex shrink-0 items-center gap-1.5 overflow-x-auto pb-0.5">
         {trip.itinerary.map((d) => (
@@ -945,10 +913,8 @@ function ItineraryCard({
             key={d.id}
             type="button"
             onClick={() => onSelectDay(d.id)}
-            className={[
-              'shrink-0 rounded-full px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] transition focus:outline-none',
-              d.id === day?.id ? 'accent-pill glow-ring' : 'soft-button text-white/55',
-            ].join(' ')}
+            aria-pressed={d.id === day?.id}
+            className="pill h-8 shrink-0 px-3.5 text-[0.8125rem]"
           >
             {d.label}
           </button>
@@ -957,7 +923,7 @@ function ItineraryCard({
           type="button"
           onClick={() => onAddDay()}
           aria-label="Add day"
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-white/25 text-white/40 transition hover:border-cyan-100/55 hover:text-cyan-100/70 focus:outline-none"
+          className="pill h-8 w-8 shrink-0 px-0 text-moon/70"
         >
           <Plus className="h-3 w-3" aria-hidden="true" />
         </button>
@@ -970,23 +936,23 @@ function ItineraryCard({
               value={day.label}
               onChange={(event) => onPatchDay(day.id, { label: event.target.value })}
               aria-label="Day label"
-              className="editable-field editable-auto bg-transparent text-[0.8125rem] font-medium text-white/85 outline-none"
+              className="editable-field editable-auto bg-transparent text-[0.8125rem] font-medium text-moon/85 outline-none"
             />
-            <span className="text-white/20" aria-hidden="true">
+            <span className="text-moon/20" aria-hidden="true">
               ·
             </span>
             <EditableDate
               value={day.date}
               onChange={(value) => onPatchDay(day.id, { date: value })}
               aria-label="Day date"
-              className="text-[0.75rem] text-cyan-100/70"
+              className="text-[0.75rem] text-accent/70"
             />
             {trip.itinerary.length > 1 ? (
               <RemoveButton onClick={() => onRemoveDay(day.id)} label="Remove day" className="ml-auto" />
             ) : null}
           </div>
 
-          <div className="glass-scroll mt-1.5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+          <div className="glass-scroll cascade mt-1.5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
             {items.map((item) => (
               <ItineraryRow
                 key={item.id}
@@ -1004,7 +970,7 @@ function ItineraryCard({
           <AddRow label="Add your first day" onClick={() => onAddDay()} />
         </div>
       )}
-    </GlassCard>
+    </div>
   );
 }
 
@@ -1020,11 +986,11 @@ function ItineraryRow({ item, category, onToggle, onOpen }) {
       >
         <span
           className={[
-            'grid h-4 w-4 place-items-center rounded-md border transition-all',
-            item.done ? 'border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
+            'grid h-[1.125rem] w-[1.125rem] place-items-center rounded-full transition-all duration-300',
+            item.done ? 'bg-moon text-ink' : 'shadow-[inset_0_0_0_1.5px_rgba(226,230,248,0.35)]',
           ].join(' ')}
         >
-          {item.done && <Check className="h-2.5 w-2.5 text-cyan-100" aria-hidden="true" />}
+          {item.done && <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />}
         </span>
       </button>
 
@@ -1039,15 +1005,15 @@ function ItineraryRow({ item, category, onToggle, onOpen }) {
         onClick={onOpen}
         className="flex min-w-0 flex-1 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
       >
-        <span className="clock-figures w-11 shrink-0 text-[0.6875rem] text-cyan-100/65">{item.time || '—'}</span>
+        <span className="clock-figures w-12 shrink-0 text-[0.8125rem] text-accent/80">{item.time || '—'}</span>
         <span className="min-w-0 flex-1">
           <span
-            className={`block truncate text-[0.8125rem] ${item.done ? 'text-white/35 line-through' : 'text-white/85'}`}
+            className={`block truncate text-[0.9375rem] ${item.done ? 'text-moon/35 line-through' : 'text-moon/90'}`}
           >
             {item.title || 'Untitled plan'}
           </span>
           {item.place?.name || item.note ? (
-            <span className="mt-0.5 flex items-center gap-1 truncate text-[0.625rem] text-white/38">
+            <span className="mt-0.5 flex items-center gap-1 truncate text-[0.75rem] text-moon/38">
               {item.place?.name ? (
                 <>
                   <MapPin className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
@@ -1060,7 +1026,7 @@ function ItineraryRow({ item, category, onToggle, onOpen }) {
           ) : null}
         </span>
         {item.cost ? (
-          <span className="clock-figures shrink-0 text-[0.6875rem] font-medium text-white/45">{item.cost}</span>
+          <span className="clock-figures shrink-0 text-[0.8125rem] font-medium text-moon/45">{item.cost}</span>
         ) : null}
         {item.booked ? (
           <Ticket className="h-3 w-3 shrink-0 text-emerald-300/80" aria-hidden="true" />
@@ -1077,7 +1043,7 @@ function StayCard({ trip, onPick, onClear }) {
   const photo = placePhotoUrl(stay?.photos?.[0] ?? stay?.photo, 480);
 
   return (
-    <GlassCard tone="pink" delay={260} className="relative col-span-3 flex min-h-0 flex-col overflow-hidden">
+    <div className="relative mt-2 flex h-[16.5rem] shrink-0 flex-col overflow-hidden rounded-[1.25rem] bg-white/[0.04] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]">
       {photo ? (
         <>
           <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" />
@@ -1086,7 +1052,7 @@ function StayCard({ trip, onPick, onClear }) {
       ) : null}
 
       <div className="relative z-10 flex shrink-0 items-center justify-between">
-        <p className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+        <p className="flex items-center gap-1.5 t-label">
           <BedDouble className="h-3.5 w-3.5" aria-hidden="true" />
           Stay
         </p>
@@ -1094,7 +1060,7 @@ function StayCard({ trip, onPick, onClear }) {
           type="button"
           onClick={onPick}
           aria-label="Find a hotel"
-          className="text-white/35 transition hover:text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="text-moon/35 transition hover:text-moon/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -1102,20 +1068,20 @@ function StayCard({ trip, onPick, onClear }) {
 
       {stay ? (
         <div className="relative z-10 mt-auto min-w-0">
-          <p className="display-type truncate text-base font-normal text-white">{stay.name}</p>
-          <p className="mt-0.5 line-clamp-2 text-[0.625rem] leading-4 text-white/45">{stay.address}</p>
+          <p className="t-title truncate">{stay.name}</p>
+          <p className="mt-0.5 line-clamp-2 text-[0.75rem] leading-4 text-moon/45">{stay.address}</p>
           <div className="mt-2 flex items-center gap-3">
             {stay.rating ? (
-              <span className="flex items-center gap-1 text-[0.6875rem] font-semibold text-amber-200/90">
+              <span className="flex items-center gap-1 text-[0.8125rem] font-semibold text-amber-200/90">
                 <Star className="h-3 w-3 fill-amber-200/90" aria-hidden="true" />
                 {stay.rating.toFixed(1)}
-                {stay.ratingCount ? <span className="text-white/35">({stay.ratingCount})</span> : null}
+                {stay.ratingCount ? <span className="text-moon/35">({stay.ratingCount})</span> : null}
               </span>
             ) : null}
             <button
               type="button"
               onClick={onClear}
-              className="ml-auto text-[0.625rem] font-medium text-white/30 transition hover:text-rose-300/80 focus:outline-none"
+              className="ml-auto text-[0.75rem] font-medium text-moon/30 transition hover:text-rose-300/80 focus:outline-none"
             >
               Clear
             </button>
@@ -1125,13 +1091,13 @@ function StayCard({ trip, onPick, onClear }) {
         <button
           type="button"
           onClick={onPick}
-          className="relative z-10 m-auto flex flex-col items-center gap-1.5 rounded-2xl px-4 py-3 text-white/40 transition hover:text-white/75 focus:outline-none"
+          className="relative z-10 m-auto flex flex-col items-center gap-1.5 rounded-2xl px-4 py-3 text-moon/40 transition hover:text-moon/75 focus:outline-none"
         >
           <BedDouble className="h-5 w-5" aria-hidden="true" />
-          <span className="text-[0.6875rem] font-medium uppercase tracking-[0.12em]">Find a hotel</span>
+          <span className="text-[0.8125rem] font-medium">Find a hotel</span>
         </button>
       )}
-    </GlassCard>
+    </div>
   );
 }
 
@@ -1149,8 +1115,8 @@ function StayPicker({ near, onPick, onClose }) {
       <div className="theme-card fade-in relative z-10 flex h-[min(32rem,calc(100dvh-4rem))] w-full max-w-lg flex-col rounded-3xl p-5">
         <div className="mb-3 flex shrink-0 items-center justify-between">
           <div>
-            <h2 className="display-type text-lg font-light text-white text-glow">Where are you staying?</h2>
-            <p className="mt-0.5 text-[0.625rem] font-medium uppercase tracking-[0.22em] text-white/38">
+            <h2 className="display-type text-lg font-light text-moon text-glow">Where are you staying?</h2>
+            <p className="mt-0.5 text-[0.75rem] font-medium text-moon/38">
               Hotels near {near?.city ?? 'your destination'}
             </p>
           </div>
@@ -1158,7 +1124,7 @@ function StayPicker({ near, onPick, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="grid h-8 w-8 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="grid h-8 w-8 place-items-center rounded-full text-moon/50 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -1172,132 +1138,44 @@ function StayPicker({ near, onPick, onClose }) {
 
 /* ── Currency ─────────────────────────────────────────────────────────────── */
 
-function CurrencyCard({ trip, destination, fx, amount, onAmount }) {
+/**
+ * A pocket converter beside the trip's controls: type an amount at home, read it
+ * there. One pill, the same height as the buttons it sits with.
+ */
+function CurrencyConverter({ trip, destination, fx, amount, onAmount }) {
   const homeCode = trip.homeCurrency || 'GBP';
   const destCode = destination?.currency?.code ?? null;
-  const destSymbol = destination?.currency?.symbol ?? '';
+  if (!destCode || destCode === homeCode) return null;
+
+  const destSymbol = destination?.currency?.symbol || destCode;
   const rate = fx?.rate ?? null;
   const value = Number(amount) || 0;
   const converted = rate ? value * rate : null;
 
   return (
-    <GlassCard tone="green" delay={320} className="relative col-span-4 flex min-h-0 flex-col overflow-hidden">
-      <BanknotePhoto photo={fx?.photo} label={destCode} />
-
-      <div className="relative z-10 flex shrink-0 items-center justify-between">
-        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/60">Currency</p>
-        {fx?.series?.length ? <Sparkline series={fx.series} /> : null}
-      </div>
-
-      {destCode ? (
-        <>
-          <div className="relative z-10 my-auto grid grid-cols-2 items-center gap-3">
-            <label className="flex items-baseline gap-1.5">
-              <span className="text-base font-light text-white/55">{homeCode}</span>
-              <input
-                value={amount}
-                onChange={(event) => onAmount(event.target.value.replace(/[^\d.]/g, ''))}
-                inputMode="decimal"
-                aria-label={`Amount in ${homeCode}`}
-                className="clock-figures w-full min-w-0 bg-transparent text-2xl font-light text-white focus:outline-none"
-              />
-            </label>
-            <div className="flex items-baseline gap-1.5 border-l border-white/10 pl-3">
-              <span className="text-base font-light text-cyan-100/70">{destSymbol || destCode}</span>
-              <span className="clock-figures truncate text-2xl font-light text-cyan-100">
-                {converted != null
-                  ? converted.toLocaleString('en-GB', { maximumFractionDigits: converted > 100 ? 0 : 2 })
-                  : '—'}
-              </span>
-            </div>
-          </div>
-
-          <div className="relative z-10 flex shrink-0 items-center justify-between gap-2">
-            <div className="flex gap-1.5">
-              {QUICK_AMOUNTS.map((quick) => (
-                <button
-                  key={quick}
-                  type="button"
-                  onClick={() => onAmount(String(quick))}
-                  className="soft-button rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-white/75 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                >
-                  {quick}
-                </button>
-              ))}
-            </div>
-            <p className="clock-figures truncate text-[0.625rem] font-medium text-white/65">
-              {rate ? `1 ${homeCode} = ${rate.toFixed(rate > 20 ? 2 : 4)} ${destCode}` : 'Rate unavailable'}
-            </p>
-          </div>
-          {fx?.date ? (
-            <p className="relative z-10 mt-1 shrink-0 truncate text-[0.5625rem] uppercase tracking-[0.14em] text-white/45">
-              {fx.source} · {fx.date}
-            </p>
-          ) : null}
-        </>
-      ) : (
-        <p className="relative z-10 m-auto max-w-[16rem] text-center text-xs text-white/38">
-          Set a destination and Pulse pulls its currency and the live rate.
-        </p>
-      )}
-    </GlassCard>
-  );
-}
-
-/**
- * The destination's banknotes behind the converter — Wikipedia's picture of the
- * current series, so the money you'll be handling is the money on the card.
- */
-function BanknotePhoto({ photo, label }) {
-  const [failed, setFailed] = useState(false);
-  if (!photo?.url || failed) return null;
-  return (
-    <>
-      <img
-        src={photo.url}
-        alt={label ? `${label} banknotes` : ''}
-        onError={() => setFailed(true)}
-        className="absolute inset-0 h-full w-full object-cover opacity-[0.45]"
-      />
-      <div
-        className="absolute inset-0 bg-gradient-to-tr from-[#0b1024]/88 via-[#0b1024]/68 to-[#0b1024]/40"
-        aria-hidden="true"
-      />
-    </>
-  );
-}
-
-/** 30 days of the pair, drawn small — the shape matters, not the numbers. */
-function Sparkline({ series }) {
-  const points = series.filter((p) => Number.isFinite(p.rate));
-  if (points.length < 3) return null;
-
-  const values = points.map((p) => p.rate);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const path = values
-    .map((rate, index) => `${(index / (values.length - 1)) * 100},${28 - ((rate - min) / span) * 24}`)
-    .join(' ');
-  const rising = values[values.length - 1] >= values[0];
-
-  return (
-    <span className="flex items-center gap-1.5">
-      <TrendingUp
-        className={`h-3 w-3 ${rising ? 'text-emerald-300/80' : 'rotate-180 text-rose-300/80'}`}
-        aria-hidden="true"
-      />
-      <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="h-4 w-16" aria-hidden="true">
-        <polyline
-          points={path}
-          fill="none"
-          stroke={rising ? 'rgba(110,231,183,0.8)' : 'rgba(253,164,175,0.8)'}
-          strokeWidth="1.6"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
+    <div className="ml-3 flex min-w-0 items-center gap-3">
+      <label className="pill h-9 cursor-text gap-2 px-4">
+        <span className="text-moon/50">{homeCode}</span>
+        <input
+          value={amount}
+          onChange={(event) => onAmount(event.target.value.replace(/[^\d.]/g, ''))}
+          inputMode="decimal"
+          aria-label={`Amount in ${homeCode}`}
+          size={Math.max(2, amount.length)}
+          className="clock-figures min-w-0 bg-transparent text-moon focus:outline-none"
         />
-      </svg>
-    </span>
+        <span className="h-4 w-px bg-white/15" aria-hidden="true" />
+        <span className="text-accent/70">{destSymbol}</span>
+        <output className="clock-figures text-accent" aria-label={`Amount in ${destCode}`}>
+          {converted != null
+            ? converted.toLocaleString('en-GB', { maximumFractionDigits: converted > 100 ? 0 : 2 })
+            : '—'}
+        </output>
+      </label>
+      <p className="t-meta clock-figures hidden truncate xl:block">
+        {rate ? `1 ${homeCode} = ${rate.toFixed(rate > 20 ? 2 : 4)} ${destCode}` : 'Rate unavailable'}
+      </p>
+    </div>
   );
 }
 
@@ -1309,27 +1187,27 @@ function PackingCard({ trip, onToggle, onAdd, onRemove }) {
   const done = items.filter((item) => item.done).length;
 
   return (
-    <GlassCard tone="amber" delay={380} className="col-span-3 flex min-h-0 flex-col overflow-hidden">
+    <div className="mt-4 flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center justify-between">
-        <p className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+        <p className="flex items-center gap-1.5 t-label">
           <Luggage className="h-3.5 w-3.5" aria-hidden="true" />
           Packing
         </p>
-        <span className="clock-figures text-[0.6875rem] font-medium text-white/48">
+        <span className="clock-figures text-[0.8125rem] text-dim">
           {done}/{items.length}
         </span>
       </div>
 
-      <div className="mt-2 h-1 shrink-0 overflow-hidden rounded-full bg-white/8">
+      <div className="mt-2 h-[3px] shrink-0 overflow-hidden rounded-full bg-white/[0.08]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-amber-200 to-cyan-200 transition-all duration-500"
+          className="bar-grow h-full rounded-full bg-moon/80 transition-all duration-700"
           style={{ width: `${items.length ? (done / items.length) * 100 : 0}%` }}
         />
       </div>
 
-      <div className="glass-scroll mt-2 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
+      <div className="glass-scroll cascade mt-2 min-h-0 flex-1 space-y-0.5 overflow-y-auto pb-4 pr-1 [mask-image:linear-gradient(180deg,#000_86%,transparent)]">
         {items.map((item) => (
-          <div key={item.id} className="group flex items-center gap-2 rounded-lg px-1 py-1 transition hover:bg-white/5">
+          <div key={item.id} className="group flex items-center gap-2.5 rounded-[0.8rem] px-1.5 py-1.5 transition hover:bg-white/[0.045]">
             <button
               type="button"
               onClick={() => onToggle(item.id, !item.done)}
@@ -1338,15 +1216,15 @@ function PackingCard({ trip, onToggle, onAdd, onRemove }) {
             >
               <span
                 className={[
-                  'grid h-4 w-4 place-items-center rounded-md border transition-all',
-                  item.done ? 'border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
+                  'grid h-[1.125rem] w-[1.125rem] place-items-center rounded-full transition-all duration-300',
+                  item.done ? 'bg-moon text-ink' : 'shadow-[inset_0_0_0_1.5px_rgba(226,230,248,0.35)]',
                 ].join(' ')}
               >
-                {item.done && <Check className="h-2.5 w-2.5 text-cyan-100" aria-hidden="true" />}
+                {item.done && <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />}
               </span>
             </button>
             <span
-              className={`min-w-0 flex-1 truncate text-[0.75rem] ${item.done ? 'text-white/35 line-through' : 'text-white/78'}`}
+              className={`min-w-0 flex-1 truncate text-[0.875rem] ${item.done ? 'text-moon/35 line-through' : 'text-moon/85'}`}
             >
               {item.label}
             </span>
@@ -1363,17 +1241,17 @@ function PackingCard({ trip, onToggle, onAdd, onRemove }) {
           onAdd(value);
           setText('');
         }}
-        className="mt-2 flex shrink-0 items-center gap-1.5 border-t border-white/8 pl-1 pt-2"
+        className="flex shrink-0 items-center gap-2 pl-1.5 pt-1"
       >
-        <Plus className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden="true" />
+        <Plus className="h-3.5 w-3.5 shrink-0 text-moon/30" aria-hidden="true" />
         <input
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder="Add item"
-          className="w-full bg-transparent text-xs text-white placeholder:text-white/35 focus:outline-none"
+          className="w-full bg-transparent text-[0.875rem] text-moon placeholder:text-moon/40 focus:outline-none"
         />
       </form>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -1392,9 +1270,9 @@ function ExpandedMap({ points, flight, center, filters, onFilters, days, day, on
       <div className="theme-card fade-in relative z-10 flex h-full w-full flex-col overflow-hidden rounded-3xl p-3">
         <div className="mb-2 flex shrink-0 items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-cyan-100/80" aria-hidden="true" />
-            <p className="display-type text-base font-light text-white">{center?.city ?? 'Trip map'}</p>
-            <span className="text-[0.625rem] uppercase tracking-[0.18em] text-white/35">
+            <MapPin className="h-4 w-4 text-accent/80" aria-hidden="true" />
+            <p className="display-type text-base font-light text-moon">{center?.city ?? 'Trip map'}</p>
+            <span className="text-[0.75rem] text-moon/35">
               {points.length} pin{points.length === 1 ? '' : 's'}
             </span>
           </div>
@@ -1402,7 +1280,7 @@ function ExpandedMap({ points, flight, center, filters, onFilters, days, day, on
             type="button"
             onClick={onClose}
             aria-label="Close map"
-            className="grid h-8 w-8 place-items-center rounded-full text-white/55 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="grid h-8 w-8 place-items-center rounded-full text-moon/55 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>

@@ -1,75 +1,104 @@
 # Pulse OS
 
-A personal command-center dashboard — a React frontend (Vite) and an Express
-backend that fronts weather, stocks, news, sports, AI, calendar, and music.
+A personal command-centre dashboard — one screen that never scrolls, carrying
+weather, calendar, news, markets, sport, music and travel, with an AI assistant
+that can read all of it and act on it. React + Vite frontend, Express backend.
+
+> **v2 "Afterglow" is out.** The whole frontend was rebuilt around a shared
+> spatial system and a background that follows the time of day, Travel became
+> live, and the assistant learned to speak. See **[ANNOUNCEMENT.md](ANNOUNCEMENT.md)**
+> for the full before/after.
+
+![Pulse OS home](docs/release/gallery/home.jpg)
 
 ## Layout
 
 ```
 pulseos/
-├── frontend/        React + Vite dashboard (the existing app)
+├── frontend/        React + Vite dashboard
 │   └── src/
-│       ├── views/           Home, Finance, Travel, Music, Markets, LifeHub, …
-│       ├── components/       GlassCard, Dock, InlineEdit, …
-│       ├── hooks/            useFinanceStore, useTravelStore, …
+│       ├── views/           Home, Launchpad, LifeHub, Markets, Music, Travel, AIAssistant
+│       ├── components/      Stage (sky/horizon/ground), Sky, Dock, MusicImmersive, …
+│       ├── hooks/           useSky, useWholeRows, useTravelStore, useSpotifyPlayer, …
 │       └── services/api/
-│           ├── backendClient.js   ← calls the Express backend
-│           └── *.js               ← existing mock services (migrate over gradually)
+│           └── backendClient.js   ← the one place the frontend calls the backend
 │
 └── backend/         Express API gateway (clean route → controller → service → provider)
     ├── src/
     │   ├── app.js           builds the app (Firebase-ready — no listen())
-    │   ├── index.js         local server bootstrap
+    │   ├── index.js         local bootstrap; also attaches the voice WebSocket
     │   ├── config/env.js    all env access
-    │   ├── routes/          weather, stocks, news, sports, ai, calendar, music
+    │   ├── routes/          weather, stocks, news, sports, ai, calendar, music,
+    │   │                    travel, search, geo, launch
     │   ├── controllers/
     │   ├── services/<feature>/<vendor>.provider.js
-    │   ├── middleware/
-    │   └── utils/
-    └── functions/           Firebase Functions entry (placeholder)
+    │   ├── realtime/        voiceGateway.js — browser WS ↔ Gemini Live
+    │   ├── middleware/      cors, rate limiting, error handling
+    │   └── utils/           TTL cache, token store, usage meter
+    └── functions/           Firebase Functions entry
 ```
+
+Every view is composed of the same three parts — a **sky zone**, a **horizon**
+at a fixed height, and a full-bleed **ground** split into columns — defined once
+in [`frontend/src/components/Stage.jsx`](frontend/src/components/Stage.jsx).
 
 ## Quickstart
 
-```bash
-# 1. Backend
-cd backend
-cp .env.example .env         # add keys for the integrations you want live
-npm install
-npm run dev                  # http://localhost:4000  →  /api/status shows what's live
-
-# 2. Frontend (separate terminal)
-cd frontend
-npm install                  # (already installed)
-npm run dev                  # http://localhost:5173
-```
-
-Or from the repo root (installs both via npm workspaces):
+From the repo root (npm workspaces installs both packages):
 
 ```bash
 npm install
-npm run dev                  # runs frontend + backend together (needs `concurrently`)
+npm run dev          # frontend on :5173, backend on :4000
 ```
+
+Or separately:
+
+```bash
+cd backend && cp .env.example .env && npm run dev    # :4000 — /api/status shows what's live
+cd frontend && npm run dev                            # :5173
+```
+
+`.env` is optional. The server boots with zero keys; unconfigured integrations
+return a clear `503 NOT_CONFIGURED` instead of crashing.
 
 ## Integrations
 
-| Domain | Provider | Free tier | Notes |
-|---|---|---|---|
-| Weather | OpenWeather | 1,000/day | key required |
-| Stocks | Finnhub | 60/min | key required |
-| News | GNews | 100/day | key required |
-| Sports | TheSportsDB | free | works out of the box (key `3`) |
-| AI | Gemini / OpenAI / Claude | Gemini free | provider-swappable; default Gemini |
-| Calendar (LifeHub) | Google (read+write) + iCal (read) | free | OAuth |
-| Music | Spotify | free | OAuth |
-| Travel, Finance | — | — | **local only**, no API (manual + localStorage) |
+| Domain | Provider | Notes |
+|---|---|---|
+| Weather | OpenWeather | key required |
+| Stocks & crypto | Finnhub, CoinGecko | Finnhub key required |
+| News | GNews + RSS | key required; local news resolved by town/county |
+| Live TV | HLS streams via hls.js | keyless |
+| Sport | Football-Data.org, balldontlie, Jolpica/Ergast | F1 is keyless |
+| Calendar | Google (read+write), Apple iCloud (CalDAV), public `.ics` | OAuth |
+| Music | Spotify Web API + Web Playback SDK + Connect; LRCLIB lyrics | OAuth; lyrics keyless |
+| Travel | Google Places *or* OpenStreetMap, AeroDataBox, OpenFreeMap | degrades to keyless |
+| Search | Brave, Tavily, or keyless open web | optional keys |
+| AI | Gemini (default), OpenAI, Claude | swappable per request |
+| Voice | Gemini Live API over WebSocket | shares the typed assistant's tools |
 
 See [backend/README.md](backend/README.md) for endpoint details, the provider
-pattern, and how to add a new integration. Everything runs without keys —
-unconfigured integrations return a clear `503 NOT_CONFIGURED`.
+pattern, and how to add a new integration.
 
-## Future: Firebase
+## Cost and safety
 
-The backend is structured so `src/app.js` (which builds the app without calling
-`listen()`) can be wrapped by Cloud Functions — see `backend/functions/index.js`.
-The in-memory OAuth `tokenStore` swaps for Firestore with no call-site changes.
+Every route passes through an in-memory rate limiter, with tighter caps on the
+AI route and on anything that mutates state. A separate, disk-persisted usage
+meter enforces hard daily and monthly request and token budgets per AI provider,
+checked *before* each call — the default Gemini budgets sit under its free tier,
+so the assistant cannot run up a bill. The TTL cache serves stale data rather
+than failing when a provider rate-limits.
+
+## Firebase
+
+`src/app.js` builds the Express app without calling `listen()`, so Cloud
+Functions can wrap it — see `backend/functions/index.js`. The voice WebSocket is
+attached in `src/index.js` rather than the app factory, deliberately, so the
+Firebase path stays clean. The OAuth `tokenStore` swaps for Firestore with no
+call-site changes.
+
+## Documentation
+
+- [ANNOUNCEMENT.md](ANNOUNCEMENT.md) — v2 release notes, with before/after imagery
+- [docs/PulseOS-Doc.html](docs/PulseOS-Doc.html) — the full project document (source for the PDF)
+- [backend/README.md](backend/README.md) — API surface and provider pattern

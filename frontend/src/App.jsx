@@ -8,7 +8,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import bgImage from './assets/bg.jpg';
+import Sky from './components/Sky.jsx';
+import { useSky } from './hooks/useSky.js';
 import ChatPopover from './components/ChatPopover.jsx';
 import Dock from './components/Dock.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
@@ -39,7 +40,7 @@ const navItems = [
     id: 'home',
     label: 'Home',
     Icon: Home,
-    color: 'from-cyan-300/85 to-blue-500/85',
+    color: 'from-accent/85 to-blue-500/85',
   },
   {
     id: 'launchpad',
@@ -51,7 +52,7 @@ const navItems = [
     id: 'life',
     label: 'Life Hub',
     Icon: Calendar,
-    color: 'from-emerald-300/85 to-cyan-500/85',
+    color: 'from-emerald-300/85 to-accent/85',
   },
   {
     id: 'ai',
@@ -63,7 +64,7 @@ const navItems = [
     id: 'markets',
     label: 'Markets & News',
     Icon: Newspaper,
-    color: 'from-cyan-300/85 to-purple-500/85',
+    color: 'from-accent/85 to-purple-500/85',
   },
   {
     id: 'music',
@@ -80,6 +81,7 @@ const navItems = [
 ];
 
 export default function App() {
+  useSky();
   const [activeView, setActiveView] = useState('home');
 
   // The assistant can move the dashboard: "put BBC News on" has to be able to
@@ -315,8 +317,7 @@ export default function App() {
 
   return (
     <div
-      className="theme-bg relative h-dvh overflow-hidden bg-midnight font-sans text-white selection:bg-cyan-200/25"
-      style={{ backgroundImage: `url(${bgImage})` }}
+      className="relative h-dvh overflow-hidden bg-ink font-sans text-moon"
       onPointerDownCapture={(event) => {
         if (event.target?.closest?.('[data-settings]')) return;
         if (isIdleScreen) activate('home');
@@ -327,10 +328,7 @@ export default function App() {
       }}
       role="presentation"
     >
-      <div className="ambient-layer" aria-hidden="true" />
-      <div className="ambient-sheen" aria-hidden="true" />
-      <div className="ambient-stars" aria-hidden="true" />
-      <div className="ambient-grain" aria-hidden="true" />
+      <Sky />
 
       {isIdleScreen && afkImmersive ? (
         // Going idle with music on lands in the immersive player rather than the
@@ -340,13 +338,13 @@ export default function App() {
         <IdleScreen now={now} />
       ) : (
         <div className="relative z-10 flex h-dvh flex-col">
-          <TopBar activeLabel={activeItem.label} now={now} />
+          <TopBar now={now} />
 
           <main
             id="main-content"
             className="min-h-0 flex-1 px-5 pb-[6.5rem] pt-2 md:px-8"
           >
-            <div key={activeView} className="fade-in mx-auto h-full max-w-[80rem]">
+            <div key={activeView} className="view-enter mx-auto h-full max-w-[80rem]">
               <ErrorBoundary resetKey={activeView}>{views[activeView]}</ErrorBoundary>
             </div>
           </main>

@@ -181,21 +181,21 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
           type="button"
           onClick={() => go(-1)}
           aria-label="Previous channel"
-          className="flex h-6 w-6 items-center justify-center rounded-full text-white/70 transition hover:bg-white/15 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="flex h-6 w-6 items-center justify-center rounded-full text-moon/70 transition hover:bg-white/15 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
         <div className="flex items-center gap-1.5 px-1.5">
           <span className="glow-dot h-1.5 w-1.5 rounded-full bg-rose-400 text-rose-400" aria-hidden="true" />
-          <span className="whitespace-nowrap text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/90">
-            Live · {active.label}
+          <span className="whitespace-nowrap text-[0.75rem] font-semibold text-moon/90">
+            <span className="font-semibold">Live</span>&ensp;{active.label}
           </span>
         </div>
         <button
           type="button"
           onClick={() => go(1)}
           aria-label="Next channel"
-          className="flex h-6 w-6 items-center justify-center rounded-full text-white/70 transition hover:bg-white/15 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="flex h-6 w-6 items-center justify-center rounded-full text-moon/70 transition hover:bg-white/15 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -206,7 +206,7 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
           href={active.site}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-white/85 backdrop-blur-md transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1 text-[0.75rem] font-semibold text-moon/85 backdrop-blur-md transition hover:bg-black/70 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           Open site
           <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -216,7 +216,7 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
             type="button"
             onClick={onExit}
             aria-label="Leave full screen"
-            className="grid h-7 w-7 place-items-center rounded-full bg-black/50 text-white/85 backdrop-blur-md transition hover:bg-black/70 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="grid h-7 w-7 place-items-center rounded-full bg-black/50 text-moon/85 backdrop-blur-md transition hover:bg-black/70 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
           >
             <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -225,7 +225,7 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
 
       <video
         ref={videoRef}
-        className={`h-full w-full bg-black ${immersive ? 'object-contain' : 'object-cover'}`}
+        className="h-full w-full bg-black object-contain"
         autoPlay
         playsInline
         controls
@@ -233,8 +233,8 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
 
       {standby && (
         <div className="absolute inset-0 z-20 grid place-items-center bg-black/80 px-4 text-center backdrop-blur-sm">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/55">
-            {active.label} · playing full screen
+          <p className="text-xs font-medium text-moon/55">
+            {active.label}, full screen
           </p>
         </div>
       )}
@@ -242,8 +242,8 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
       {failed && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/70 px-4 text-center backdrop-blur-sm">
           <span className="glow-dot h-2 w-2 rounded-full bg-rose-400 text-rose-400" aria-hidden="true" />
-          <p className="display-type text-lg font-light text-white/90">{active.label} is live now</p>
-          <p className="max-w-xs text-xs text-white/50">
+          <p className="display-type text-lg font-light text-moon/90">{active.label} is live now</p>
+          <p className="max-w-xs text-xs text-moon/50">
             The inline stream didn’t start from your region. Retry, switch channel with ‹ ›, or open
             the broadcast in a new tab.
           </p>
@@ -254,7 +254,7 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
                 autoRetryRef.current = 0;
                 setReloadKey((k) => k + 1);
               }}
-              className="soft-button inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className="soft-button inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-moon/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             >
               <RotateCw className="h-3.5 w-3.5" aria-hidden="true" />
               Retry
@@ -263,7 +263,7 @@ export default function LiveNewsPlayer({ immersive = false, onExit = null }) {
               href={active.site}
               target="_blank"
               rel="noreferrer"
-              className="soft-button inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className="soft-button inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold text-moon/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             >
               Watch {active.label}
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

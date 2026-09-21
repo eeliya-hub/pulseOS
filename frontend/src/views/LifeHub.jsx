@@ -8,7 +8,6 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  FolderKanban,
   Link2,
   Loader2,
   MapPin,
@@ -16,13 +15,11 @@ import {
   Plus,
   RefreshCw,
   Repeat,
-  Sun,
   Trash2,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import GlassCard from '../components/GlassCard.jsx';
-import ViewHeader from '../components/ViewHeader.jsx';
+import { Column, ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { ensureCalendarRange, SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { api } from '../services/api/backendClient.js';
 import {
@@ -37,9 +34,9 @@ import {
 import { useSettings } from '../hooks/useSettings.js';
 
 const inputClass =
-  'w-full rounded-lg bg-white/8 px-3 py-2 text-sm text-white placeholder:text-white/35 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/45';
+  'w-full rounded-lg bg-white/8 px-3 py-2 text-sm text-moon placeholder:text-moon/35 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/45';
 const selectClass =
-  'rounded-lg bg-white/8 px-2 py-2 text-xs font-medium text-white ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/45';
+  'rounded-lg bg-white/8 px-2 py-2 text-xs font-medium text-moon ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/45';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const projectAccents = ['#0A84FF', '#BF5AF2', '#30D158', '#FF9F0A', '#FF453A'];
@@ -70,28 +67,19 @@ function relativeDayLabel(key) {
   return keyToDate(key).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * The day in one place.
+ *
+ * The sky holds the day you're reading and the month you pick it from — the
+ * calendar itself is the picker, so any day is one tap away. The ground carries
+ * that day's schedule, its to-dos and habits, and the projects they belong to.
+ */
 export default function LifeHub() {
   const life = useLifeData();
   const calendar = useCalendarEvents();
 
-  return (
-    <div className="flex h-full flex-col">
-      <ViewHeader lead="Life" accent="Hub" subtitle="One gentle day at a time" />
-
-      <section className="my-auto grid max-h-[32rem] min-h-0 flex-1 grid-cols-12 gap-4">
-        <DayCard life={life} calendar={calendar} />
-        <ProjectsCard life={life} />
-        <HabitsCard life={life} />
-      </section>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Card 1 — the day: schedule + to-do, with a calendar day-picker      */
-/* ------------------------------------------------------------------ */
-
-function DayCard({ life, calendar }) {
   const [selectedKey, setSelectedKey] = useState(() => dateKey(new Date()));
   const [showCalendar, setShowCalendar] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
@@ -110,81 +98,117 @@ function DayCard({ life, calendar }) {
     else life.removeEvent(event.id);
   };
 
-  // Local (editable) events + read-only events from connected calendars.
-  const allEvents = useMemo(
-    () => [...life.events, ...(calendar?.events ?? [])],
-    [life.events, calendar?.events],
-  );
+  // Local (editable) events + read-only ones from connected calendars.
+  const allEvents = useMemo(() => [...life.events, ...(calendar?.events ?? [])], [life.events, calendar?.events]);
   const events = allEvents
     .filter((event) => occursOn(event, selectedKey))
     .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
   const todos = life.todos.filter((todo) => occursOn(todo, selectedKey));
+  const doneToday = life.habitLog[dateKey(new Date())] ?? [];
+  const habitsDone = life.habits.filter((habit) => doneToday.includes(habit.id)).length;
+
+  const pick = (key) => {
+    setSelectedKey(key);
+    setShowCalendar(false);
+  };
+  const jumpToToday = () => {
+    setSelectedKey(dateKey(new Date()));
+    setShowCalendar(false);
+  };
 
   return (
-    <GlassCard tone="cyan" className="relative col-span-5 flex min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-2">
-        <CardLabel icon={Sun} label={relativeDayLabel(selectedKey)} />
-        <div className="flex items-center gap-1">
-          <IconButton onClick={() => calendar?.refresh()} label="Refresh calendars">
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${calendar?.loading ? 'animate-spin text-cyan-100/70' : ''}`}
-              aria-hidden="true"
-            />
-          </IconButton>
-          <IconButton onClick={() => setShowConnect(true)} label="Connect calendars">
-            <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-          </IconButton>
-          <IconButton onClick={() => setShowCalendar((v) => !v)} active={showCalendar} label="Pick a day">
-            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-          </IconButton>
-          <IconButton onClick={() => setEditing('new')} label="Add">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-          </IconButton>
+    <div className="flex h-full flex-col">
+      {/* ── Sky: the day you're looking at, and the month it sits in ─────── */}
+      <SkyZone className="flex items-end justify-between gap-10">
+        <div className="min-w-0">
+          <p className="t-eyebrow">{relativeDayLabel(selectedKey)}</p>
+          <h1 className="t-hero mt-3 truncate">
+            {keyToDate(selectedKey).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </h1>
+          <p className="t-lede mt-3">
+            {plural(events.length, 'event')}, {plural(todos.length, 'to-do')}, {habitsDone} of{' '}
+            {plural(life.habits.length, 'habit')} done
+          </p>
+          <div className="mt-6 flex items-center gap-2">
+            <button type="button" onClick={() => setEditing('new')} aria-label="Add" className="pill pill-lit h-10 px-4">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add
+            </button>
+            <button type="button" onClick={jumpToToday} aria-label="Jump to today" className="pill h-10 px-4">
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCalendar((v) => !v)}
+              aria-pressed={showCalendar}
+              aria-label="Pick a day"
+              className="pill h-10 px-4"
+            >
+              <CalendarDays className="h-4 w-4" aria-hidden="true" />
+              Month
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowConnect(true)}
+              aria-label="Connect calendars"
+              className="pill h-10 w-10 px-0 text-moon/75"
+            >
+              <Link2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => calendar?.refresh()}
+              aria-label="Refresh calendars"
+              className="pill h-10 w-10 px-0 text-moon/75"
+            >
+              <RefreshCw className={`h-4 w-4 ${calendar?.loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      </div>
 
-      {showCalendar ? (
-        <MonthCalendar
-          selectedKey={selectedKey}
-          events={allEvents}
-          onPick={(key) => {
-            setSelectedKey(key);
-            setShowCalendar(false);
-          }}
-        />
-      ) : (
-        <div className="glass-scroll mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <SectionLabel>Schedule</SectionLabel>
-              {calendar?.loading && <Loader2 className="h-3 w-3 animate-spin text-cyan-100/50" aria-hidden="true" />}
-            </div>
+      </SkyZone>
+
+      {/* ── Ground: the day's plan, what to do, habits, projects ─────────── */}
+      <Ground className="grid grid-cols-[1.35fr_1fr_1fr]">
+        <Column
+          label="Schedule"
+          action={calendar?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent/70" aria-hidden="true" /> : null}
+          className="pr-8 pt-7"
+          bodyClassName="flex min-h-0 flex-col"
+        >
+          {/* The month drops in above the day's plan rather than replacing it,
+              so choosing a day and reading it happen in the same place. */}
+          {showCalendar ? <MonthCalendar selectedKey={selectedKey} events={allEvents} onPick={pick} /> : null}
+
+          <div className="glass-scroll cascade mt-3 min-h-0 flex-1 overflow-y-auto pb-3 pr-1 [mask-image:linear-gradient(180deg,#000_91%,transparent)]">
             {events.length === 0 ? (
-              <EmptyLine>{calendar?.loading ? 'Syncing calendars…' : 'No events'}</EmptyLine>
+              <EmptyLine>{calendar?.loading ? 'Syncing calendars…' : 'Nothing planned'}</EmptyLine>
             ) : (
-              events.map((event) => (
-                <EventRow key={event.id} event={event} onClick={() => setViewing(event)} />
-              ))
+              events.map((event) => <EventRow key={event.id} event={event} onClick={() => setViewing(event)} />)
             )}
           </div>
+        </Column>
 
-          <div className="space-y-1">
-            <SectionLabel>To-do</SectionLabel>
-            {todos.length === 0 ? (
-              <EmptyLine>Nothing to do</EmptyLine>
-            ) : (
-              todos.map((todo) => (
+        <Column label="To-do" className="ground-rule px-8 pt-7" bodyClassName="glass-scroll overflow-y-auto pr-1">
+          {todos.length === 0 ? (
+            <EmptyLine>Nothing to do</EmptyLine>
+          ) : (
+            <div className="cascade mt-1 space-y-0.5">
+              {todos.map((todo) => (
                 <TodoRow
                   key={todo.id}
                   todo={todo}
                   onToggle={() => life.toggleTodo(todo.id)}
                   onRemove={() => life.removeTodo(todo.id)}
                 />
-              ))
-            )}
-          </div>
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+          <HabitsBlock life={life} />
+        </Column>
+
+        <ProjectsColumn life={life} />
+      </Ground>
 
       {viewing && (
         <EventDetailPopup
@@ -215,7 +239,7 @@ function DayCard({ life, calendar }) {
       )}
 
       {showConnect && <CalendarConnectPopup calendar={calendar} onClose={() => setShowConnect(false)} />}
-    </GlassCard>
+    </div>
   );
 }
 
@@ -264,12 +288,12 @@ function CalendarConnectPopup({ calendar, onClose }) {
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-900/95" />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">Connect calendars</p>
+          <p className="text-[0.75rem] font-semibold text-moon/42">Connect calendars</p>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="grid h-7 w-7 place-items-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
+            className="grid h-7 w-7 place-items-center rounded-full text-moon/50 transition hover:bg-white/10 hover:text-moon"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -286,7 +310,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
                 <button
                   type="button"
                   onClick={calendar.disconnectGoogle}
-                  className="rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-white/45 transition hover:bg-white/10 hover:text-rose-300"
+                  className="rounded-full px-2.5 py-1 text-[0.8125rem] font-semibold text-moon/45 transition hover:bg-white/10 hover:text-rose-300"
                 >
                   Disconnect
                 </button>
@@ -295,7 +319,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
               <button
                 type="button"
                 onClick={calendar.connectGoogle}
-                className="soft-button inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                className="soft-button inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-moon/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
               >
                 <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Connect Google Calendar
               </button>
@@ -308,10 +332,10 @@ function CalendarConnectPopup({ calendar, onClose }) {
                 Can’t reach the Pulse backend — your Google connection is untouched. Retrying automatically.
               </p>
             ) : (
-              <p className="text-xs leading-relaxed text-white/45">
-                Add <code className="text-white/70">GOOGLE_CLIENT_ID</code> and{' '}
-                <code className="text-white/70">GOOGLE_CLIENT_SECRET</code> to{' '}
-                <code className="text-white/70">backend/.env</code> to enable read + write Google sync.
+              <p className="text-xs leading-relaxed text-moon/45">
+                Add <code className="text-moon/70">GOOGLE_CLIENT_ID</code> and{' '}
+                <code className="text-moon/70">GOOGLE_CLIENT_SECRET</code> to{' '}
+                <code className="text-moon/70">backend/.env</code> to enable read + write Google sync.
               </p>
             )}
           </div>
@@ -326,7 +350,7 @@ function CalendarConnectPopup({ calendar, onClose }) {
                 <button
                   type="button"
                   onClick={calendar.disconnectApple}
-                  className="rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold text-white/45 transition hover:bg-white/10 hover:text-rose-300"
+                  className="rounded-full px-2.5 py-1 text-[0.8125rem] font-semibold text-moon/45 transition hover:bg-white/10 hover:text-rose-300"
                 >
                   Disconnect
                 </button>
@@ -359,15 +383,15 @@ function CalendarConnectPopup({ calendar, onClose }) {
                     type="button"
                     onClick={connectApple}
                     disabled={appleBusy || !appleId || !applePw}
-                    className="shrink-0 rounded-lg bg-cyan-200/15 px-3 py-2 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/25 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                    className="shrink-0 rounded-lg bg-accent/15 px-3 py-2 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/25 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                   >
                     {appleBusy ? '…' : 'Connect'}
                   </button>
                 </div>
-                {appleErr && <p className="text-[0.6875rem] leading-relaxed text-rose-300/90">{appleErr}</p>}
-                <p className="text-[0.625rem] leading-relaxed text-white/38">
+                {appleErr && <p className="text-[0.8125rem] leading-relaxed text-rose-300/90">{appleErr}</p>}
+                <p className="text-[0.75rem] leading-relaxed text-moon/38">
                   Uses your Apple ID + an app-specific password (create one at{' '}
-                  <span className="text-white/60">appleid.apple.com → Sign-In and Security → App-Specific Passwords</span>).
+                  <span className="text-moon/60">appleid.apple.com → Sign-In and Security → App-Specific Passwords</span>).
                   iCloud requires this — your normal password won&rsquo;t work.
                 </p>
               </>
@@ -384,14 +408,14 @@ function CalendarConnectPopup({ calendar, onClose }) {
                   <div key={f.id} className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-3 py-2">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: SOURCE_META.ical.color }} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-white/85">{f.name}</p>
-                      <p className="truncate text-[0.625rem] text-white/35">{f.url}</p>
+                      <p className="truncate text-sm text-moon/85">{f.name}</p>
+                      <p className="truncate text-[0.75rem] text-moon/35">{f.url}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeFeed(f.id)}
                       aria-label={`Remove ${f.name}`}
-                      className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-rose-300"
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-moon/40 transition hover:bg-white/10 hover:text-rose-300"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
@@ -417,12 +441,12 @@ function CalendarConnectPopup({ calendar, onClose }) {
                 type="button"
                 onClick={addFeed}
                 aria-label="Add feed"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-200/15 text-cyan-100 ring-1 ring-cyan-200/25 transition hover:bg-cyan-200/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent ring-1 ring-accent/25 transition hover:bg-accent/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            <p className="text-[0.625rem] leading-relaxed text-white/38">
+            <p className="text-[0.75rem] leading-relaxed text-moon/38">
               Paste a public .ics URL — e.g. Google Calendar&rsquo;s &ldquo;Secret address in iCal format&rdquo;, an
               Apple/Outlook share link, or a university timetable feed.
             </p>
@@ -445,18 +469,18 @@ function CalendarConnectPopup({ calendar, onClose }) {
                         className="h-3 w-3 shrink-0 rounded-full"
                         style={{ backgroundColor: c.color || '#888', opacity: off ? 0.3 : 1 }}
                       />
-                      <span className={`min-w-0 flex-1 truncate text-sm ${off ? 'text-white/35' : 'text-white/80'}`}>
+                      <span className={`min-w-0 flex-1 truncate text-sm ${off ? 'text-moon/35' : 'text-moon/80'}`}>
                         {c.name}
                       </span>
                       {c.source === 'google' || c.source === 'apple' ? (
                         <SourceLogo source={c.source} className="h-3.5 w-3.5" />
                       ) : (
-                        <span className="text-[0.5625rem] uppercase tracking-wide text-white/30">{c.source}</span>
+                        <span className="text-[0.75rem] text-moon/30">{c.source}</span>
                       )}
                       {off ? (
-                        <EyeOff className="h-4 w-4 shrink-0 text-white/30" aria-hidden="true" />
+                        <EyeOff className="h-4 w-4 shrink-0 text-moon/30" aria-hidden="true" />
                       ) : (
-                        <Eye className="h-4 w-4 shrink-0 text-white/55" aria-hidden="true" />
+                        <Eye className="h-4 w-4 shrink-0 text-moon/55" aria-hidden="true" />
                       )}
                     </button>
                   );
@@ -495,7 +519,7 @@ function EventMap({ lat, lon, label }) {
         href={link}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center justify-center gap-1 bg-white/[0.04] py-1.5 text-[0.625rem] font-medium text-white/55 transition hover:text-white/85"
+        className="flex items-center justify-center gap-1 bg-white/[0.04] py-1.5 text-[0.75rem] font-medium text-moon/55 transition hover:text-moon/85"
       >
         Open in maps <ExternalLink className="h-3 w-3" aria-hidden="true" />
       </a>
@@ -535,8 +559,8 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
         <div className="flex items-start gap-3 p-4 pb-3">
           <span className="mt-1 h-10 w-1 shrink-0 rounded-full" style={{ backgroundColor: event.color }} />
           <div className="min-w-0 flex-1">
-            <p className="display-type text-lg font-normal leading-tight text-white">{event.title}</p>
-            {event.calendarName && <p className="mt-0.5 truncate text-[0.6875rem] text-white/45">{event.calendarName}</p>}
+            <p className="display-type text-lg font-normal leading-tight text-moon">{event.title}</p>
+            {event.calendarName && <p className="mt-0.5 truncate text-[0.8125rem] text-moon/45">{event.calendarName}</p>}
           </div>
           <IconButton onClick={onClose} label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
@@ -544,25 +568,25 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
         </div>
 
         <div className="glass-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pb-4">
-          <div className="space-y-1.5 text-sm text-white/75">
+          <div className="space-y-1.5 text-sm text-moon/75">
             <p className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 shrink-0 text-white/40" aria-hidden="true" />
+              <CalendarDays className="h-4 w-4 shrink-0 text-moon/40" aria-hidden="true" />
               {dateLabel}
             </p>
             <p className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-white/40" aria-hidden="true" />
+              <Clock className="h-4 w-4 shrink-0 text-moon/40" aria-hidden="true" />
               {event.time || 'All day'}
             </p>
             {location && (
               <p className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-white/40" aria-hidden="true" />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-moon/40" aria-hidden="true" />
                 <span className="min-w-0">{location}</span>
               </p>
             )}
           </div>
 
           {event.description && (
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-white/55">{stripHtml(event.description)}</p>
+            <p className="whitespace-pre-wrap text-xs leading-relaxed text-moon/55">{stripHtml(event.description)}</p>
           )}
 
           {geo && <EventMap lat={geo.lat} lon={geo.lon} label={location} />}
@@ -570,12 +594,12 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
           <div className="flex items-center gap-2 pt-1">
             <SourceLogo source={event.source} className="h-4 w-4" />
             {sourceLabel && (
-              <span className="text-[0.625rem] font-medium uppercase tracking-[0.12em] text-white/45">{sourceLabel}</span>
+              <span className="text-[0.75rem] font-medium text-moon/45">{sourceLabel}</span>
             )}
-            {event.readOnly && <span className="text-[0.625rem] text-white/35">Read-only</span>}
+            {event.readOnly && <span className="text-[0.75rem] text-moon/35">Read-only</span>}
             {confirmDelete ? (
               <div className="ml-auto flex items-center gap-1.5">
-                <span className="text-[0.625rem] uppercase tracking-wide text-white/40">Delete</span>
+                <span className="text-[0.75rem] text-moon/40">Delete</span>
                 <button
                   type="button"
                   onClick={() => onDelete('this')}
@@ -590,7 +614,7 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
                 >
                   All events
                 </button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-lg px-2 py-1 text-xs text-white/45">
+                <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-lg px-2 py-1 text-xs text-moon/45">
                   Cancel
                 </button>
               </div>
@@ -609,7 +633,7 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
                   <button
                     type="button"
                     onClick={onEdit}
-                    className="soft-button inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    className="soft-button inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-moon/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                   >
                     <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit
                   </button>
@@ -681,7 +705,7 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-900/95" />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+          <p className="text-[0.75rem] font-semibold text-moon/42">
             {isNew ? 'New event' : 'Edit event'}
           </p>
           <IconButton onClick={onClose} label="Close">
@@ -696,7 +720,7 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
           </div>
           <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className={inputClass} />
           <div>
-            <p className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">Calendar</p>
+            <p className="mb-1.5 text-[0.75rem] font-semibold text-moon/42">Calendar</p>
             <div className="flex flex-wrap gap-1.5">
               {writable.map((c) => (
                 <button
@@ -705,7 +729,7 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
                   onClick={() => setCalId(c.id)}
                   className={[
                     'flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3 text-xs transition',
-                    calId === c.id ? 'bg-white/12 text-white ring-1 ring-white/25' : 'text-white/55 hover:bg-white/6',
+                    calId === c.id ? 'bg-white/12 text-moon ring-1 ring-white/25' : 'text-moon/55 hover:bg-white/6',
                   ].join(' ')}
                 >
                   <span className="h-3 w-3 rounded-full" style={{ backgroundColor: c.color || '#888' }} />
@@ -714,15 +738,15 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
               ))}
             </div>
           </div>
-          {err && <p className="text-[0.6875rem] leading-relaxed text-rose-300/90">{err}</p>}
+          {err && <p className="text-[0.8125rem] leading-relaxed text-rose-300/90">{err}</p>}
           <div className="flex items-center gap-2 pt-1">
-            <button type="button" onClick={onClose} className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-white/55 transition hover:text-white">
+            <button type="button" onClick={onClose} className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-moon/55 transition hover:text-moon">
               Cancel
             </button>
             <button
               type="submit"
               disabled={busy || !title.trim() || !target}
-              className="soft-button inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white/90 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className="soft-button inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-moon/90 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             >
               {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
               {busy ? 'Saving…' : 'Save'}
@@ -736,38 +760,34 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
 
 function EventRow({ event, onClick }) {
   const recurring = event.repeat !== 'none' || event.recurring;
+  const [start, end] = (event.time || '').split(/\s*[–-]\s*/);
   return (
     <button
       type="button"
       onClick={onClick}
-      className="soft-row group flex w-full items-center gap-3 rounded-2xl p-3.5 text-left transition hover:bg-white/8"
+      className="ground-row group grid w-full grid-cols-[4.25rem_3px_minmax(0,1fr)_auto] items-stretch gap-4 px-2 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
     >
-      <span
-        className="h-9 w-1 shrink-0 rounded-full"
-        style={{ backgroundColor: event.color || calendarColor(event.calendar) }}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="clock-figures flex items-center gap-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-white/45">
-          {event.time || 'All day'}
-          {recurring && <Repeat className="h-3 w-3" aria-hidden="true" />}
-        </p>
-        <p className="display-type mt-0.5 truncate text-lg font-normal leading-tight text-white">
-          {event.title}
-        </p>
-        {event.place && <p className="mt-0.5 truncate text-xs text-white/50">{event.place}</p>}
-      </div>
-      {event.source === 'google' || event.source === 'apple' ? (
-        <SourceLogo source={event.source} className="h-4 w-4" />
-      ) : event.source === 'ical' ? (
-        <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[0.5625rem] font-semibold uppercase tracking-[0.12em] text-white/45">
-          iCal
+      <span className="pt-1 text-right leading-tight">
+        <span className="clock-figures block text-[1rem] font-medium text-moon">{start || 'All day'}</span>
+        {end ? <span className="clock-figures mt-0.5 block text-[0.8125rem] text-dim">{end}</span> : null}
+      </span>
+      <span className="rounded-full" style={{ backgroundColor: event.color || calendarColor(event.calendar) }} />
+      <span className="min-w-0">
+        <span className="display-type block truncate text-[1.375rem] leading-tight text-moon">{event.title}</span>
+        <span className="mt-1 flex items-center gap-2 text-[0.8125rem] text-dim">
+          {event.place ? <span className="truncate">{event.place}</span> : null}
+          {recurring ? <Repeat className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
         </span>
-      ) : (
-        <Pencil
-          className="h-3.5 w-3.5 shrink-0 text-white/25 transition group-hover:text-white/60"
-          aria-hidden="true"
-        />
-      )}
+      </span>
+      <span className="self-center">
+        {event.source === 'google' || event.source === 'apple' ? (
+          <SourceLogo source={event.source} className="h-4 w-4" />
+        ) : event.source === 'ical' ? (
+          <span className="pill h-6 px-2 text-[0.8125rem] text-moon/60">iCal</span>
+        ) : (
+          <Pencil className="h-3.5 w-3.5 text-moon/25 transition group-hover:text-moon/60" aria-hidden="true" />
+        )}
+      </span>
     </button>
   );
 }
@@ -781,6 +801,11 @@ function MonthCalendar({ selectedKey, events, onPick }) {
   const month = cursor.getMonth();
   const todayKey = dateKey(new Date());
 
+  useEffect(() => {
+    const d = keyToDate(selectedKey);
+    setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+  }, [selectedKey]);
+
   // Whatever month is on screen has to be loaded. The dashboard keeps several
   // months to hand, but paging past them used to show empty days rather than
   // fetching them.
@@ -789,35 +814,36 @@ function MonthCalendar({ selectedKey, events, onPick }) {
   }, [year, month]);
   const offset = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Always six rows. A month that only needs five would otherwise be shorter,
+  // and since the hero sits on the horizon the whole calendar would jump every
+  // time you paged into a longer month.
   const cells = [...Array(offset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  while (cells.length < 42) cells.push(null);
 
   return (
-    <div className="mt-3 flex min-h-0 flex-1 flex-col">
-      {/* Month heading — vertically centred in the space between the top and the grid */}
-      <div className="flex min-h-0 flex-1 items-center">
-        <div className="grid w-full grid-cols-[2.25rem_1fr_2.25rem] items-center">
-          <IconButton onClick={() => setCursor(new Date(year, month - 1, 1))} label="Previous month">
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-          </IconButton>
-          <span className="display-type text-center text-base font-medium text-white/90">
-            {cursor.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-          </span>
-          <IconButton onClick={() => setCursor(new Date(year, month + 1, 1))} label="Next month">
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </IconButton>
-        </div>
+    <div className="mt-1 shrink-0 border-b border-white/[0.07] pb-5">
+      <div className="grid w-full grid-cols-[2.25rem_1fr_2.25rem] items-center">
+        <IconButton onClick={() => setCursor(new Date(year, month - 1, 1))} label="Previous month">
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </IconButton>
+        <span className="display-type text-center text-[1.375rem] text-moon">
+          {cursor.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+        </span>
+        <IconButton onClick={() => setCursor(new Date(year, month + 1, 1))} label="Next month">
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </IconButton>
       </div>
 
-      <div className="shrink-0">
-        <div className="grid grid-cols-7 gap-1 text-center text-[0.5625rem] font-semibold uppercase tracking-wide text-white/35">
+      <div className="mt-3">
+        <div className="grid grid-cols-7 gap-1 text-center text-[0.75rem] font-medium text-moon/40">
           {WEEKDAYS.map((day, i) => (
             <span key={i}>{day}</span>
           ))}
         </div>
 
-        <div className="mt-1.5 grid grid-cols-7 gap-1">
+        <div className="mt-1 grid grid-cols-7 gap-x-1 gap-y-0.5">
           {cells.map((day, i) => {
-            if (day === null) return <span key={`b${i}`} />;
+            if (day === null) return <span key={`b${i}`} className="h-8" />;
             const key = dateKey(new Date(year, month, day));
             const isSelected = key === selectedKey;
             const isToday = key === todayKey;
@@ -828,18 +854,18 @@ function MonthCalendar({ selectedKey, events, onPick }) {
                 type="button"
                 onClick={() => onPick(key)}
                 className={[
-                  'flex h-10 flex-col items-center justify-center gap-1 rounded-lg text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+                  'flex h-8 flex-col items-center justify-center gap-0.5 rounded-full text-[0.875rem] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
                   isSelected
-                    ? 'glow-ring bg-cyan-200/20 ring-1 ring-cyan-200/50'
+                    ? 'bg-moon'
                     : isToday
-                      ? 'ring-1 ring-white/15 hover:bg-white/8'
+                      ? 'shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_50%,transparent)] hover:bg-white/8'
                       : 'hover:bg-white/8',
                 ].join(' ')}
               >
                 <span
                   className={[
                     'clock-figures leading-none',
-                    isSelected ? 'font-semibold text-white' : isToday ? 'text-cyan-100' : 'text-white/70',
+                    isSelected ? 'font-semibold text-ink' : isToday ? 'text-accent' : 'text-moon/75',
                   ].join(' ')}
                 >
                   {day}
@@ -879,7 +905,7 @@ function AddEditPopup({ life, calendar, selectedKey, event, onClose }) {
       />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
+          <p className="text-[0.75rem] font-semibold text-moon/42">
             {isNew ? (type === 'task' ? 'New task' : 'New event') : 'Edit event'}
           </p>
           <IconButton onClick={onClose} label="Close">
@@ -896,7 +922,7 @@ function AddEditPopup({ life, calendar, selectedKey, event, onClose }) {
                 onClick={() => setType(option)}
                 className={[
                   'flex-1 rounded-full py-1 text-xs font-semibold capitalize transition',
-                  type === option ? 'glow-ring bg-white/15 text-white' : 'text-white/50 hover:text-white/80',
+                  type === option ? 'glow-ring bg-white/15 text-moon' : 'text-moon/50 hover:text-moon/80',
                 ].join(' ')}
               >
                 {option}
@@ -973,7 +999,7 @@ function TaskForm({ onSave, onCancel }) {
         placeholder="Task"
         className={inputClass}
       />
-      <label className="flex items-center gap-2 text-[0.6875rem] text-white/45">
+      <label className="flex items-center gap-2 text-[0.8125rem] text-moon/45">
         <Repeat className="h-3.5 w-3.5" aria-hidden="true" />
         <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${selectClass} flex-1`}>
           {REPEAT_OPTIONS.map((option) => (
@@ -987,13 +1013,13 @@ function TaskForm({ onSave, onCancel }) {
         <button
           type="button"
           onClick={onCancel}
-          className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-white/55 transition hover:text-white"
+          className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-moon/55 transition hover:text-moon"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="soft-button rounded-lg px-4 py-2 text-xs font-semibold text-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          className="soft-button rounded-lg px-4 py-2 text-xs font-semibold text-moon/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
           Add
         </button>
@@ -1045,7 +1071,7 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
       />
 
       <div>
-        <p className="mb-1.5 text-[0.625rem] font-semibold uppercase tracking-[0.2em] text-white/42">Calendar</p>
+        <p className="mb-1.5 text-[0.75rem] font-semibold text-moon/42">Calendar</p>
         <div className="flex flex-wrap gap-1.5">
           {[...CALENDARS, ...connectedCalendars].map((cal) => (
             <button
@@ -1055,8 +1081,8 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
               className={[
                 'flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3 text-xs transition',
                 calendar === cal.id
-                  ? 'bg-white/12 text-white ring-1 ring-white/25'
-                  : 'text-white/55 hover:bg-white/6',
+                  ? 'bg-white/12 text-moon ring-1 ring-white/25'
+                  : 'text-moon/55 hover:bg-white/6',
               ].join(' ')}
             >
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: cal.color || '#888' }} />
@@ -1066,7 +1092,7 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-[0.6875rem] text-white/45">
+      <label className="flex items-center gap-2 text-[0.8125rem] text-moon/45">
         <Repeat className="h-3.5 w-3.5" aria-hidden="true" />
         <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${selectClass} flex-1`}>
           {REPEAT_OPTIONS.map((option) => (
@@ -1091,14 +1117,14 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
         <button
           type="button"
           onClick={onCancel}
-          className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-white/55 transition hover:text-white"
+          className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-moon/55 transition hover:text-moon"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={busy}
-          className="soft-button inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          className="soft-button inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-moon/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
           {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
           {busy ? 'Saving…' : 'Save'}
@@ -1112,7 +1138,7 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
 /* Projects — deliberately styled apart from the day card             */
 /* ------------------------------------------------------------------ */
 
-function ProjectsCard({ life }) {
+function ProjectsColumn({ life }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
 
@@ -1126,38 +1152,34 @@ function ProjectsCard({ life }) {
   };
 
   return (
-    <GlassCard tone="purple" delay={120} className="col-span-4 flex min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between">
-        <CardLabel icon={FolderKanban} label="Projects" />
-        <IconButton onClick={() => setAdding((v) => !v)} active={adding} label="Add project">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-        </IconButton>
-      </div>
-
+    <Column
+      label="Projects"
+      action={
+        <button
+          type="button"
+          onClick={() => setAdding((v) => !v)}
+          aria-pressed={adding}
+          aria-label="Add project"
+          className="pill h-7 w-7 px-0 text-moon/75"
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      }
+      className="ground-rule pl-8 pt-7"
+      bodyClassName="glass-scroll overflow-y-auto pr-1"
+    >
       {adding && (
-        <form onSubmit={submit} className="mt-3">
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Project name"
-            className={inputClass}
-          />
+        <form onSubmit={submit} className="mt-2">
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" className={inputClass} />
         </form>
       )}
-
-      <div className="glass-scroll mt-3 min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-1">
+      <div className="cascade mt-2 space-y-7">
         {life.projects.map((project, i) => (
-          <ProjectItem
-            key={project.id}
-            project={project}
-            accent={projectAccents[i % projectAccents.length]}
-            life={life}
-          />
+          <ProjectItem key={project.id} project={project} accent={projectAccents[i % projectAccents.length]} life={life} />
         ))}
-        {life.projects.length === 0 && <EmptyLine>No projects yet</EmptyLine>}
       </div>
-    </GlassCard>
+      {life.projects.length === 0 && <EmptyLine>No projects yet</EmptyLine>}
+    </Column>
   );
 }
 
@@ -1166,53 +1188,39 @@ function ProjectItem({ project, accent, life }) {
   const pct = project.todos.length ? (done / project.todos.length) * 100 : 0;
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl bg-white/[0.04] p-3 pl-4 ring-1 ring-white/10">
-      <span className="absolute inset-y-0 left-0 w-1 rounded-full" style={{ backgroundColor: accent }} />
-      <div className="flex items-center justify-between gap-2">
-        <p className="display-type truncate text-sm font-medium text-white">{project.name}</p>
+    <div className="group">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="t-title truncate text-[1.375rem]">{project.name}</p>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="clock-figures text-[0.6875rem] font-medium text-white/45">
-            {done}/{project.todos.length}
+          <span className="clock-figures text-[0.8125rem] text-dim">
+            {done} of {project.todos.length}
           </span>
           <RemoveButton onClick={() => life.removeProject(project.id)} />
         </div>
       </div>
-
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/8">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${pct}%`, backgroundColor: accent }}
-        />
+      <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-white/[0.07]">
+        <div className="bar-grow h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: accent }} />
       </div>
-
       <div className="mt-2 space-y-0.5">
         {project.todos.map((todo) => (
-          <TodoRow
-            key={todo.id}
-            todo={todo}
-            compact
-            onToggle={() => life.toggleProjectTodo(project.id, todo.id)}
-          />
+          <TodoRow key={todo.id} todo={todo} compact onToggle={() => life.toggleProjectTodo(project.id, todo.id)} />
         ))}
       </div>
-
       <InlineAdd placeholder="Add task" onAdd={(label) => life.addProjectTodo(project.id, label)} />
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Daily habits                                                       */
-/* ------------------------------------------------------------------ */
-
-function HabitsCard({ life }) {
+/**
+ * Today's habits as pills: tap one and it lights, which is the whole point of a
+ * habit tracker — the satisfaction of switching it on.
+ */
+function HabitsBlock({ life }) {
   const todayKey = dateKey(new Date());
   const doneToday = life.habitLog[todayKey] ?? [];
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState('');
-
   const doneCount = life.habits.filter((habit) => doneToday.includes(habit.id)).length;
-  const pct = life.habits.length ? (doneCount / life.habits.length) * 100 : 0;
 
   const submit = (e) => {
     e.preventDefault();
@@ -1224,62 +1232,56 @@ function HabitsCard({ life }) {
   };
 
   return (
-    <GlassCard tone="green" delay={200} className="col-span-3 flex min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-2">
-        <CardLabel label="Daily Habits" />
-        <div className="flex items-center gap-2">
-          <span className="clock-figures text-xs font-medium text-white/48">
-            {doneCount}/{life.habits.length}
+    <div className="mt-9">
+      <ColumnHead
+        label="Habits today"
+        action={
+          <div className="flex items-center gap-2">
+          <span className="clock-figures text-[0.8125rem] text-dim">
+            {doneCount} of {life.habits.length}
           </span>
-          <IconButton onClick={() => setAdding((v) => !v)} active={adding} label="Add habit">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-          </IconButton>
-        </div>
-      </div>
-
-      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/8">
-        <div
-          className="glow-dot h-full rounded-full bg-gradient-to-r from-emerald-200 to-cyan-200 text-cyan-200 transition-all duration-700"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            aria-pressed={adding}
+            aria-label="Add habit"
+            className="pill h-7 w-7 px-0 text-moon/75"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          </div>
+        }
+      />
 
       {adding && (
-        <form onSubmit={submit} className="mt-3">
-          <input
-            autoFocus
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="New habit"
-            className={inputClass}
-          />
+        <form onSubmit={submit} className="mt-2">
+          <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="New habit" className={inputClass} />
         </form>
       )}
 
-      <div className="glass-scroll mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+      <div className="mt-3 flex flex-wrap gap-2">
         {life.habits.map((habit) => {
           const done = doneToday.includes(habit.id);
           return (
-            <div key={habit.id} className="group flex items-center gap-2">
+            <span key={habit.id} className="group relative inline-flex">
               <button
                 type="button"
                 onClick={() => life.toggleHabit(habit.id, todayKey)}
-                className="soft-button flex min-w-0 flex-1 items-center justify-between gap-2 rounded-2xl p-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                aria-pressed={done}
+                className="pill h-10 px-4 text-[0.875rem]"
               >
-                <span
-                  className={`truncate text-sm font-medium ${done ? 'text-white/42 line-through' : 'text-white/80'}`}
-                >
-                  {habit.label}
-                </span>
-                <CheckMark done={done} shape="round" />
+                {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                {habit.label}
               </button>
-              <RemoveButton onClick={() => life.removeHabit(habit.id)} />
-            </div>
+              <span className="absolute -right-1 -top-1">
+                <RemoveButton onClick={() => life.removeHabit(habit.id)} />
+              </span>
+            </span>
           );
         })}
-        {life.habits.length === 0 && <EmptyLine>Add your first habit</EmptyLine>}
       </div>
-    </GlassCard>
+      {life.habits.length === 0 && <EmptyLine>Add your first habit</EmptyLine>}
+    </div>
   );
 }
 
@@ -1297,13 +1299,13 @@ function InlineAdd({ placeholder, onAdd }) {
     setText('');
   };
   return (
-    <form onSubmit={submit} className="mt-1 flex items-center gap-1.5 pl-1">
-      <Plus className="h-3.5 w-3.5 shrink-0 text-white/30" aria-hidden="true" />
+    <form onSubmit={submit} className="mt-1.5 flex items-center gap-2.5 px-1.5">
+      <Plus className="h-4 w-4 shrink-0 text-moon/30" aria-hidden="true" />
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-transparent text-xs text-white placeholder:text-white/35 focus:outline-none"
+        className="w-full bg-transparent py-1 text-[0.875rem] text-moon placeholder:text-moon/35 focus:outline-none"
       />
     </form>
   );
@@ -1311,41 +1313,35 @@ function InlineAdd({ placeholder, onAdd }) {
 
 function TodoRow({ todo, onToggle, onRemove, compact }) {
   return (
-    <div className="group flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 transition hover:bg-white/5">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus:outline-none"
-      >
-        <CheckMark done={todo.done} shape="square" />
+    <div className="ground-row group flex items-center gap-3 px-1.5 py-1.5">
+      <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none">
+        <CheckMark done={todo.done} />
         <span
           className={[
-            compact ? 'text-[0.8125rem]' : 'text-sm',
-            'truncate font-medium',
-            todo.done ? 'text-white/38 line-through' : 'text-white/75',
+            compact ? 'text-[0.875rem]' : 'text-[0.9375rem]',
+            'truncate transition-colors',
+            todo.done ? 'text-moon/35 line-through' : 'text-moon/85',
           ].join(' ')}
         >
           {todo.label}
         </span>
-        {todo.repeat && todo.repeat !== 'none' && (
-          <Repeat className="h-3 w-3 shrink-0 text-white/30" aria-hidden="true" />
-        )}
+        {todo.repeat && todo.repeat !== 'none' && <Repeat className="h-3 w-3 shrink-0 text-moon/30" aria-hidden="true" />}
       </button>
       {onRemove && <RemoveButton onClick={onRemove} />}
     </div>
   );
 }
 
-function CheckMark({ done, shape }) {
+/** Round, and it fills with the moon when done. */
+function CheckMark({ done }) {
   return (
     <span
       className={[
-        'grid shrink-0 place-items-center border transition-all',
-        shape === 'round' ? 'h-5 w-5 rounded-full' : 'h-[1.125rem] w-[1.125rem] rounded-md',
-        done ? 'glow-ring border-cyan-100/60 bg-cyan-100/15' : 'border-white/28',
+        'grid h-5 w-5 shrink-0 place-items-center rounded-full transition-all duration-300',
+        done ? 'bg-moon text-ink' : 'shadow-[inset_0_0_0_1.5px_rgba(226,230,248,0.35)]',
       ].join(' ')}
     >
-      {done && <Check className="h-3 w-3 text-cyan-100" aria-hidden="true" />}
+      {done && <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />}
     </span>
   );
 }
@@ -1356,44 +1352,25 @@ function RemoveButton({ onClick }) {
       type="button"
       onClick={onClick}
       aria-label="Delete"
-      className="shrink-0 text-white/25 opacity-0 transition hover:text-white/70 focus:opacity-100 focus:outline-none group-hover:opacity-100"
+      className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ink/80 text-moon/45 opacity-0 transition hover:text-moon focus:opacity-100 focus:outline-none group-hover:opacity-100"
     >
-      <X className="h-3.5 w-3.5" aria-hidden="true" />
+      <X className="h-3 w-3" aria-hidden="true" />
     </button>
   );
 }
 
 function IconButton({ onClick, active, label, children }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className={[
-        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
-        active ? 'bg-white/15 text-white' : 'text-white/45 hover:bg-white/10 hover:text-white',
-      ].join(' ')}
-    >
+    <button type="button" onClick={onClick} aria-label={label} aria-pressed={Boolean(active)} className="pill h-8 w-8 px-0 text-moon/75">
       {children}
     </button>
   );
 }
 
 function SectionLabel({ children }) {
-  return (
-    <p className="text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">{children}</p>
-  );
+  return <p className="t-label">{children}</p>;
 }
 
 function EmptyLine({ children }) {
-  return <p className="px-1.5 py-1 text-xs text-white/35">{children}</p>;
-}
-
-function CardLabel({ icon: Icon, label }) {
-  return (
-    <p className="flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.24em] text-white/42">
-      {Icon ? <Icon className="h-3.5 w-3.5 text-white/55" strokeWidth={1.8} aria-hidden="true" /> : null}
-      {label}
-    </p>
-  );
+  return <p className="px-1.5 py-2 text-[0.9375rem] text-dim">{children}</p>;
 }
