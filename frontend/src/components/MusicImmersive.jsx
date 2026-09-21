@@ -131,117 +131,112 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
         e.currentTarget.scrollLeft = 0;
       }}
     >
-      {/* The room: the sleeve's colours as light, not as a photograph. */}
+      {/* The room, lit from where the record is. The sleeve is the sun, so the
+          light in the gradient starts at the sleeve rather than in a corner. */}
       <div
         ref={fieldRef}
         aria-hidden="true"
         className="immersive-field"
         style={{
-          // The light pools to the right, opposite the words. The lyric sits in
-          // the shadow side of the room and the sleeve's colour fills the space
-          // beside it — which is what stops the right-hand half reading as
-          // simply empty.
+          // A sunset reads from the sun outward: the sky around and above it
+          // carries most of the light, the ground under it holds the rest.
           background:
-            `radial-gradient(62% 68% at 84% 26%, ${rgba(palette.base, 0.78)}, transparent 68%),` +
-            `radial-gradient(52% 46% at 96% 78%, ${rgba(palette.accent, 0.5)}, transparent 70%),` +
-            `radial-gradient(70% 36% at 18% 6%, ${rgba(palette.glow, 0.22)}, transparent 72%)`,
+            `radial-gradient(66% 82% at var(--sun-x) var(--sun-y), ${rgba(palette.base, 0.85)}, transparent 70%),` +
+            `radial-gradient(84% 38% at var(--sun-x) 100%, ${rgba(palette.accent, 0.5)}, transparent 74%),` +
+            `radial-gradient(96% 44% at 62% -8%, ${rgba(palette.glow, 0.22)}, transparent 72%)`,
         }}
       />
 
-      <div className="relative grid h-full" style={{ gridTemplateRows: 'minmax(0,1fr) auto' }}>
-        {/* ── Sky: the words ─────────────────────────────────────────── */}
-        <div className="relative min-h-0">
-          {!afk ? (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Exit immersive mode"
-              title="Exit (Esc)"
-              className="pill absolute right-7 top-6 z-20 grid h-10 w-10 place-items-center px-0 text-moon/70 md:right-10"
-            >
-              <Minimize2 className="h-4 w-4" aria-hidden="true" />
-            </button>
-          ) : null}
+      {!afk ? (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Exit immersive mode"
+          title="Exit (Esc)"
+          className="pill absolute right-7 top-6 z-30 grid h-10 w-10 place-items-center px-0 text-moon/70 md:right-10"
+        >
+          <Minimize2 className="h-4 w-4" aria-hidden="true" />
+        </button>
+      ) : null}
 
-          <Lyrics
-            lyrics={lyrics}
-            index={lineIndex}
-            onSeek={seekTo}
-            activeRef={activeLineRef}
-            hasTrack={hasTrack}
-          />
-        </div>
+      {/* ── Sky, left of the sun: the words ──────────────────────────── */}
+      <Lyrics
+        lyrics={lyrics}
+        index={lineIndex}
+        onSeek={seekTo}
+        activeRef={activeLineRef}
+        hasTrack={hasTrack}
+      />
 
-        {/* ── The horizon: the song itself ───────────────────────────── */}
-        <Horizon
-          lines={lyrics.synced ? lyrics.lines : null}
-          durationMs={durationMs}
-          onSeek={seekTo}
-          litRef={litRef}
-          litTicksRef={litTicksRef}
-          headRef={headRef}
-        />
+      {/* ── The horizon: the song itself, running behind the sleeve ──── */}
+      <Horizon
+        lines={lyrics.synced ? lyrics.lines : null}
+        durationMs={durationMs}
+        onSeek={seekTo}
+        litRef={litRef}
+        litTicksRef={litTicksRef}
+        headRef={headRef}
+      />
 
-        {/* ── Ground: the record, and what you can do to it ──────────── */}
-        <footer className="immersive-ground flex items-center gap-6 px-7 pb-7 pt-6 md:gap-8 md:px-10">
-          <Sleeve image={state?.image} track={state?.track} />
+      {/* ── The sun: the record itself, half in the sky, half on the
+             ground, sitting on the line it is being played along. ────── */}
+      <Sleeve image={state?.image} track={state?.track} />
 
-          <div className="min-w-0 flex-1">
-            <h1 className="immersive-title truncate">{state?.track || 'Nothing playing'}</h1>
-            <p className="t-meta mt-1 truncate">
-              {state?.artists || 'Start something from your library'}
+      {/* ── Ground, left of the sun ──────────────────────────────────── */}
+      <footer className="immersive-ground">
+        <h1 className="immersive-title truncate">{state?.track || 'Nothing playing'}</h1>
+        <p className="t-meta mt-1 truncate">
+          {state?.artists || 'Start something from your library'}
+        </p>
+
+        {afk ? (
+          <div className="mt-5">
+            <p className="display-figures text-[clamp(2.5rem,5vw,4rem)] leading-none text-moon">
+              {formatClock(now)}
+            </p>
+            <p className="t-meta mt-1.5">{formatLongDate(now)}</p>
+          </div>
+        ) : (
+          <div className="mt-5 flex items-center gap-5">
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={controls.previous}
+                aria-label="Previous track"
+                className="pill grid h-11 w-11 place-items-center px-0"
+              >
+                <SkipBack className="h-4 w-4" fill="currentColor" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={controls.toggle}
+                aria-label={paused ? 'Play' : 'Pause'}
+                className="pill pill-lit grid h-14 w-14 place-items-center px-0"
+              >
+                {paused ? (
+                  <Play className="ml-0.5 h-5 w-5" fill="currentColor" aria-hidden="true" />
+                ) : (
+                  <Pause className="h-5 w-5" fill="currentColor" aria-hidden="true" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={controls.next}
+                aria-label="Next track"
+                className="pill grid h-11 w-11 place-items-center px-0"
+              >
+                <SkipForward className="h-4 w-4" fill="currentColor" aria-hidden="true" />
+              </button>
+            </div>
+
+            <p className="clock-figures text-[0.8125rem] text-moon/45">
+              <span ref={elapsedRef}>{fmt(position)}</span>
+              <span className="px-1.5 text-moon/25">/</span>
+              <span>{fmt(durationMs)}</span>
             </p>
           </div>
-
-          {afk ? (
-            <div className="text-right">
-              <p className="display-figures text-[clamp(2.25rem,4.4vw,3.5rem)] leading-none text-moon">
-                {formatClock(now)}
-              </p>
-              <p className="t-meta mt-1.5">{formatLongDate(now)}</p>
-            </div>
-          ) : (
-            <>
-              <p className="clock-figures shrink-0 text-[0.8125rem] text-moon/45">
-                <span ref={elapsedRef}>{fmt(position)}</span>
-                <span className="px-1.5 text-moon/25">/</span>
-                <span>{fmt(durationMs)}</span>
-              </p>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={controls.previous}
-                  aria-label="Previous track"
-                  className="pill grid h-11 w-11 place-items-center px-0"
-                >
-                  <SkipBack className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={controls.toggle}
-                  aria-label={paused ? 'Play' : 'Pause'}
-                  className="pill pill-lit grid h-14 w-14 place-items-center px-0"
-                >
-                  {paused ? (
-                    <Play className="ml-0.5 h-5 w-5" fill="currentColor" aria-hidden="true" />
-                  ) : (
-                    <Pause className="h-5 w-5" fill="currentColor" aria-hidden="true" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={controls.next}
-                  aria-label="Next track"
-                  className="pill grid h-11 w-11 place-items-center px-0"
-                >
-                  <SkipForward className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-                </button>
-              </div>
-            </>
-          )}
-        </footer>
-      </div>
+        )}
+      </footer>
 
       {/* Standing in for the screensaver, the whole screen is the way back —
           one transparent target over everything, so a stray tap can't seek a
@@ -331,17 +326,24 @@ function Horizon({ lines, durationMs, onSeek, litRef, litTicksRef, headRef }) {
 
 /* ── The sleeve ──────────────────────────────────────────────────────────── */
 
-/** The record as an object on the ground: square, hard-edged, casting a shadow. */
+/**
+ * The record, set on the horizon like a sun: its centre on the line, half of it
+ * in the sky and half standing on the ground. Square and hard-edged, with a
+ * shadow that falls down the ground beneath it — it is an object in the room,
+ * not a picture of one, so it gets no halo and no glow.
+ */
 function Sleeve({ image, track }) {
   return (
-    <div className="immersive-sleeve shrink-0">
-      {image ? (
-        <img src={image} alt={`${track} album art`} className="h-full w-full object-cover" />
-      ) : (
-        <div className="grid h-full w-full place-items-center bg-white/5">
-          <Music2 className="h-7 w-7 text-moon/30" strokeWidth={1.2} aria-hidden="true" />
-        </div>
-      )}
+    <div className="immersive-sun">
+      <div className="immersive-sun-face">
+        {image ? (
+          <img src={image} alt={`${track} album art`} className="h-full w-full object-cover" />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-white/5">
+            <Music2 className="h-12 w-12 text-moon/25" strokeWidth={1.1} aria-hidden="true" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

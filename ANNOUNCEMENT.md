@@ -31,7 +31,7 @@ product can actually do.
 | Navigation | Floating pill dock, gradient AI button | A hairline baseline across the foot of the screen, with the assistant as an ECG beat in it |
 | Travel | Local-only, typed in by hand | Live flight tracking, real maps, places search, currency, destination facts |
 | Assistant | Text chat, agent loop over tools | The same, plus real-time speech over a WebSocket, with barge-in |
-| Immersive player | Blurred sleeve, floating cover, karaoke lyrics | The song drawn as a horizon: every lyric line a tick on the rule |
+| Immersive player | Blurred sleeve, floating cover, karaoke lyrics | The song drawn as a horizon, with the record set on it like a sun |
 | Launchpad | A modal app picker | A view of its own: local apps, saved sites and web search |
 | Finance | Present | **Removed** |
 
@@ -181,20 +181,25 @@ the line to move there.
 
 ![The immersive player, before and after](docs/release/compare-immersive.png)
 
-Above the line are the words, set in Newsreader because a lyric is read from
-across the room — the old version set them in the interface face and the track
-title in the display face, which was exactly the wrong way round. The line being
-sung is simply the only bright one, marked with the same accent tick that heads
-every column elsewhere in the app; there is no bloom. Below the line the record
-sits on the ground as an object, square-edged and casting a shadow, and nothing
-floats.
+The record sits on that line like a sun: half in the sky, half standing on the
+ground, at the point the light comes from. The sleeve is not wallpaper and not a
+card in a halo — it is square-edged, ringed, throwing a shadow down the ground
+beneath it, and the horizon runs behind it and comes out the other side. Every
+gradient in the room is centred on it, so the light in the picture has a source
+rather than a corner it happens to sit in.
 
-The light in the room is the sleeve's, and only the sleeve's. It does not listen
-to the audio — no beat detection, nothing to tune — because this is somewhere to
-leave running, not a meter to watch. The starfield and nebula the old version
-drifted behind everything are gone, along with a shine that swept the cover, a
-breathing halo, a parallax drift and a pulsing glow on the sung line: five
-decorations that were there because they were possible.
+The words run to its left, set in Newsreader because a lyric is read from across
+the room — the old version set them in the interface face and the track title in
+the display face, which was exactly the wrong way round. The line being sung is
+simply the only bright one, marked with the same accent tick that heads every
+column elsewhere in the app; there is no bloom.
+
+The light is the sleeve's and only the sleeve's. It does not listen to the audio
+— no beat detection, nothing to tune — because this is somewhere to leave
+running, not a meter to watch. The starfield and nebula the old version drifted
+behind everything are gone, along with a shine that swept the cover, a breathing
+halo, a parallax drift and a pulsing glow on the sung line: five decorations
+that were there because they were possible.
 
 ![The immersive player, lit by a different record](docs/release/gallery/immersive.jpg)
 
