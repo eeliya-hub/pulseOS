@@ -1,5 +1,5 @@
 import { Minimize2, Music2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
+import { useCallback, useEffect, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { activeLineIndex, useLyrics } from '../hooks/useLyrics.js';
 import { useSpotifyPlayer } from '../hooks/useSpotifyPlayer.js';
@@ -23,10 +23,14 @@ const LYRIC_LEAD_MS = 400;
  *
  * The rest of Pulse OS is built as sky, horizon and ground; this is that idea
  * with the lights turned all the way up. The horizon IS the track — the rule
- * runs the width of the screen, the part you have heard is lit, and every line
- * of the lyric is a tick standing on it, so the shape of the song is visible
- * before you hear it: verses crowd together, an instrumental opens a gap. Click
+ * runs the width of the screen and the part you have heard is lit. Click
  * anywhere along it to move.
+ *
+ * Where you are shows as a light sitting in the rule rather than a marker
+ * standing off it, and a second light sweeps the played stretch on a loop: the
+ * same streak that runs the navigation baseline at the foot of every other
+ * view. Its run ends at the playhead, so it never crosses music you have not
+ * reached.
  *
  * Above the line are the words, set in the display face because they are the
  * thing read from across the room. Below it is the record itself and the
@@ -61,7 +65,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
 
   const activeLineRef = useRef(null);
   const litRef = useRef(null);
-  const litTicksRef = useRef(null);
+  const horizonRef = useRef(null);
   const headRef = useRef(null);
   const elapsedRef = useRef(null);
   const fieldRef = useRef(null);
@@ -91,13 +95,18 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
     const clamped = durationMs ? Math.min(here, durationMs) : here;
     const pct = durationMs ? Math.min(100, (clamped / durationMs) * 100) : 0;
 
-    // The horizon: one width and one offset. The lit ticks are the same row of
-    // ticks as the dim ones, clipped to how far the song has got — one style
-    // write a frame instead of one per tick.
+    // The horizon: how much of it is lit, and where the light sits in it.
     if (litRef.current) litRef.current.style.width = `${pct.toFixed(3)}%`;
-    if (litTicksRef.current) litTicksRef.current.style.clipPath = `inset(0 ${(100 - pct).toFixed(3)}% 0 0)`;
     if (headRef.current) headRef.current.style.left = `${pct.toFixed(3)}%`;
     if (elapsedRef.current) elapsedRef.current.textContent = fmt(clamped);
+
+    // Where the travelling light finishes its run: the playhead, in pixels. The
+    // keyframe reads it as --played, so the sweep only ever covers the part of
+    // the track that has actually been heard.
+    if (horizonRef.current) {
+      const width = horizonRef.current.clientWidth;
+      horizonRef.current.style.setProperty('--played', `${((pct / 100) * width).toFixed(1)}px`);
+    }
 
     // Re-render only when the sung line actually changes — a few times a verse
     // instead of sixty times a second.
@@ -174,11 +183,10 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
 
         {/* ── The horizon: the song itself ───────────────────────────── */}
         <Horizon
-          lines={lyrics.synced ? lyrics.lines : null}
           durationMs={durationMs}
           onSeek={seekTo}
+          rootRef={horizonRef}
           litRef={litRef}
-          litTicksRef={litTicksRef}
           headRef={headRef}
         />
 
@@ -289,31 +297,16 @@ function useFrame(fn) {
  * the playhead, which keeps the per-frame work to two style writes however many
  * lines the song has.
  */
-function Horizon({ lines, durationMs, onSeek, litRef, litTicksRef, headRef }) {
-  // Positions change only when the track does.
-  const ticks = useMemo(() => {
-    if (!lines || !durationMs) return [];
-    return lines
-      .filter((l) => l.text && l.at != null)
-      .map((l) => ({ at: l.at, pct: Math.min(100, (l.at / durationMs) * 100) }));
-  }, [lines, durationMs]);
-
+function Horizon({ durationMs, onSeek, rootRef, litRef, headRef }) {
   const seekFromEvent = (e) => {
     if (!durationMs) return;
     const rect = e.currentTarget.getBoundingClientRect();
     onSeek(((e.clientX - rect.left) / rect.width) * durationMs);
   };
 
-  const row = (lit) => (
-    <div className={lit ? 'immersive-ticks immersive-ticks--lit' : 'immersive-ticks'} ref={lit ? litTicksRef : null}>
-      {ticks.map((t, i) => (
-        <span key={i} style={{ left: `${t.pct.toFixed(3)}%` }} />
-      ))}
-    </div>
-  );
-
   return (
     <button
+      ref={rootRef}
       type="button"
       aria-label="Seek within the track"
       onClick={seekFromEvent}
@@ -322,9 +315,8 @@ function Horizon({ lines, durationMs, onSeek, litRef, litTicksRef, headRef }) {
       <div className="immersive-rule" aria-hidden="true">
         <div ref={litRef} className="immersive-rule-lit" />
       </div>
-      {row(false)}
-      {row(true)}
-      {/* The light that runs the navigation baseline, running this rule too. */}
+      {/* The light that runs the navigation baseline, running this rule too —
+          as far as the music has got, and no further. */}
       <span className="immersive-blip" aria-hidden="true" />
       <span ref={headRef} className="immersive-head" aria-hidden="true" />
     </button>

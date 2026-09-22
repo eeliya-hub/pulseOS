@@ -31,7 +31,7 @@ product can actually do.
 | Navigation | Floating pill dock, gradient AI button | A hairline baseline across the foot of the screen, with the assistant as an ECG beat in it |
 | Travel | Local-only, typed in by hand | Live flight tracking, real maps, places search, currency, destination facts |
 | Assistant | Text chat, agent loop over tools | The same, plus real-time speech over a WebSocket, with barge-in |
-| Immersive player | Blurred sleeve, floating cover, karaoke lyrics | The song drawn as a horizon: every lyric line a tick on the rule |
+| Immersive player | Blurred sleeve, floating cover, karaoke lyrics | The song drawn as a horizon, with the baseline's travelling light in the rule |
 | Launchpad | A modal app picker | A view of its own: local apps, saved sites and web search |
 | Finance | Present | **Removed** |
 
@@ -173,11 +173,12 @@ copying music players.
 
 The rebuild starts from the grammar the rest of Pulse OS is already built on. A
 view is a sky, a horizon and a ground — so here, **the horizon is the track**.
-The rule runs the full width of the screen, the part you have heard is lit, and
-every line of the lyric stands on it as a tick. That means the shape of the song
-is visible before you get to it: verses crowd together, a chorus repeats at an
-even pace, an instrumental break opens a gap in the marks. Click anywhere along
-the line to move there.
+The rule runs the full width of the screen and the part you have heard is lit.
+Click anywhere along it to move there. Where you are shows as a light sitting in
+the rule rather than a marker standing off it — the same three-part streak,
+accent tails around a white core, that runs the navigation baseline at the foot
+of every other view — and a second one sweeps the played stretch on a loop, its
+run ending at the playhead so it never crosses music you have not reached.
 
 ![The immersive player, before and after](docs/release/compare-immersive.png)
 

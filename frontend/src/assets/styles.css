@@ -1699,9 +1699,10 @@ h3,
   content: '';
   position: absolute;
   left: 0;
-  top: 0.55em;
+  top: 50%;
+  height: 0.92em;
+  margin-top: -0.46em;
   width: 3px;
-  height: 1.05em;
   border-radius: 2px;
   background: linear-gradient(180deg, var(--lit), color-mix(in srgb, var(--lit) 12%, transparent));
   animation: tick-grow 520ms var(--ease-out) both;
@@ -1755,32 +1756,6 @@ h3,
   box-shadow: 0 0 18px color-mix(in srgb, var(--lit) 55%, transparent);
 }
 
-/* Ticks hang below the rule. Two identical rows: the dim one always drawn, the
-   lit one clipped to the playhead — so marking progress across a hundred ticks
-   costs one clip-path write a frame rather than a hundred colour writes. */
-.immersive-ticks {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 0.5rem;
-  pointer-events: none;
-}
-
-.immersive-ticks > span {
-  position: absolute;
-  top: 0;
-  width: 1px;
-  height: 100%;
-  background: rgba(232, 238, 252, 0.22);
-}
-
-.immersive-ticks--lit > span {
-  background: var(--lit);
-}
-
-/* Where you are in the track. Not a spike standing off the rule but a light
-   sitting in it — the same three-part streak that runs the navigation baseline:
-   accent at the tails, a brighter middle, a white core. */
 .immersive-head {
   position: absolute;
   top: 0;
@@ -1843,7 +1818,10 @@ h3,
   }
 
   100% {
-    transform: translateX(100vw);
+    /* Half the streak's own width back, so its core finishes on the playhead
+       rather than its leading edge — otherwise the light runs on past music
+       that has not been played. */
+    transform: translateX(calc(var(--played, 0px) - 4.5rem));
     opacity: 0;
   }
 }
