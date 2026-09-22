@@ -1731,8 +1731,14 @@ h3,
 
 /* ── The horizon ───────────────────────────────────────────────────────── */
 
+/* A button, so it seeks on click — which means it needs to be told to fill its
+   parent. Left as the inline-block a button is by default, it collapses to the
+   width of its content, and its content is three absolutely-positioned spans:
+   nothing. The whole bar then measures 0px and no progress can show. */
 .immersive-horizon {
   position: relative;
+  display: block;
+  width: 100%;
   height: var(--horizon-h);
   cursor: pointer;
   flex-shrink: 0;
@@ -1743,7 +1749,7 @@ h3,
   inset-inline: 0;
   top: 0;
   height: 1px;
-  background: rgba(232, 238, 252, 0.12);
+  background: rgba(232, 238, 252, 0.22);
 }
 
 .immersive-rule-lit {
