@@ -181,17 +181,19 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
           />
         </div>
 
-        {/* ── The horizon: the song itself ───────────────────────────── */}
-        <Horizon
-          durationMs={durationMs}
-          onSeek={seekTo}
-          rootRef={horizonRef}
-          litRef={litRef}
-          headRef={headRef}
-        />
+        {/* ── The horizon, and the ground under it ───────────────────────
+            One surface, starting at the rule: the tonal edge and the progress
+            line have to be the same line, not two a few rem apart. */}
+        <div className="immersive-ground">
+          <Horizon
+            durationMs={durationMs}
+            onSeek={seekTo}
+            rootRef={horizonRef}
+            litRef={litRef}
+            headRef={headRef}
+          />
 
-        {/* ── Ground: the record, and what you can do to it ──────────── */}
-        <footer className="immersive-ground flex items-center gap-6 px-7 pb-7 pt-6 md:gap-8 md:px-10">
+          <footer className="immersive-ground-bar flex items-center gap-6 px-7 pb-7 pt-6 md:gap-8 md:px-10">
           <Sleeve image={state?.image} track={state?.track} />
 
           <div className="min-w-0 flex-1">
@@ -248,7 +250,8 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
               </div>
             </>
           )}
-        </footer>
+          </footer>
+        </div>
       </div>
 
       {/* Standing in for the screensaver, the whole screen is the way back —

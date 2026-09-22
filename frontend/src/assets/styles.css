@@ -1828,8 +1828,16 @@ h3,
 
 /* ── The ground ────────────────────────────────────────────────────────── */
 
+/* Everything below the rule is one surface, and the rule sits on its top edge:
+   the change of tone and the progress line are the same line. Previously the
+   gradient began under the horizon strip, which put the tonal edge 2.75rem
+   below the rule and read as two horizons. */
 .immersive-ground {
   background: linear-gradient(180deg, rgba(4, 6, 13, 0.16), rgba(4, 6, 13, 0.78));
+}
+
+.immersive-ground-bar {
+  position: relative;
 }
 
 .immersive-title {
