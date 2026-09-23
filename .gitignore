@@ -33,3 +33,11 @@ build/
 **/.DS_Store
 .idea/
 .vscode/
+
+# iOS — the Xcode project is generated from ios/project.yml by XcodeGen,
+# so the generated one is build output, not source.
+ios/*.xcodeproj
+ios/PulseOS/Info.plist
+ios/*.xcworkspace
+ios/build/
+ios/DerivedData/
