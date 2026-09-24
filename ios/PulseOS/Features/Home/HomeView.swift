@@ -2,183 +2,230 @@ import SwiftUI
 
 /// Home, in portrait.
 ///
-/// The web lays this out as one landscape viewport that never scrolls: a hero
-/// on the sky, a horizon, then three ground columns side by side. A phone has
-/// no room for three columns, so the columns become a stack and the ground
-/// scrolls under a sky that does not. The grammar survives — sky, horizon,
-/// ground, an accent tick at the head of each column — the arrangement does not.
+/// The web lays this out as one landscape viewport that never scrolls: a hero on
+/// the sky, then three ground columns side by side — Upcoming, Forecast, Launch.
+/// A phone has no room for three columns, so they become three tabs. The thing
+/// the web pulls out as the highlighted event stays pulled out, above the tabs,
+/// because that is the one piece you open the app to see.
 struct HomeView: View {
     @StateObject private var model = HomeModel()
     @EnvironmentObject private var sky: SkyModel
 
+    enum Tab: Hashable { case today, upcoming, forecast }
+    @State private var tab: Tab = .today
+
     var body: some View {
-        ZStack {
-            SkyView(phase: sky.phase)
+        Stage(phase: sky.phase) {
+            VStack(alignment: .leading, spacing: 10) {
+                (Text(model.greeting)
+                    .font(PulseFont.hero(36))
+                    .foregroundStyle(Theme.moon)
+                 + Text(" ")
+                 + Text(model.settings.name)
+                    .font(PulseFont.heroItalic(36))
+                    .foregroundStyle(sky.phase.accent.opacity(0.92)))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
 
+                Text(model.todayLine)
+                    .font(PulseFont.lede)
+                    .foregroundStyle(Theme.haze)
+
+                AskPulseField()
+                    .padding(.top, 4)
+            }
+        } ground: {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let next = model.next {
+                        HighlightedEvent(entry: next, accent: sky.phase.accent)
+                    }
+
+                    SegTabs(
+                        items: [(.today, "Today"), (.upcoming, "Upcoming"), (.forecast, "Forecast")],
+                        selection: $tab,
+                        accent: sky.phase.accent
+                    )
+
+                    switch tab {
+                    case .today: rows(model.today)
+                    case .upcoming: rows(model.upcoming)
+                    case .forecast: ForecastPanel()
+                    }
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 18)
+                .padding(.bottom, 26)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    @ViewBuilder
+    private func rows(_ entries: [Sample.Entry]) -> some View {
+        if entries.isEmpty {
+            Text("Nothing here.")
+                .font(PulseFont.body)
+                .foregroundStyle(Theme.dim)
+                .padding(.vertical, 8)
+        } else {
             VStack(spacing: 0) {
-                TopBar()
-                skyZone
-                horizon
-                ground
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                    GroundRow(
+                        lead: entry.allDay ? "All day" : entry.start.formatted(date: .omitted, time: .shortened),
+                        subLead: entry.start.formatted(.dateTime.weekday(.abbreviated)),
+                        title: entry.title,
+                        subtitle: entry.location,
+                        tint: entry.tint
+                    )
+                    if index < entries.count - 1 { Hairline() }
+                }
             }
         }
-        .task { await model.load() }
-        .refreshable { await model.load() }
     }
+}
 
-    // MARK: Sky — what the day is
+/// The web calls this the highlighted event and gives it the largest type on the
+/// screen after the greeting. It keeps that billing here.
+private struct HighlightedEvent: View {
+    let entry: Sample.Entry
+    let accent: Color
 
-    private var skyZone: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(model.greeting)
-                .font(PulseFont.hero(38))
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 8) {
+                Circle().fill(entry.tint).frame(width: 7, height: 7)
+                Text("Highlighted event")
+                    .font(PulseFont.label)
+                    .foregroundStyle(Theme.moon.opacity(0.7))
+                Spacer()
+                Text(entry.start, style: .relative)
+                    .font(PulseFont.micro)
+                    .foregroundStyle(accent.opacity(0.9))
+                    .fixedSize()
+            }
+
+            Text(entry.title)
+                .font(PulseFont.hero(27))
                 .foregroundStyle(Theme.moon)
-            + Text(" ")
-            + Text(model.settings.name)
-                .font(PulseFont.heroItalic(38))
-                // The name carries the hour's colour pushed toward a truer blue,
-                // the way `.name-mark` does on the web.
-                .foregroundStyle(sky.phase.accent.opacity(0.92))
+                .lineLimit(2)
 
-            Text(model.todayLine)
-                .font(PulseFont.lede)
-                .foregroundStyle(Theme.haze)
-
-            AskPulseField()
-                .padding(.top, 6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 22)
-        .padding(.top, 18)
-        .padding(.bottom, 22)
-    }
-
-    private var horizon: some View {
-        Rectangle()
-            .fill(Theme.rule)
-            .frame(height: 1)
-            .overlay(alignment: .leading) {
-                // A short lit run at the left end, the way the horizon is lit on
-                // the web. Purely a light, not a measure of anything.
-                LinearGradient(
-                    colors: [sky.phase.accent.opacity(0.5), .clear],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: 120, height: 1)
+            HStack(spacing: 10) {
+                Text(window)
+                    .font(PulseFont.body)
+                    .foregroundStyle(Theme.haze)
+                if let location = entry.location {
+                    Text("·").foregroundStyle(Theme.dim)
+                    Text(location)
+                        .font(PulseFont.meta)
+                        .foregroundStyle(Theme.dim)
+                        .lineLimit(1)
+                }
             }
+        }
+        .padding(.leading, 13)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(entry.tint)
+                .frame(width: 3)
+        }
     }
 
-    // MARK: Ground — what you do about it
+    private var window: String {
+        if entry.allDay { return "All day" }
+        let start = entry.start.formatted(date: .omitted, time: .shortened)
+        guard let end = entry.end else { return start }
+        return "\(start) – \(end.formatted(date: .omitted, time: .shortened))"
+    }
+}
 
-    private var ground: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                if let next = model.next {
-                    column("Next") {
-                        NextEventCard(event: next, accent: sky.phase.accent)
-                    }
-                }
-
-                if !model.upcoming.isEmpty {
-                    column("Upcoming") {
-                        VStack(spacing: 0) {
-                            ForEach(Array(model.upcoming.prefix(6).enumerated()), id: \.offset) { i, event in
-                                EventRow(event: event)
-                                if i < min(6, model.upcoming.count) - 1 {
-                                    Divider().overlay(Theme.rule)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if let weather = model.weather {
-                    column("Forecast") {
-                        ForecastPanel(weather: weather, points: model.forecast)
-                    }
-                }
-
-                ForEach(model.problems, id: \.self) { problem in
-                    Text(problem)
+/// Home's forecast tab: today's reading, then the week. The full detail lives in
+/// the Weather section.
+private struct ForecastPanel: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("\(Sample.currentTemp)°")
+                    .font(PulseFont.hero(46))
+                    .foregroundStyle(Theme.moon)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(Sample.currentCondition)
+                        .font(PulseFont.body)
+                        .foregroundStyle(Theme.moon.opacity(0.9))
+                    Text(Sample.city)
                         .font(PulseFont.meta)
                         .foregroundStyle(Theme.dim)
                 }
+                Spacer()
+                Image(systemName: WeatherIcon.symbol(Sample.currentIcon))
+                    .font(.system(size: 30, weight: .light))
+                    .foregroundStyle(Theme.moon.opacity(0.75))
             }
-            .padding(.horizontal, 22)
-            .padding(.top, 22)
-            .padding(.bottom, 40)
-        }
-        .scrollIndicators(.hidden)
-        .background(
-            LinearGradient(
-                colors: [Theme.ink.opacity(0.22), Theme.ink.opacity(0.78)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-    }
 
-    private func column<Content: View>(
-        _ label: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ColumnHead(label: label, accent: sky.phase.accent)
-            content()
+            VStack(spacing: 0) {
+                ForEach(Array(Sample.days.prefix(5).enumerated()), id: \.element.id) { i, day in
+                    DayRow(day: day, isToday: i == 0)
+                    if i < 4 { Hairline() }
+                }
+            }
         }
     }
 }
 
-// MARK: - Pieces
+struct DayRow: View {
+    let day: Sample.Day
+    var isToday: Bool = false
 
-private struct TopBar: View {
-    @State private var now = Date.now
-    private let tick = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+    private static let range = 8.0...26.0
 
     var body: some View {
-        HStack {
-            HStack(spacing: 7) {
-                PulseMark()
-                Text("Pulse")
-                    .font(PulseFont.title)
-                    .foregroundStyle(Theme.moon.opacity(0.9))
-            }
-            Spacer()
-            Text(now, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated))
-                .font(PulseFont.micro)
+        HStack(spacing: 12) {
+            Text(isToday ? "Today" : day.date.formatted(.dateTime.weekday(.abbreviated)))
+                .font(PulseFont.body)
+                .foregroundStyle(Theme.moon.opacity(isToday ? 0.95 : 0.7))
+                .frame(width: 54, alignment: .leading)
+
+            Image(systemName: WeatherIcon.symbol(day.icon))
+                .font(.system(size: 14, weight: .light))
+                .foregroundStyle(Theme.moon.opacity(0.65))
+                .frame(width: 22)
+
+            Text("\(day.low)°")
+                .font(PulseFont.figures(13))
                 .foregroundStyle(Theme.dim)
+
+            // The temperature range as a bar, the way the web draws it: the day
+            // is read by comparing bars, not by reading two numbers.
+            GeometryReader { geo in
+                let span = Self.range.upperBound - Self.range.lowerBound
+                let x0 = (Double(day.low) - Self.range.lowerBound) / span
+                let x1 = (Double(day.high) - Self.range.lowerBound) / span
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.08)).frame(height: 3)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: 0x7dd3fc), Color(hex: 0xfbbf24)],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(6, geo.size.width * (x1 - x0)), height: 3)
+                        .offset(x: geo.size.width * x0)
+                }
+                .frame(height: geo.size.height, alignment: .center)
+            }
+            .frame(height: 16)
+
+            Text("\(day.high)°")
+                .font(PulseFont.figures(13))
+                .foregroundStyle(Theme.moon.opacity(0.92))
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 6)
-        .onReceive(tick) { now = $0 }
+        .padding(.vertical, 9)
     }
 }
 
-/// The heartbeat the app is named for.
-private struct PulseMark: View {
-    var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            let midY = size.height / 2
-            path.move(to: CGPoint(x: 0, y: midY))
-            path.addLine(to: CGPoint(x: size.width * 0.3, y: midY))
-            path.addLine(to: CGPoint(x: size.width * 0.42, y: midY - size.height * 0.42))
-            path.addLine(to: CGPoint(x: size.width * 0.56, y: midY + size.height * 0.38))
-            path.addLine(to: CGPoint(x: size.width * 0.68, y: midY))
-            path.addLine(to: CGPoint(x: size.width, y: midY))
-            context.stroke(
-                path,
-                with: .color(Theme.moon.opacity(0.85)),
-                style: StrokeStyle(lineWidth: 1.4, lineCap: .round, lineJoin: .round)
-            )
-        }
-        .frame(width: 26, height: 14)
-    }
-}
-
-/// The way into the assistant. Inert in this slice — the assistant is its own.
-private struct AskPulseField: View {
+/// The way into the assistant.
+struct AskPulseField: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles")
@@ -191,142 +238,14 @@ private struct AskPulseField: View {
         }
         .padding(.horizontal, 15)
         .padding(.vertical, 12)
-        .background(
-            Capsule().fill(Color.white.opacity(0.07))
-        )
-        .overlay(
-            Capsule().stroke(Color.white.opacity(0.09), lineWidth: 1)
-        )
+        .background(Capsule().fill(Color.white.opacity(0.07)))
+        .overlay(Capsule().stroke(Color.white.opacity(0.09), lineWidth: 1))
     }
 }
 
-private struct NextEventCard: View {
-    let event: Event
-    let accent: Color
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color(hexString: event.color) ?? accent)
-                .frame(width: 3)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(event.title)
-                    .font(PulseFont.titleLarge)
-                    .foregroundStyle(Theme.moon)
-                    .lineLimit(2)
-                Text(Self.window(event))
-                    .font(PulseFont.body)
-                    .foregroundStyle(Theme.haze)
-                if let location = event.location, !location.isEmpty {
-                    Text(location)
-                        .font(PulseFont.meta)
-                        .foregroundStyle(Theme.dim)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-            Text(event.start, style: .relative)
-                .font(PulseFont.micro)
-                .foregroundStyle(Theme.dim)
-                .fixedSize()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 2)
-    }
-
-    private static func window(_ event: Event) -> String {
-        if event.allDay == true { return "All day" }
-        let start = event.start.formatted(date: .omitted, time: .shortened)
-        guard let end = event.end else { return start }
-        return "\(start) – \(end.formatted(date: .omitted, time: .shortened))"
-    }
-}
-
-private struct EventRow: View {
-    let event: Event
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(event.allDay == true ? "All day" : event.start.formatted(date: .omitted, time: .shortened))
-                    .font(PulseFont.figures(13))
-                    .foregroundStyle(Theme.moon.opacity(0.75))
-                Text(event.start, format: .dateTime.weekday(.abbreviated))
-                    .font(PulseFont.micro)
-                    .foregroundStyle(Theme.dim)
-            }
-            .frame(width: 58, alignment: .trailing)
-
-            Circle()
-                .fill(Color(hexString: event.color) ?? Theme.faint)
-                .frame(width: 6, height: 6)
-                .padding(.top, 5)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(event.title)
-                    .font(PulseFont.title)
-                    .foregroundStyle(Theme.moon.opacity(0.94))
-                    .lineLimit(1)
-                if let location = event.location, !location.isEmpty {
-                    Text(location)
-                        .font(PulseFont.meta)
-                        .foregroundStyle(Theme.dim)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 9)
-    }
-}
-
-private struct ForecastPanel: View {
-    let weather: Weather
-    let points: [Forecast.Point]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text("\(Int(weather.temp.rounded()))°")
-                    .font(PulseFont.hero(44))
-                    .foregroundStyle(Theme.moon)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text((weather.description ?? weather.condition).capitalizedFirst)
-                        .font(PulseFont.body)
-                        .foregroundStyle(Theme.moon.opacity(0.9))
-                    Text(weather.location)
-                        .font(PulseFont.meta)
-                        .foregroundStyle(Theme.dim)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: Self.symbol(weather.icon))
-                    .font(.system(size: 26, weight: .light))
-                    .foregroundStyle(Theme.moon.opacity(0.7))
-            }
-
-            if !points.isEmpty {
-                HStack(spacing: 0) {
-                    ForEach(points.prefix(5)) { point in
-                        VStack(spacing: 6) {
-                            Text(point.date, format: .dateTime.weekday(.abbreviated))
-                                .font(PulseFont.micro)
-                                .foregroundStyle(Theme.dim)
-                            Image(systemName: Self.symbol(point.icon))
-                                .font(.system(size: 14, weight: .light))
-                                .foregroundStyle(Theme.moon.opacity(0.65))
-                            Text("\(Int(point.temp.rounded()))°")
-                                .font(PulseFont.figures(14))
-                                .foregroundStyle(Theme.moon.opacity(0.88))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-        }
-    }
-
-    /// OpenWeather's icon ids mapped onto SF Symbols.
-    private static func symbol(_ icon: String?) -> String {
+/// OpenWeather's icon ids mapped onto SF Symbols.
+enum WeatherIcon {
+    static func symbol(_ icon: String?) -> String {
         guard let icon else { return "cloud" }
         let night = icon.hasSuffix("n")
         switch icon.prefix(2) {
@@ -341,24 +260,5 @@ private struct ForecastPanel: View {
         case "50": return "cloud.fog"
         default: return "cloud"
         }
-    }
-}
-
-// MARK: - Helpers
-
-extension Color {
-    /// Calendars hand back their colour as `#RRGGBB`.
-    init?(hexString: String?) {
-        guard var raw = hexString else { return nil }
-        raw = raw.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        guard raw.count == 6, let value = UInt32(raw, radix: 16) else { return nil }
-        self.init(hex: value)
-    }
-}
-
-extension String {
-    var capitalizedFirst: String {
-        guard let first else { return self }
-        return first.uppercased() + dropFirst()
     }
 }
