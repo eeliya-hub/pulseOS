@@ -54,6 +54,11 @@ export const musicController = {
     res.json({ tracks: await musicService.recentlyPlayed() });
   }),
 
+  // GET /api/music/queue → what is coming up on the active device
+  queue: asyncHandler(async (_req, res) => {
+    res.json(await musicService.queue());
+  }),
+
   // GET /api/music/search?q=...
   search: asyncHandler(async (req, res) => {
     res.json({ tracks: await musicService.search(req.query.q) });

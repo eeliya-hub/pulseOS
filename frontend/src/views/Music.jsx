@@ -15,7 +15,7 @@ import {
   Tv,
   X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import GlassCard from '../components/GlassCard.jsx';
 import MusicImmersive from '../components/MusicImmersive.jsx';
 import ViewHeader from '../components/ViewHeader.jsx';
@@ -158,6 +158,15 @@ export default function Music() {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [immersive, setImmersive] = useState(false);
+  // The playlist being looked at, and what Spotify says is coming up from it.
+  //
+  // Spotify refuses /playlists/{id}/tracks with a flat 403 for apps in
+  // Development mode, even for your own playlists, so a list cannot be read
+  // directly. Playing the playlist and reading the player queue back is the one
+  // route to its contents — see backend spotify.provider.queue().
+  const [openList, setOpenList] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [queueLoading, setQueueLoading] = useState(false);
   const [palette, setPalette] = useState(DEFAULT_PALETTE);
 
   // Seeded from the launch preload above, so this refresh is invisible: the
@@ -228,8 +237,45 @@ export default function Music() {
     return () => clearTimeout(id);
   }, [query]);
 
+  // Reading the queue back is the only way to see what is on a playlist, and
+  // Spotify needs a beat after the play command before it reports the new
+  // context — hence the short wait rather than an immediate fetch.
+  const readQueue = useCallback(async ({ delay = 0 } = {}) => {
+    setQueueLoading(true);
+    try {
+      if (delay) await new Promise((r) => setTimeout(r, delay));
+      const data = await api.music.queue();
+      setQueue(data.queue ?? []);
+    } catch {
+      setQueue([]);
+    } finally {
+      setQueueLoading(false);
+    }
+  }, []);
+
+  const openPlaylist = useCallback(
+    (list) => {
+      setOpenList(list);
+      setQueue([]);
+      setQuery('');
+      controls.playContext({ contextUri: list.uri });
+      readQueue({ delay: 900 });
+    },
+    [controls, readQueue],
+  );
+
+  // The queue moves on as tracks finish, so follow the player while a playlist
+  // is open rather than leaving a stale list on screen.
+  useEffect(() => {
+    if (!openList) return undefined;
+    readQueue();
+    const id = window.setInterval(() => readQueue(), 15_000);
+    return () => window.clearInterval(id);
+  }, [openList, state?.track, readQueue]);
+
   const isSearch = query.trim().length > 0;
-  const shown = isSearch ? results : recent;
+  // Search wins over an open playlist, which wins over the default shelf.
+  const shown = isSearch ? results : openList ? queue : recent;
   // Both lists show only whole rows, so nothing is left cut off at the foot.
   const playlistRows = useWholeRows(playlists.length);
   const trackRows = useWholeRows(shown.length);
@@ -412,8 +458,8 @@ export default function Music() {
                   <button
                     key={list.id}
                     type="button"
-                    onClick={() => controls.playContext({ contextUri: list.uri })}
-                    aria-label={`Play ${list.name}`}
+                    onClick={() => openPlaylist(list)}
+                    aria-label={`Play ${list.name} and show what's on it`}
                     className="group/list min-w-0 text-left focus:outline-none"
                   >
                     <span className="relative block aspect-square overflow-hidden rounded-[1rem] bg-white/[0.06] shadow-[0_18px_40px_-20px_rgba(0,0,0,0.85)] ring-1 ring-white/10 transition-transform duration-500 group-hover/list:-translate-y-1 group-focus-visible/list:ring-2 group-focus-visible/list:ring-accent/60">
@@ -439,8 +485,23 @@ export default function Music() {
         </Column>
 
         <Column
-          label={isSearch ? 'Search results' : 'Recently played'}
-          action={<span className="clock-figures text-[0.8125rem] text-dim">{searching ? '···' : shown.length}</span>}
+          label={isSearch ? 'Search results' : openList ? openList.name : 'Recently played'}
+          action={
+            openList && !isSearch ? (
+              <button
+                type="button"
+                onClick={() => setOpenList(null)}
+                aria-label="Back to recently played"
+                className="pill h-7 px-3 text-[0.75rem]"
+              >
+                Recent
+              </button>
+            ) : (
+              <span className="clock-figures text-[0.8125rem] text-dim">
+                {searching ? '···' : shown.length}
+              </span>
+            )
+          }
           className="ground-rule pl-8 pt-7"
           bodyClassName="flex min-h-0 flex-col"
         >
@@ -513,7 +574,15 @@ export default function Music() {
               })}
               {shown.length === 0 && (
                 <p className="px-2 py-3 text-[0.9375rem] text-dim">
-                  {isSearch ? (searching ? 'Searching…' : 'No tracks found') : 'No recent tracks yet.'}
+                  {isSearch
+                    ? searching
+                      ? 'Searching…'
+                      : 'No tracks found'
+                    : openList
+                      ? queueLoading
+                        ? 'Reading the queue…'
+                        : 'Nothing queued yet — give it a moment after playing.'
+                      : 'No recent tracks yet.'}
                 </p>
               )}
             </div>

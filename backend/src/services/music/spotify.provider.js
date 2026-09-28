@@ -386,6 +386,36 @@ export const spotifyProvider = {
     }));
   },
 
+  /**
+   * What is queued up after the current track.
+   *
+   * This is how the app shows a playlist's contents at all. Spotify refuses
+   * `/playlists/{id}/tracks` with a flat 403 "Forbidden" for apps in
+   * Development mode — even the user's own playlists — and no scope fixes it.
+   * The queue endpoint is not in that bucket, so playing a playlist and reading
+   * the queue back is the one route to "what is on this list".
+   *
+   * The catch is inherent: it reports what is COMING, not the list from the
+   * top, and it only says anything once something is playing.
+   */
+  async queue(user) {
+    const data = await api('/me/player/queue', user);
+    const shape = (t) =>
+      t && {
+        track: t.name,
+        uri: t.uri,
+        artists: t.artists?.map((a) => a.name),
+        album: t.album?.name,
+        image: t.album?.images?.[0]?.url,
+        durationMs: t.duration_ms,
+      };
+    return {
+      current: shape(data.currently_playing),
+      // Spotify returns a generous tail; twenty is more than a column shows.
+      queue: (data.queue ?? []).slice(0, 20).map(shape).filter(Boolean),
+    };
+  },
+
   async recentlyPlayed(user) {
     const data = await api('/me/player/recently-played?limit=20', user);
     // Play a song three times and Spotify lists it three times. Keep the most

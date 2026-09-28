@@ -180,6 +180,7 @@ export const api = {
     play: (payload) => request('/music/play', { method: 'PUT', body: payload }),
     nowPlaying: () => request('/music/now-playing'),
     playlists: () => request('/music/playlists'),
+    queue: () => request('/music/queue'),
     recentlyPlayed: () => request('/music/recently-played'),
     search: (q) => request('/music/search', { params: { q } }),
     // Time-synced lyrics for the immersive player → { found, synced, lines[] }

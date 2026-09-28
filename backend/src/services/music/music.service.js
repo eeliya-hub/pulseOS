@@ -18,6 +18,7 @@ export const musicService = {
   command: (action, options, user) => spotifyProvider.command(action, options, user),
   playlists: (user) => spotifyProvider.playlists(user),
   recentlyPlayed: (user) => spotifyProvider.recentlyPlayed(user),
+  queue: (user) => spotifyProvider.queue(user),
   search: (query, user) => spotifyProvider.search(query, user),
   audioAnalysis: (trackId, user) => spotifyProvider.audioAnalysis(trackId, user),
 
