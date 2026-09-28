@@ -14,6 +14,12 @@ struct MusicView: View {
     @State private var playing = true
     @State private var position = Sample.playedSeconds
     @State private var immersive = false
+    /// Nil shows the grid; set shows that playlist's tracks in the same panel.
+    @State private var openPlaylist: Sample.Playlist?
+    /// What is playing, once you pick something. Until then the hero shows the
+    /// sample now-playing track.
+    @State private var current: Sample.Track?
+    @State private var fromPlaylist: String?
 
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -21,17 +27,18 @@ struct MusicView: View {
         Stage(phase: sky.phase) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 14) {
-                    Sleeve(tint: Sample.nowPlaying.art, size: 78)
+                    Sleeve(tint: track.art, size: 78)
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(playing ? "Now playing" : "Paused")
+                        Text(heroEyebrow)
                             .font(PulseFont.eyebrow)
                             .foregroundStyle(sky.phase.accent.opacity(0.85))
-                        Text(Sample.nowPlaying.title)
+                            .lineLimit(1)
+                        Text(track.title)
                             .font(PulseFont.hero(25))
                             .foregroundStyle(Theme.moon)
                             .lineLimit(2)
-                        Text(Sample.nowPlaying.artist)
+                        Text(track.artist)
                             .font(PulseFont.meta)
                             .foregroundStyle(Theme.dim)
                     }
@@ -43,7 +50,7 @@ struct MusicView: View {
                         ZStack(alignment: .leading) {
                             Capsule().fill(Color.white.opacity(0.12))
                             Capsule()
-                                .fill(Sample.nowPlaying.art)
+                                .fill(track.art)
                                 .frame(width: geo.size.width * (position / Sample.totalSeconds))
                         }
                     }
@@ -52,7 +59,7 @@ struct MusicView: View {
                     HStack {
                         Text(Self.clock(position))
                         Spacer()
-                        Text(Sample.nowPlaying.duration)
+                        Text(track.duration)
                     }
                     .font(PulseFont.figures(11))
                     .foregroundStyle(Theme.dim)
@@ -81,7 +88,21 @@ struct MusicView: View {
                     )
 
                     switch tab {
-                    case .playlists: playlistGrid
+                    case .playlists:
+                        // Opening one replaces the grid in place rather than
+                        // pushing a screen: the player above stays put, so you
+                        // can pick a track without losing what is playing.
+                        if let open = openPlaylist {
+                            PlaylistDetail(
+                                playlist: open,
+                                accent: sky.phase.accent,
+                                nowPlaying: nowPlayingTitle,
+                                onBack: { withAnimation(.snappy(duration: 0.24)) { openPlaylist = nil } },
+                                onPlay: { play($0, from: open) }
+                            )
+                        } else {
+                            playlistGrid
+                        }
                     case .recent: recentList
                     case .lyrics: lyricStack
                     }
@@ -104,16 +125,36 @@ struct MusicView: View {
     private var playlistGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 14) {
             ForEach(Sample.playlists) { list in
-                VStack(alignment: .leading, spacing: 7) {
-                    Sleeve(tint: list.tint, size: nil)
-                    Text(list.name)
-                        .font(PulseFont.title)
-                        .foregroundStyle(Theme.moon.opacity(0.92))
-                        .lineLimit(1)
-                    Text("\(list.count) tracks")
-                        .font(PulseFont.micro)
-                        .foregroundStyle(Theme.dim)
+                Button {
+                    withAnimation(.snappy(duration: 0.24)) { openPlaylist = list }
+                } label: {
+                    VStack(alignment: .leading, spacing: 7) {
+                        Sleeve(tint: list.tint, size: nil)
+                            .overlay(alignment: .bottomTrailing) {
+                                // Play the whole list without opening it.
+                                Button {
+                                    if let first = list.tracks.first { play(first, from: list) }
+                                } label: {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(Theme.ink)
+                                        .frame(width: 30, height: 30)
+                                        .background(Circle().fill(Theme.moon))
+                                        .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(8)
+                            }
+                        Text(list.name)
+                            .font(PulseFont.title)
+                            .foregroundStyle(Theme.moon.opacity(0.92))
+                            .lineLimit(1)
+                        Text("\(list.count) tracks")
+                            .font(PulseFont.micro)
+                            .foregroundStyle(Theme.dim)
+                    }
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -157,7 +198,7 @@ struct MusicView: View {
                     .overlay(alignment: .leading) {
                         if active {
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(Sample.nowPlaying.art)
+                                .fill(track.art)
                                 .frame(width: 3, height: 22)
                                 .offset(x: -13)
                         }
@@ -165,6 +206,26 @@ struct MusicView: View {
             }
         }
         .padding(.leading, 13)
+    }
+
+    /// What the hero shows: whatever was picked, else the sample track.
+    private var track: Sample.Track { current ?? Sample.nowPlaying }
+
+    private var nowPlayingTitle: String? { track.title }
+
+    private var heroEyebrow: String {
+        guard playing else { return "Paused" }
+        if let fromPlaylist { return "Playing from \(fromPlaylist)" }
+        return "Now playing"
+    }
+
+    private func play(_ track: Sample.Track, from list: Sample.Playlist) {
+        withAnimation(.snappy(duration: 0.24)) {
+            current = track
+            fromPlaylist = list.name
+            position = 0
+            playing = true
+        }
     }
 
     static func clock(_ seconds: Double) -> String {
@@ -283,5 +344,110 @@ private struct ImmersiveView: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+}
+
+/// A playlist, opened in place of the grid.
+///
+/// Same panel, same position on the screen as Recent — the player above does not
+/// move, so picking a track out of a list never costs you sight of what is
+/// currently on. Back returns to the grid rather than to a previous screen.
+private struct PlaylistDetail: View {
+    let playlist: Sample.Playlist
+    let accent: Color
+    let nowPlaying: String?
+    let onBack: () -> Void
+    let onPlay: (Sample.Track) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.moon.opacity(0.8))
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.white.opacity(0.07)))
+                }
+                .buttonStyle(.plain)
+
+                Sleeve(tint: playlist.tint, size: 46)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(playlist.name)
+                        .font(PulseFont.titleLarge)
+                        .foregroundStyle(Theme.moon)
+                        .lineLimit(1)
+                    Text("\(playlist.count) tracks")
+                        .font(PulseFont.meta)
+                        .foregroundStyle(Theme.dim)
+                }
+
+                Spacer()
+
+                Button {
+                    if let first = playlist.tracks.first { onPlay(first) }
+                } label: {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Theme.ink)
+                        .frame(width: 38, height: 38)
+                        .background(Circle().fill(Theme.moon))
+                }
+                .buttonStyle(.plain)
+            }
+
+            VStack(spacing: 0) {
+                ForEach(Array(playlist.tracks.enumerated()), id: \.element.id) { i, item in
+                    let on = item.title == nowPlaying
+                    Button { onPlay(item) } label: {
+                        HStack(spacing: 12) {
+                            // The track number gives way to a marker on the one
+                            // that is playing, so the row reads without colour
+                            // alone carrying it.
+                            Group {
+                                if on {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(accent)
+                                } else {
+                                    Text("\(i + 1)")
+                                        .font(PulseFont.figures(12))
+                                        .foregroundStyle(Theme.dim)
+                                }
+                            }
+                            .frame(width: 18)
+
+                            Sleeve(tint: item.art, size: 38)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .font(PulseFont.title)
+                                    .foregroundStyle(on ? accent : Theme.moon.opacity(0.94))
+                                    .lineLimit(1)
+                                Text(item.artist)
+                                    .font(PulseFont.meta)
+                                    .foregroundStyle(Theme.dim)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Text(item.duration)
+                                .font(PulseFont.figures(12))
+                                .foregroundStyle(Theme.dim)
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                    if i < playlist.tracks.count - 1 { Hairline() }
+                }
+            }
+
+            if playlist.tracks.count < playlist.count {
+                Text("Showing \(playlist.tracks.count) of \(playlist.count) — the rest arrive with the backend.")
+                    .font(PulseFont.micro)
+                    .foregroundStyle(Theme.dim)
+                    .padding(.top, 2)
+            }
+        }
     }
 }

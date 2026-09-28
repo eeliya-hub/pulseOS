@@ -262,15 +262,53 @@ enum Sample {
         let name: String
         let count: Int
         var tint: Color
+        /// What opening one shows. Only the first page in sample data — the real
+        /// list arrives a page at a time from Spotify.
+        var tracks: [Track] = []
     }
 
     static let playlists: [Playlist] = [
-        Playlist(name: "UK House", count: 84, tint: Color(hex: 0x8b5cf6)),
-        Playlist(name: "Arabic", count: 52, tint: Color(hex: 0x14b8a6)),
-        Playlist(name: "Sormeh music", count: 128, tint: Color(hex: 0xef4444)),
-        Playlist(name: "Türkçe Afro House", count: 39, tint: Color(hex: 0xf59e0b)),
-        Playlist(name: "Michael", count: 61, tint: Color(hex: 0x3b82f6)),
-        Playlist(name: "Club", count: 143, tint: Color(hex: 0xec4899)),
+        Playlist(name: "UK House", count: 84, tint: Color(hex: 0x8b5cf6), tracks: [
+            Track(title: "Need U (100%)", artist: "Duke Dumont, A*M*E", album: "Need U", duration: "3:33", art: Color(hex: 0x8b5cf6)),
+            Track(title: "Look Right Through", artist: "Storm Queen", album: "MK Remix", duration: "6:41", art: Color(hex: 0x7c3aed)),
+            Track(title: "Latch", artist: "Disclosure, Sam Smith", album: "Settle", duration: "4:16", art: Color(hex: 0xa78bfa)),
+            Track(title: "White Noise", artist: "Disclosure, AlunaGeorge", album: "Settle", duration: "5:13", art: Color(hex: 0x6d28d9)),
+            Track(title: "Ready For Your Love", artist: "Gorgon City, MNEK", album: "Sirens", duration: "3:49", art: Color(hex: 0x9333ea)),
+            Track(title: "Feel The Love", artist: "Rudimental, John Newman", album: "Home", duration: "4:29", art: Color(hex: 0xc084fc)),
+        ]),
+        Playlist(name: "Arabic", count: 52, tint: Color(hex: 0x14b8a6), tracks: [
+            Track(title: "Tamally Maak", artist: "Amr Diab", album: "Aktar Wahed", duration: "5:12", art: Color(hex: 0x14b8a6)),
+            Track(title: "Nour El Ein", artist: "Amr Diab", album: "Nour El Ein", duration: "4:38", art: Color(hex: 0x0d9488)),
+            Track(title: "Aaly Bali", artist: "Amr Diab", album: "Sahran", duration: "4:02", art: Color(hex: 0x2dd4bf)),
+            Track(title: "Bahebak Wahashtini", artist: "Nancy Ajram", album: "Ya Tab Ya Doub", duration: "3:58", art: Color(hex: 0x0f766e)),
+            Track(title: "Ya Salam", artist: "Sherine", album: "Garh Tani", duration: "4:21", art: Color(hex: 0x5eead4)),
+        ]),
+        Playlist(name: "Sormeh music", count: 128, tint: Color(hex: 0xef4444), tracks: [
+            Track(title: "Soltane Ghalbha", artist: "Aref", album: "Classics", duration: "5:48", art: Color(hex: 0xef4444)),
+            Track(title: "Gole Sangam", artist: "Hayedeh", album: "Gole Sangam", duration: "6:20", art: Color(hex: 0xdc2626)),
+            Track(title: "Jane Maryam", artist: "Mohammad Nouri", album: "Jane Maryam", duration: "4:55", art: Color(hex: 0xf87171)),
+            Track(title: "Del Ey Del", artist: "Googoosh", album: "Do Mahi", duration: "4:11", art: Color(hex: 0xb91c1c)),
+        ]),
+        Playlist(name: "Türkçe Afro House", count: 39, tint: Color(hex: 0xf59e0b), tracks: [
+            Track(title: "Dudu", artist: "Tarkan", album: "Dudu", duration: "4:03", art: Color(hex: 0xf59e0b)),
+            Track(title: "Şımarık", artist: "Tarkan", album: "Ölürüm Sana", duration: "3:56", art: Color(hex: 0xd97706)),
+            Track(title: "Kuzu Kuzu", artist: "Tarkan", album: "Karma", duration: "4:24", art: Color(hex: 0xfbbf24)),
+            Track(title: "Hadi Ya", artist: "Sezen Aksu", album: "Deliveren", duration: "4:47", art: Color(hex: 0xb45309)),
+            Track(title: "Ben Böyleyim", artist: "Mabel Matiz", album: "Maya", duration: "3:41", art: Color(hex: 0xfcd34d)),
+        ]),
+        Playlist(name: "Michael", count: 61, tint: Color(hex: 0x3b82f6), tracks: [
+            Track(title: "Billie Jean", artist: "Michael Jackson", album: "Thriller", duration: "4:54", art: Color(hex: 0x3b82f6)),
+            Track(title: "Smooth Criminal", artist: "Michael Jackson", album: "Bad", duration: "4:17", art: Color(hex: 0x2563eb)),
+            Track(title: "Don't Stop 'Til You Get Enough", artist: "Michael Jackson", album: "Off The Wall", duration: "6:05", art: Color(hex: 0x60a5fa)),
+            Track(title: "Blood on the Dance Floor", artist: "Michael Jackson", album: "Blood on the Dance Floor", duration: "4:14", art: Color(hex: 0x1d4ed8)),
+            Track(title: "Rock With You", artist: "Michael Jackson", album: "Off The Wall", duration: "3:40", art: Color(hex: 0x93c5fd)),
+        ]),
+        Playlist(name: "Club", count: 143, tint: Color(hex: 0xec4899), tracks: [
+            Track(title: "One More Time", artist: "Daft Punk", album: "Discovery", duration: "5:20", art: Color(hex: 0xec4899)),
+            Track(title: "Music Sounds Better With You", artist: "Stardust", album: "Single", duration: "6:32", art: Color(hex: 0xdb2777)),
+            Track(title: "Losing It", artist: "FISHER", album: "Losing It", duration: "3:45", art: Color(hex: 0xf472b6)),
+            Track(title: "Where Them Girls At", artist: "David Guetta", album: "Nothing But The Beat", duration: "3:12", art: Color(hex: 0xbe185d)),
+        ]),
     ]
 
     static let lyrics: [(at: Double, line: String)] = [
