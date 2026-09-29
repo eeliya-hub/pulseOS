@@ -21,6 +21,9 @@ export const footballDataProvider = {
   standings: (code) => get(`/competitions/${code}/standings`),
   competitionMatches: (code, status) => get(`/competitions/${code}/matches?status=${status}`),
   teams: (code) => get(`/competitions/${code}/teams`),
+  // One club, for the things the match object doesn't carry: its ground, its
+  // colours and its three-letter code.
+  team: (id) => get(`/teams/${id}`),
   teamMatches: (teamId, status, limit = 5) =>
     get(`/teams/${teamId}/matches?status=${status}&limit=${limit}`),
 };

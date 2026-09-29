@@ -39,10 +39,48 @@ const splitIso = (iso) => {
   return { date: s.slice(0, 10), time: s.length > 10 ? s.slice(11, 16) : '' };
 };
 
+/**
+ * The next fixture, as two sides rather than one sentence.
+ *
+ * It used to flatten to "Arsenal FC vs Leeds United FC" and put the competition
+ * in `venue`, which meant the card said "Premier League" twice and had no way to
+ * show a crest for the opponent, a three-letter code, or the ground — all of
+ * which the providers were already handing us. `name` stays for anything still
+ * reading it; everything else is new.
+ */
 function fixtureCard(f, sep) {
   if (!f) return null;
   const { date, time } = splitIso(f.date);
-  return { name: `${f.homeTeam} ${sep} ${f.awayTeam}`, venue: f.competition ?? null, date, time };
+  const side = (name, short, tla, crest) => ({
+    name: name ?? null,
+    short: short ?? name ?? null,
+    // Not every sport gives a three-letter code; the initials of the short name
+    // are a decent stand-in, and the UI falls back to the name when neither fits.
+    tla: tla ?? initials(short ?? name),
+    crest: crest ?? null,
+  });
+  return {
+    name: `${f.homeTeam} ${sep} ${f.awayTeam}`,
+    home: side(f.homeTeam, f.homeShort, f.homeTla, f.homeCrest),
+    away: side(f.awayTeam, f.awayShort, f.awayTla, f.awayCrest),
+    // `sep` doubles as which way round the fixture reads: football lists the
+    // home side first, the American sports list the visitor first.
+    homeFirst: sep !== '@',
+    competition: f.competition ?? null,
+    competitionEmblem: f.competitionEmblem ?? null,
+    matchday: f.matchday ?? null,
+    venue: f.venue ?? null,
+    date,
+    time,
+  };
+}
+
+/** "Leeds United" → "LEE" — a stand-in for a code the provider didn't give. */
+function initials(name) {
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  const letters = words.length >= 3 ? words.slice(0, 3).map((w) => w[0]) : words[0].slice(0, 3).split('');
+  return letters.join('').toUpperCase();
 }
 
 const resultRow = (f) => ({

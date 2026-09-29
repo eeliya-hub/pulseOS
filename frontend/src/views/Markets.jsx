@@ -216,32 +216,90 @@ function NewsPanel({ scope, onPlace }) {
         ) : articles.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-moon/45">No stories found.</p>
         ) : (
-          articles.map((article) => (
-            <a
-              key={article.url}
-              href={article.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="ground-row group flex gap-3.5 px-2 py-3"
-            >
-              <ArticleThumb src={article.image} />
-              <div className="min-w-0 flex-1">
-                <h3 className="t-title line-clamp-2 group-hover:text-moon">
-                  {article.title}
-                </h3>
-                <p className="t-micro mt-1.5 flex items-center gap-2">
-                  <span className="truncate text-accent/80">{article.source}</span>
-                  <span className="shrink-0">{relTime(article.publishedAt)}</span>
-                  <ExternalLink
-                    className="ml-auto h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-70"
-                    aria-hidden="true"
-                  />
-                </p>
-              </div>
-            </a>
-          ))
+          <>
+            {/* A front page has a lead. The list treated the top story exactly
+                like the ninth, so the one thing the feed had already ranked for
+                us was the one thing the layout threw away. */}
+            <LeadStory article={articles[0]} />
+            {articles.slice(1).map((article) => (
+              <a
+                key={article.url}
+                href={article.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="ground-row group flex gap-3.5 px-2 py-3"
+              >
+                <ArticleThumb src={article.image} />
+                <div className="min-w-0 flex-1">
+                  <h3 className="t-title line-clamp-2 group-hover:text-moon">
+                    {article.title}
+                  </h3>
+                  <p className="t-micro mt-1.5 flex items-center gap-2">
+                    <span className="truncate text-accent/80">{article.source}</span>
+                    <span className="shrink-0">{relTime(article.publishedAt)}</span>
+                    <ExternalLink
+                      className="ml-auto h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-70"
+                      aria-hidden="true"
+                    />
+                  </p>
+                </div>
+              </a>
+            ))}
+          </>
         )}
     </div>
+  );
+}
+
+/** The top story, given the room a top story is owed. */
+function LeadStory({ article }) {
+  const [failed, setFailed] = useState(false);
+  if (!article) return null;
+  const image = article.image && !failed ? article.image : null;
+
+  return (
+    <a
+      href={article.url}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="group relative mb-2 block overflow-hidden rounded-2xl"
+    >
+      {image ? (
+        <>
+          <img
+            src={image}
+            alt=""
+            onError={() => setFailed(true)}
+            className="h-36 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+          />
+          {/* Dark enough at the foot for the headline to sit on the picture */}
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-[#0b1024] via-[#0b1024]/78 to-[#0b1024]/5"
+            aria-hidden="true"
+          />
+        </>
+      ) : (
+        <div className="h-24 w-full bg-white/[0.04]" aria-hidden="true" />
+      )}
+
+      <div
+        className={
+          image ? 'on-photo absolute inset-x-0 bottom-0 p-3' : 'absolute inset-0 flex flex-col justify-end p-3'
+        }
+      >
+        <h3 className="display-type line-clamp-2 text-[1.0625rem] font-light leading-snug text-moon">
+          {article.title}
+        </h3>
+        <p className="t-micro mt-1.5 flex items-center gap-2">
+          <span className={`truncate ${image ? 'text-accent/95' : 'text-accent/80'}`}>{article.source}</span>
+          <span className={`shrink-0 ${image ? 'text-moon/70' : ''}`}>{relTime(article.publishedAt)}</span>
+          <ExternalLink
+            className="ml-auto h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-70"
+            aria-hidden="true"
+          />
+        </p>
+      </div>
+    </a>
   );
 }
 
@@ -316,50 +374,7 @@ function SportsPanel({ activeId, setActiveId }) {
         </div>
       ) : (
         <>
-          <div className="soft-row shrink-0 rounded-2xl p-3.5">
-            <div className="flex items-center gap-3">
-              {(data.kind === 'f1' ? '/logos/f1/trimmed/f1.png' : data.badge) ? (
-                <img
-                  src={data.kind === 'f1' ? '/logos/f1/trimmed/f1.png' : data.badge}
-                  alt=""
-                  className={[
-                    'h-11 w-11 shrink-0 rounded-xl object-contain p-1.5',
-                    data.kind === 'f1' ? '' : 'bg-white/6',
-                  ].join(' ')}
-                />
-              ) : (
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/6">
-                  <Trophy className="h-5 w-5 text-moon/50" aria-hidden="true" />
-                </span>
-              )}
-              <div className="min-w-0">
-                <p className="text-[0.75rem] font-semibold text-accent/70">
-                  {data.league || data.sport}
-                </p>
-                <p className="display-type truncate text-lg font-light leading-tight text-moon">{data.name}</p>
-              </div>
-            </div>
-            {fixture ? (
-              <div className="mt-3">
-                <p className="text-sm font-medium text-moon/88">{fixture.name}</p>
-                {fixture.venue ? <p className="mt-0.5 truncate text-xs text-moon/48">{fixture.venue}</p> : null}
-                <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                  <span className="soft-row flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-moon/80">
-                    <CalendarDays className="h-3.5 w-3.5 text-moon/55" aria-hidden="true" />
-                    {fmtDate(fixture.date)}
-                  </span>
-                  {fmtTime(fixture.time) ? (
-                    <span className="soft-row clock-figures flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-moon">
-                      <Clock className="h-3.5 w-3.5 text-moon/55" aria-hidden="true" />
-                      {fmtTime(fixture.time)}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <p className="mt-3 text-xs text-moon/45">No upcoming fixture scheduled.</p>
-            )}
-          </div>
+          <FixtureCard data={data} fixture={fixture} />
 
           {data.kind === 'f1' ? (
             <SportsF1Standings drivers={data.driverStandings} constructors={data.constructorStandings} />
@@ -379,6 +394,179 @@ function SportsPanel({ activeId, setActiveId }) {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * The next fixture, played as an event rather than filed as a row.
+ *
+ * It borrows the flight card's grammar on purpose, so the two read as the same
+ * app: a photograph of the real place behind it, the two ends of the thing in
+ * big type with the journey between them, and the practical facts on a hairline
+ * underneath. LHR ✈ DOH becomes ARS v LEE.
+ *
+ * The photograph is of the ground the match is at — looked up by the venue name
+ * the fixture now carries, through the same place-photo endpoint the Travel view
+ * uses. There is no image-search key in this project, and a photo of the actual
+ * stadium beats a stock picture of a football anyway.
+ */
+function FixtureCard({ data, fixture }) {
+  const [shot, setShot] = useState(null);
+  const venue = fixture?.venue ?? null;
+
+  useEffect(() => {
+    if (!venue) {
+      setShot(null);
+      return undefined;
+    }
+    // Warmed between visits: a stadium's photograph is the definition of
+    // something that does not change while you are looking at it.
+    const key = `venue:${venue}`;
+    const warmed = peek(key);
+    if (warmed) {
+      setShot(warmed);
+      return undefined;
+    }
+    let alive = true;
+    api.travel
+      .photos({ q: venue, limit: 1 })
+      .then((d) => {
+        const first = (d.results ?? [])[0];
+        if (!alive || !first) return;
+        const url = first.url ?? (first.ref ? api.travel.photoUrl(first.ref, 900) : null);
+        if (!url) return;
+        put(key, url);
+        setShot(url);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [venue]);
+
+  // The followed team's own crest, not the competition's: several competition
+  // emblems are dark artwork on transparent (the Premier League's lion among
+  // them) and vanish against this card.
+  const crest = data.kind === 'f1' ? '/logos/f1/trimmed/f1.png' : data.badge;
+  // The quiet greys on this card were chosen against a flat surface. Over a
+  // photograph the same values read as mush, so everything secondary comes up a
+  // stop when there is a picture behind it.
+  const quiet = shot ? 'text-moon/70' : 'text-moon/45';
+  const quieter = shot ? 'text-moon/60' : 'text-moon/35';
+  const home = fixture?.home;
+  const away = fixture?.away;
+  // Whoever is at home is named on the left, because that is the side the
+  // photograph belongs to.
+  const [left, right] = fixture?.homeFirst === false ? [away, home] : [home, away];
+  // Not every sport is two sides. A grand prix is one event at one circuit, and
+  // drawing it as a match left a bare "v" standing between two empty columns.
+  const isMatch = Boolean(home?.name || away?.name);
+
+  return (
+    <div className={`soft-row relative shrink-0 overflow-hidden rounded-2xl p-3.5 ${shot ? 'on-photo' : ''}`}>
+      {shot ? (
+        <>
+          <img src={shot} alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.46]" />
+          <div
+            className="absolute inset-0 bg-gradient-to-tr from-[#0b1024]/92 via-[#0b1024]/72 to-[#0b1024]/48"
+            aria-hidden="true"
+          />
+        </>
+      ) : null}
+
+      {/* With a fixture on it, the card is about the match, and the two sides
+          below carry the crests and the names. Repeating the followed team's
+          crest and its name up here printed both of them twice on one card —
+          and the team is already named in the selector beside the tabs. Without
+          a fixture there is nothing else to identify the card, so the crest and
+          the name come back. */}
+      {fixture ? (
+        <div className="relative z-10 flex items-baseline gap-2">
+          <p className={`t-label ${shot ? 'text-accent/95' : 'text-accent/70'}`}>{data.league || data.sport}</p>
+          {fixture.matchday ? (
+            <p className={`ml-auto shrink-0 t-label ${quieter}`}>Matchday {fixture.matchday}</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="relative z-10 flex items-center gap-3">
+          {crest ? (
+            <img
+              src={crest}
+              alt=""
+              className={[
+                'h-11 w-11 shrink-0 rounded-xl object-contain p-1.5',
+                data.kind === 'f1' ? '' : 'bg-white/6',
+              ].join(' ')}
+            />
+          ) : (
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/6">
+              <Trophy className="h-5 w-5 text-moon/50" aria-hidden="true" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="text-[0.75rem] font-semibold text-accent/70">{data.league || data.sport}</p>
+            <p className="display-type truncate text-lg font-light leading-tight text-moon">{data.name}</p>
+          </div>
+        </div>
+      )}
+
+      {!fixture ? (
+        <p className="relative z-10 mt-3 text-xs text-moon/45">No upcoming fixture scheduled.</p>
+      ) : (
+        <>
+          {isMatch ? (
+            <div className="relative z-10 mt-2.5 flex items-center justify-between gap-2">
+              <Side side={left} quiet={quiet} />
+              {/* The tie between them, drawn the way the flight card draws a route */}
+              <span className="mb-3 flex flex-1 items-center gap-1.5 text-moon/25" aria-hidden="true">
+                <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/25" />
+                <span className="shrink-0 text-[0.75rem] italic text-accent/70">v</span>
+                <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/25" />
+              </span>
+              <Side side={right} align="right" quiet={quiet} />
+            </div>
+          ) : (
+            <p className="display-type relative z-10 mt-2 line-clamp-2 text-2xl font-light leading-tight text-moon">
+              {fixture.name}
+            </p>
+          )}
+
+          <div className="relative z-10 mt-2.5 flex items-center gap-2 border-t border-white/10 pt-2 text-[0.75rem]">
+            {/* The competition is already named at the top of the card, so an
+                empty venue leaves this side of the line empty rather than
+                printing "NBA" under a card headed NBA. */}
+            <span className={`min-w-0 flex-1 truncate ${quiet}`}>{venue ?? ''}</span>
+            <span className={`flex shrink-0 items-center gap-1.5 ${shot ? 'text-moon/85' : 'text-moon/70'}`}>
+              <CalendarDays className={`h-3.5 w-3.5 ${quieter}`} aria-hidden="true" />
+              {fmtDate(fixture.date)}
+            </span>
+            {fmtTime(fixture.time) ? (
+              <span className="clock-figures flex shrink-0 items-center gap-1.5 font-medium text-moon">
+                <Clock className={`h-3.5 w-3.5 ${quieter}`} aria-hidden="true" />
+                {fmtTime(fixture.time)}
+              </span>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** One team in the fixture: its crest, its three letters, and its name under. */
+function Side({ side, align = 'left', quiet = 'text-moon/40' }) {
+  const right = align === 'right';
+  if (!side) return <div className="min-w-0" />;
+  return (
+    <div className={`flex min-w-0 items-center gap-2 ${right ? 'flex-row-reverse text-right' : ''}`}>
+      {side.crest ? (
+        <img src={side.crest} alt="" className="h-7 w-7 shrink-0 object-contain" />
+      ) : null}
+      <div className="min-w-0">
+        <p className="clock-figures text-xl font-light leading-none text-moon">{side.tla ?? side.short}</p>
+        <p className={`mt-1 max-w-[7rem] truncate text-[0.75rem] ${quiet}`}>{side.short}</p>
+      </div>
     </div>
   );
 }
@@ -834,35 +1022,96 @@ function StocksPanel() {
       </div>
 
       <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-        {rows.map((r) => {
-          const up = (r.changePercent ?? 0) >= 0;
-          return (
-            <div key={r.symbol} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1.5 text-sm font-semibold text-moon">
-                  {r.symbol}
-                  {r.name ? <span className="truncate text-[0.8125rem] font-normal text-moon/40">{r.name}</span> : null}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="clock-figures text-sm font-medium text-moon">{fmtPrice(r.price)}</p>
-                <p
-                  className={[
-                    'clock-figures flex items-center justify-end gap-0.5 text-xs font-medium',
-                    up ? 'text-emerald-300/90' : 'text-rose-300/85',
-                  ].join(' ')}
-                >
-                  {up ? <ArrowUp className="h-3 w-3" aria-hidden="true" /> : <ArrowDown className="h-3 w-3" aria-hidden="true" />}
-                  {Math.abs(r.changePercent ?? 0).toFixed(2)}%
-                </p>
-              </div>
-            </div>
-          );
-        })}
+        {rows.map((r) => (
+          <StockRow key={r.symbol} quote={r} />
+        ))}
       </div>
       <p className="shrink-0 text-center text-[0.75rem] text-moon/30">
         {isSample ? 'Sample data. Add a Finnhub key for live quotes' : 'Live from Finnhub'}
       </p>
+    </div>
+  );
+}
+
+/**
+ * One instrument on the watchlist, told as a day rather than a number.
+ *
+ * The row used to be a price and a percentage, which says what happened but not
+ * where it leaves you: -2.7% reads the same whether the stock is sitting on its
+ * low or has climbed most of the way back. Finnhub already sends the day's open,
+ * high, low and previous close with every quote, and none of it was being shown.
+ *
+ * So the row carries a rail from the day's low to its high, with the previous
+ * close ticked on it and the price lit where it actually stands. No sparkline:
+ * there is no intraday series in this payload, and drawing a curve through four
+ * points would be inventing a shape the data does not have.
+ */
+function StockRow({ quote: r }) {
+  const up = (r.changePercent ?? 0) >= 0;
+  // The rail spans everything it has to draw, not just the day's high and low.
+  // A stock that gapped closed outside today's range — Apple closed at 338.40
+  // and never traded above 337.08 — and a tick for it drawn against a low-to-high
+  // rail lands off the end of its own track.
+  const marks = [r.low, r.high, r.price, r.previousClose].filter((n) => Number.isFinite(n));
+  const lo = Math.min(...marks);
+  const hi = Math.max(...marks);
+  const span = hi - lo;
+  // A stock can be halted, or quoted before it has traded, and then the whole
+  // day is one price and the rail has nothing to say.
+  const at = (value) => (span > 0 && Number.isFinite(value) ? ((value - lo) / span) * 100 : null);
+  const here = at(r.price);
+  const prev = at(r.previousClose);
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
+      {r.logo ? (
+        <img src={r.logo} alt="" className="h-7 w-7 shrink-0 rounded-md bg-white/85 object-contain p-0.5" />
+      ) : null}
+
+      <div className="min-w-0 flex-1">
+        <p className="flex items-baseline gap-1.5 text-sm font-semibold text-moon">
+          {r.symbol}
+          {r.name ? <span className="truncate text-[0.8125rem] font-normal text-moon/40">{r.name}</span> : null}
+        </p>
+
+        {here == null ? null : (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <span className="clock-figures shrink-0 text-[0.6875rem] text-moon/30">{fmtPrice(lo)}</span>
+            <span className="relative h-[3px] min-w-0 flex-1 rounded-full bg-white/10">
+              {/* Where it closed yesterday, so today's move has a datum */}
+              {prev == null ? null : (
+                <span
+                  className="absolute top-1/2 h-[7px] w-px -translate-y-1/2 bg-moon/30"
+                  style={{ left: `${prev}%` }}
+                  aria-hidden="true"
+                />
+              )}
+              <span
+                className={[
+                  'absolute top-1/2 h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full',
+                  up ? 'bg-rise' : 'bg-fall',
+                ].join(' ')}
+                style={{ left: `${here}%` }}
+                aria-hidden="true"
+              />
+            </span>
+            <span className="clock-figures shrink-0 text-[0.6875rem] text-moon/30">{fmtPrice(hi)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="shrink-0 text-right">
+        <p className="clock-figures text-sm font-medium text-moon">{fmtPrice(r.price)}</p>
+        <p
+          className={[
+            'clock-figures flex items-center justify-end gap-0.5 text-xs font-medium',
+            up ? 'text-emerald-300/90' : 'text-rose-300/85',
+          ].join(' ')}
+        >
+          {up ? <ArrowUp className="h-3 w-3" aria-hidden="true" /> : <ArrowDown className="h-3 w-3" aria-hidden="true" />}
+          {Math.abs(r.changePercent ?? 0).toFixed(2)}%
+        </p>
+      </div>
     </div>
   );
 }

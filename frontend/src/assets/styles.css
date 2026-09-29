@@ -1075,6 +1075,15 @@ h3,
 }
 
 /* The Markets tape. */
+/* Type set over a photograph. A scrim dark enough to carry small grey text is
+   dark enough to throw the photograph away, so the legibility is put on the
+   letters instead and the picture is allowed to stay a picture. */
+.on-photo {
+  text-shadow:
+    0 1px 2px rgb(4 8 22 / 90%),
+    0 2px 10px rgb(4 8 22 / 70%);
+}
+
 .ticker-mask {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);

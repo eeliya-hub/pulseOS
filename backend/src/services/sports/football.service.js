@@ -9,17 +9,41 @@ const sameTeam = (a, b) => norm(a).includes(norm(b)) || norm(b).includes(norm(a)
 
 const mapFixture = (m) => ({
   id: m.id,
+  homeId: m.homeTeam?.id ?? null,
   homeTeam: m.homeTeam?.name,
   awayTeam: m.awayTeam?.name,
+  // The short name is what a person calls the club ("Leeds United", not "Leeds
+  // United FC") and the TLA is what a scoreboard shows. Both were being thrown
+  // away in favour of the full registered name.
+  homeShort: m.homeTeam?.shortName ?? m.homeTeam?.name ?? null,
+  awayShort: m.awayTeam?.shortName ?? m.awayTeam?.name ?? null,
+  homeTla: m.homeTeam?.tla ?? null,
+  awayTla: m.awayTeam?.tla ?? null,
   homeCrest: m.homeTeam?.crest,
   awayCrest: m.awayTeam?.crest,
   date: m.utcDate,
   competition: m.competition?.name,
+  competitionEmblem: m.competition?.emblem ?? null,
   status: m.status,
   homeScore: m.score?.fullTime?.home ?? null,
   awayScore: m.score?.fullTime?.away ?? null,
   matchday: m.matchday,
 });
+
+/**
+ * The ground a fixture is played at, which the match object doesn't carry on the
+ * free tier — it comes off the home club instead. Cached for a day, because a
+ * stadium is the one thing about a football club that doesn't change weekly, and
+ * because the free tier allows ten requests a minute and this is a second call
+ * per fixture.
+ */
+async function homeGround(homeId) {
+  if (!homeId) return null;
+  return teamsCache
+    .wrap(`fb:team:${homeId}`, () => footballDataProvider.team(homeId))
+    .then((t) => (t?.venue ? { venue: t.venue, colours: t.clubColors ?? null } : null))
+    .catch(() => null);
+}
 
 const mapStanding = (r) => ({
   position: r.position,
@@ -97,6 +121,10 @@ export const footballService = {
       ]);
       fixture = (nextRaw.matches ?? []).map(mapFixture)[0] ?? null;
       results = (lastRaw.matches ?? []).map(mapFixture).reverse();
+      if (fixture) {
+        const ground = await homeGround(fixture.homeId);
+        fixture = { ...fixture, venue: ground?.venue ?? null, homeColours: ground?.colours ?? null };
+      }
     }
 
     return {
