@@ -2,10 +2,21 @@ import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { useSettings } from '../hooks/useSettings.js';
 
-// Add / remove the ticker symbols shown on the Stocks card.
-export default function StocksPicker() {
+/**
+ * Add / remove ticker symbols for one list.
+ *
+ * Used twice over: for the watchlist on the Markets card, and for the marquee
+ * across the top of the page — which used to be a hard-coded array in the
+ * backend that nobody could touch.
+ */
+export default function StocksPicker({
+  setting = 'stocks',
+  label = 'Stocks & tickers',
+  hint = 'Ticker symbols (e.g. AAPL, MSFT). Needs a Finnhub key.',
+  placeholder = 'e.g. AAPL',
+}) {
   const { settings, update } = useSettings();
-  const symbols = settings.stocks ?? [];
+  const symbols = settings[setting] ?? [];
   const [draft, setDraft] = useState('');
 
   const add = () => {
@@ -14,17 +25,15 @@ export default function StocksPicker() {
       setDraft('');
       return;
     }
-    update({ stocks: [...symbols, sym] });
+    update({ [setting]: [...symbols, sym] });
     setDraft('');
   };
 
-  const remove = (sym) => update({ stocks: symbols.filter((s) => s !== sym) });
+  const remove = (sym) => update({ [setting]: symbols.filter((s) => s !== sym) });
 
   return (
     <div>
-      <span className="mb-1.5 block text-[0.75rem] font-semibold text-moon/42">
-        Stocks &amp; tickers
-      </span>
+      <span className="mb-1.5 block text-[0.75rem] font-semibold text-moon/42">{label}</span>
 
       {symbols.length ? (
         <div className="mb-2.5 flex flex-wrap gap-1.5">
@@ -59,7 +68,7 @@ export default function StocksPicker() {
               add();
             }
           }}
-          placeholder="e.g. AAPL"
+          placeholder={placeholder}
           aria-label="Add ticker symbol"
           className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/8 px-2.5 py-1.5 text-xs text-moon outline-none transition placeholder:normal-case placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
         />
@@ -72,7 +81,7 @@ export default function StocksPicker() {
           <Plus className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-      <span className="mt-1.5 block text-[0.75rem] text-moon/38">Ticker symbols (e.g. AAPL, MSFT). Needs a Finnhub key.</span>
+      <span className="mt-1.5 block text-[0.75rem] text-moon/38">{hint}</span>
     </div>
   );
 }

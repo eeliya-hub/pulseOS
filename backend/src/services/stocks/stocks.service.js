@@ -1,6 +1,6 @@
 import { ApiError } from '../../utils/ApiError.js';
 import { createCache } from '../../utils/cache.js';
-import { coingeckoProvider } from './coingecko.provider.js';
+import { cryptoProvider } from './crypto.provider.js';
 import { finnhubProvider } from './finnhub.provider.js';
 
 // Quotes: short cache to stay well under Finnhub's 60 req/min free limit.
@@ -9,17 +9,10 @@ const quoteCache = createCache(60 * 1000);
 const profileCache = createCache(24 * 60 * 60 * 1000);
 const tickerCache = createCache(60 * 1000);
 
-// Fixed marquee for the top-of-page ticker (matches the original mock — no
-// customisation). Equities go through Finnhub, crypto through CoinGecko.
-const TICKER = [
-  { symbol: 'AAPL', kind: 'stock' },
-  { symbol: 'NVDA', kind: 'stock' },
-  { symbol: 'TSLA', kind: 'stock' },
-  { symbol: 'BTC', kind: 'crypto', id: 'bitcoin' },
-  { symbol: 'ETH', kind: 'crypto', id: 'ethereum' },
-  // VUSA (LSE) isn't on Finnhub's free tier; VOO is Vanguard's identical S&P 500 fund.
-  { symbol: 'VOO', kind: 'stock' },
-];
+// What the marquee runs when nobody has said otherwise. VUSA (LSE) isn't on
+// Finnhub's free tier; VOO is Vanguard's identical S&P 500 fund.
+const DEFAULT_TICKER = ['AAPL', 'NVDA', 'TSLA', 'BTC', 'ETH', 'VOO'];
+const coinCache = createCache(10 * 60 * 1000);
 
 const normalizeQuote = (symbol, q, profile) => ({
   symbol,
@@ -58,31 +51,46 @@ export const stocksService = {
   },
 
   /**
-   * Live data for the fixed top-of-page ticker. Equities via Finnhub, crypto via
-   * CoinGecko (no key). Returns { symbol, price, change } where `change` is a
-   * fraction (e.g. 0.018 = +1.8%). Any source that fails is simply omitted, so a
-   * missing Finnhub key still leaves the crypto entries live.
+   * Live data for the top-of-page marquee, for whatever symbols it is set to.
+   *
+   * Nothing declares up front whether a symbol is an equity or a coin, because
+   * asking someone to say so is asking them to know which of the two APIs we
+   * happen to use. Crypto is asked first and an unlisted symbol falls through to
+   * Finnhub. That order matters: there are thinly traded equities ticking as
+   * BTC, ETH and XRP, and Finnhub answers for them, so asking it first put
+   * Bitcoin on the tape at thirty-seven dollars.
+   *
+   * Returns { symbol, price, change } where `change` is a fraction (0.018 =
+   * +1.8%). A source that fails is omitted rather than fatal, so a missing
+   * Finnhub key still leaves the crypto entries running.
+   *
+   * @param {string[]} [symbols] defaults to DEFAULT_TICKER
    */
-  async getTicker() {
-    return tickerCache.wrap('ticker', async () => {
-      const stockSymbols = TICKER.filter((t) => t.kind === 'stock').map((t) => t.symbol);
-      const cryptoIds = TICKER.filter((t) => t.kind === 'crypto').map((t) => t.id);
+  async getTicker(symbols) {
+    const wanted = (symbols?.length ? symbols : DEFAULT_TICKER)
+      .map((s) => String(s).trim().toUpperCase())
+      .filter(Boolean)
+      .slice(0, 24); // a marquee, not a portfolio
+    if (!wanted.length) return [];
 
-      const [quotes, prices] = await Promise.all([
-        this.getQuotes(stockSymbols).catch(() => []),
-        coingeckoProvider.prices(cryptoIds).catch(() => ({})),
-      ]);
+    return tickerCache.wrap(`ticker:${wanted.join(',')}`, async () => {
+      const coins = await coinCache
+        .wrap(`coins:${wanted.join(',')}`, () => cryptoProvider.prices(wanted))
+        .catch(() => new Map());
 
-      const byStock = new Map(quotes.map((q) => [q.symbol, q]));
+      const rest = wanted.filter((s) => !coins.has(s));
+      const quotes = rest.length ? await this.getQuotes(rest).catch(() => []) : [];
+      const byStock = new Map(quotes.filter((q) => q.price).map((q) => [q.symbol, q]));
+
       const rows = [];
-      for (const t of TICKER) {
-        if (t.kind === 'stock') {
-          const q = byStock.get(t.symbol);
-          if (q?.price) rows.push({ symbol: t.symbol, price: q.price, change: (q.changePercent ?? 0) / 100 });
-        } else {
-          const p = prices[t.id];
-          if (p?.usd) rows.push({ symbol: t.symbol, price: p.usd, change: (p.usd_24h_change ?? 0) / 100 });
+      for (const symbol of wanted) {
+        const coin = coins.get(symbol);
+        if (coin) {
+          rows.push({ symbol, price: coin.usd, change: coin.change / 100 });
+          continue;
         }
+        const q = byStock.get(symbol);
+        if (q) rows.push({ symbol, price: q.price, change: (q.changePercent ?? 0) / 100 });
       }
       return rows;
     });

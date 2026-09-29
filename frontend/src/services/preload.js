@@ -25,6 +25,7 @@ export async function runPreload(onProgress = () => {}) {
   const s = getSettings();
   const location = s.location || 'London';
   const symbols = s.stocks ?? [];
+  const tape = s.ticker ?? [];
   // Matches the Markets view's own persisted choice.
   const newsScope = localStorage.getItem('pulse.news.scope') || 'top';
   const follows = s.follows ?? [];
@@ -47,7 +48,9 @@ export async function runPreload(onProgress = () => {}) {
       'Markets',
       () =>
         settle([
-          warm('stocks:ticker', () => api.stocks.ticker()),
+          // Keyed on the symbols, so a tape that has been edited warms the
+          // list it will actually show rather than the one it used to.
+          warm(`stocks:ticker:${tape.join(',')}`, () => api.stocks.ticker(tape)),
           symbols.length ? warm(`stocks:${symbols.join(',')}`, () => api.stocks.quotes(symbols)) : null,
         ]),
     ],

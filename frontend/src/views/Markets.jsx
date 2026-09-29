@@ -27,18 +27,26 @@ import { peek, put } from '../services/warmCache.js';
 import { formatCurrencyDetailed, formatPercent } from '../utils/formatters.js';
 
 function Ticker({ fallback }) {
+  const { settings } = useSettings();
+  // Whatever the tape has been set to, as a stable string so a re-render with
+  // the same symbols doesn't restart the request loop.
+  const symbols = useMemo(() => settings.ticker ?? [], [settings.ticker]);
+  const warmKey = `stocks:ticker:${symbols.join(',')}`;
+
   // Warmed on the launch screen, so the tape opens on live prices rather than
   // showing the static fallback for a beat and then swapping under the eye.
-  const [assets, setAssets] = useState(() => peek('stocks:ticker')?.ticker?.length ? peek('stocks:ticker').ticker : fallback);
+  const [assets, setAssets] = useState(() => peek(warmKey)?.ticker?.length ? peek(warmKey).ticker : fallback);
 
   useEffect(() => {
     let alive = true;
+    const warmed = peek(warmKey)?.ticker;
+    if (warmed?.length) setAssets(warmed);
     const load = () =>
       api.stocks
-        .ticker()
+        .ticker(symbols)
         .then((d) => {
           if (!alive) return;
-          put('stocks:ticker', d);
+          put(warmKey, d);
           if (d.ticker?.length) setAssets(d.ticker);
         })
         .catch(() => {});
@@ -48,7 +56,7 @@ function Ticker({ fallback }) {
       alive = false;
       window.clearInterval(id);
     };
-  }, []);
+  }, [symbols, warmKey]);
 
   /*
    * The tape has to be wider than the window at every moment of its loop, and
@@ -216,90 +224,32 @@ function NewsPanel({ scope, onPlace }) {
         ) : articles.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-moon/45">No stories found.</p>
         ) : (
-          <>
-            {/* A front page has a lead. The list treated the top story exactly
-                like the ninth, so the one thing the feed had already ranked for
-                us was the one thing the layout threw away. */}
-            <LeadStory article={articles[0]} />
-            {articles.slice(1).map((article) => (
-              <a
-                key={article.url}
-                href={article.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="ground-row group flex gap-3.5 px-2 py-3"
-              >
-                <ArticleThumb src={article.image} />
-                <div className="min-w-0 flex-1">
-                  <h3 className="t-title line-clamp-2 group-hover:text-moon">
-                    {article.title}
-                  </h3>
-                  <p className="t-micro mt-1.5 flex items-center gap-2">
-                    <span className="truncate text-accent/80">{article.source}</span>
-                    <span className="shrink-0">{relTime(article.publishedAt)}</span>
-                    <ExternalLink
-                      className="ml-auto h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-70"
-                      aria-hidden="true"
-                    />
-                  </p>
-                </div>
-              </a>
-            ))}
-          </>
+          articles.map((article) => (
+            <a
+              key={article.url}
+              href={article.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="ground-row group flex gap-3.5 px-2 py-3"
+            >
+              <ArticleThumb src={article.image} />
+              <div className="min-w-0 flex-1">
+                <h3 className="t-title line-clamp-2 group-hover:text-moon">
+                  {article.title}
+                </h3>
+                <p className="t-micro mt-1.5 flex items-center gap-2">
+                  <span className="truncate text-accent/80">{article.source}</span>
+                  <span className="shrink-0">{relTime(article.publishedAt)}</span>
+                  <ExternalLink
+                    className="ml-auto h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-70"
+                    aria-hidden="true"
+                  />
+                </p>
+              </div>
+            </a>
+          ))
         )}
     </div>
-  );
-}
-
-/** The top story, given the room a top story is owed. */
-function LeadStory({ article }) {
-  const [failed, setFailed] = useState(false);
-  if (!article) return null;
-  const image = article.image && !failed ? article.image : null;
-
-  return (
-    <a
-      href={article.url}
-      target="_blank"
-      rel="noreferrer noopener"
-      className="group relative mb-2 block overflow-hidden rounded-2xl"
-    >
-      {image ? (
-        <>
-          <img
-            src={image}
-            alt=""
-            onError={() => setFailed(true)}
-            className="h-36 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-          />
-          {/* Dark enough at the foot for the headline to sit on the picture */}
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-[#0b1024] via-[#0b1024]/78 to-[#0b1024]/5"
-            aria-hidden="true"
-          />
-        </>
-      ) : (
-        <div className="h-24 w-full bg-white/[0.04]" aria-hidden="true" />
-      )}
-
-      <div
-        className={
-          image ? 'on-photo absolute inset-x-0 bottom-0 p-3' : 'absolute inset-0 flex flex-col justify-end p-3'
-        }
-      >
-        <h3 className="display-type line-clamp-2 text-[1.0625rem] font-light leading-snug text-moon">
-          {article.title}
-        </h3>
-        <p className="t-micro mt-1.5 flex items-center gap-2">
-          <span className={`truncate ${image ? 'text-accent/95' : 'text-accent/80'}`}>{article.source}</span>
-          <span className={`shrink-0 ${image ? 'text-moon/70' : ''}`}>{relTime(article.publishedAt)}</span>
-          <ExternalLink
-            className="ml-auto h-3 w-3 shrink-0 opacity-0 transition group-hover:opacity-70"
-            aria-hidden="true"
-          />
-        </p>
-      </div>
-    </a>
   );
 }
 
@@ -915,7 +865,7 @@ function NewsSportsCard() {
           <SettingsButton
             className="!h-8 !w-8"
             title={tab === 'news' ? 'Local news' : tab === 'sports' ? 'Sports & teams' : 'Stocks'}
-            fields={tab === 'news' ? ['location'] : tab === 'sports' ? ['sports'] : ['stocks']}
+            fields={tab === 'news' ? ['location'] : tab === 'sports' ? ['sports'] : ['stocks', 'ticker']}
           />
         </div>
       </div>

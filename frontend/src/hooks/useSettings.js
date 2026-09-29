@@ -28,6 +28,10 @@ const DEFAULTS = {
     { id: 'Formula 1:Formula 1', sport: 'f1', leagueId: null, leagueLabel: 'Formula 1', team: 'Formula 1' },
   ],
   stocks: ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'GOOGL'],
+  // The tape across the top of Markets. Separate from the watchlist above on
+  // purpose: the watchlist is what you hold, the tape is what you glance at.
+  // Equities and coins both work — a symbol traded as a coin is priced as one.
+  ticker: ['AAPL', 'NVDA', 'TSLA', 'BTC', 'ETH', 'VOO'],
   // Free-typed guidance on how the Pulse assistant should talk to the user
   // (tone, format, focus). Sent with every AI chat and folded into its prompt.
   aiInstructions: '',

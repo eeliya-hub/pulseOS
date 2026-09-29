@@ -82,7 +82,9 @@ export const api = {
   stocks: {
     quotes: (symbols) => request('/stocks', { params: { symbols: symbols.join(',') } }),
     quote: (symbol) => request(`/stocks/${symbol}`),
-    ticker: () => request('/stocks/ticker'),
+    // Omit `symbols` for the default tape.
+    ticker: (symbols) =>
+      request('/stocks/ticker', symbols?.length ? { params: { symbols: symbols.join(',') } } : undefined),
   },
   news: {
     headlines: (params) => request('/news', { params }),

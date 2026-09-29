@@ -84,6 +84,17 @@ export default function SettingsButton({
                 <StocksPicker />
               </div>
             ) : null}
+            {fields.includes('ticker') ? (
+              <div className={fields.length > 1 ? 'mt-4' : ''}>
+                <StocksPicker
+                  setting="ticker"
+                  label="Top ticker tape"
+                  hint="What scrolls across the top. Stocks or crypto — BTC, ETH, SOL all work."
+                  placeholder="e.g. BTC"
+                />
+              </div>
+            ) : null}
+
             {fields.includes('afk') ? (
               <Toggle
                 className={fields.length > 1 ? 'mt-5' : ''}

@@ -13,7 +13,12 @@ export const stocksController = {
   }),
 
   // GET /api/stocks/ticker — fixed live marquee (equities + crypto)
-  getTicker: asyncHandler(async (_req, res) => {
-    res.json({ ticker: await stocksService.getTicker() });
+  // GET /api/stocks/ticker?symbols=AAPL,BTC,VOO — omit `symbols` for the default tape.
+  getTicker: asyncHandler(async (req, res) => {
+    const symbols = String(req.query.symbols ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    res.json({ ticker: await stocksService.getTicker(symbols) });
   }),
 };
