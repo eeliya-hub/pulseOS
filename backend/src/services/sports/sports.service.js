@@ -83,13 +83,47 @@ function initials(name) {
   return letters.join('').toUpperCase();
 }
 
-const resultRow = (f) => ({
-  id: f.id,
-  homeTeam: f.homeTeam,
-  awayTeam: f.awayTeam,
-  homeScore: f.homeScore,
-  awayScore: f.awayScore,
-});
+/**
+ * A finished match, from the point of view of the team being followed.
+ *
+ * The row used to be four bare fields, so the UI could print a scoreline and
+ * nothing else — no date, no crests, and no way to say whether it was a good
+ * day. Which team is "mine" is known here and nowhere else downstream, so the
+ * verdict is worked out here too.
+ */
+const resultRow = (me) => (f) => {
+  const { date, time } = splitIso(f.date);
+  const iAmHome = sameName(f.homeTeam, me);
+  const mineScore = iAmHome ? f.homeScore : f.awayScore;
+  const theirScore = iAmHome ? f.awayScore : f.homeScore;
+  const decided = Number.isFinite(mineScore) && Number.isFinite(theirScore);
+  return {
+    id: f.id,
+    homeTeam: f.homeTeam,
+    awayTeam: f.awayTeam,
+    homeShort: f.homeShort ?? f.homeTeam ?? null,
+    awayShort: f.awayShort ?? f.awayTeam ?? null,
+    homeCrest: f.homeCrest ?? null,
+    awayCrest: f.awayCrest ?? null,
+    homeScore: f.homeScore,
+    awayScore: f.awayScore,
+    competition: f.competition ?? null,
+    date,
+    time,
+    // The other side, and how it went: 'W' | 'D' | 'L' | null.
+    opponent: (iAmHome ? f.awayShort ?? f.awayTeam : f.homeShort ?? f.homeTeam) ?? null,
+    opponentCrest: (iAmHome ? f.awayCrest : f.homeCrest) ?? null,
+    home: iAmHome,
+    outcome: decided ? (mineScore > theirScore ? 'W' : mineScore < theirScore ? 'L' : 'D') : null,
+  };
+};
+
+/** Loose name match, the way "Lakers" should find "Los Angeles Lakers". */
+function sameName(a, b) {
+  const x = (a ?? '').toLowerCase().trim();
+  const y = (b ?? '').toLowerCase().trim();
+  return Boolean(x) && Boolean(y) && (x.includes(y) || y.includes(x));
+}
 
 async function footballCard(name, code) {
   const sum = await footballService.teamSummary(code, name);
@@ -102,7 +136,8 @@ async function footballCard(name, code) {
     badge: sum.badge ?? null,
     league: sum.league,
     fixture: fixtureCard(sum.fixture, 'vs'),
-    results: sum.results.map(resultRow),
+    fixtures: (sum.fixtures ?? []).map((f) => fixtureCard(f, 'vs')).filter(Boolean),
+    results: sum.results.map(resultRow(name)),
     standings: sum.standings.map((r) => ({
       rank: r.position,
       team: r.team,
@@ -161,7 +196,8 @@ async function ballCard(service, name, sportLabel, statSport) {
     badge: logo(name),
     league: sum.league,
     fixture: fixtureCard(sum.fixture, '@'),
-    results: sum.results.map(resultRow),
+    fixtures: (sum.fixtures ?? []).map((f) => fixtureCard(f, '@')).filter(Boolean),
+    results: sum.results.map(resultRow(name)),
     conferences: [...new Set(standings.map((r) => r.conference).filter(Boolean))],
     playoffs: PLAYOFF_LINES[sportKey] ?? null,
     ties: standings.some((r) => (r.drawn ?? 0) > 0), // NFL only, and only when there are any
@@ -208,6 +244,17 @@ async function f1Card(teamName) {
     badge,
     league: 'Formula 1',
     fixture: next ? { name: next.name, venue: next.circuit, date: next.date, time: next.time } : null,
+    // A season has a calendar, and the panel shows it. Shaped like every other
+    // sport's fixture list so one component draws all four.
+    fixtures: upcoming.slice(0, 6).map((r) => ({
+      name: r.name,
+      competition: 'Formula 1',
+      venue: r.circuit,
+      date: r.date,
+      time: r.time,
+      round: r.round,
+      country: r.country ?? null,
+    })),
     lastRace: last.race
       ? { name: last.race.name, podium: last.results.slice(0, 3) }
       : null,

@@ -255,9 +255,11 @@ function makeService(sport) {
       const upcoming = await this.getUpcomingGames();
       const recent = await this.getRecentGames();
       const involves = (g) => sameTeam(g.homeTeam, team) || sameTeam(g.awayTeam, team);
+      const mine = upcoming.filter(involves);
       return {
         league: sport.toUpperCase(),
-        fixture: upcoming.find(involves) ?? null,
+        fixture: mine[0] ?? null,
+        fixtures: mine.slice(0, 6),
         results: recent.filter(involves).slice(0, 5),
         standings: [], // filled by the caller from ESPN; getStandings() is the fallback
       };

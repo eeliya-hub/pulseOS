@@ -312,21 +312,96 @@ function SportsPanel({ activeId, setActiveId }) {
     );
   }
 
-  const fixture = data?.fixture;
+  if (loading) return <div className="min-h-0 flex-1 animate-pulse rounded-2xl bg-white/6" />;
+  if (!data?.found) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">
+        Couldn&rsquo;t find &ldquo;{active?.team}&rdquo;. Try the club&rsquo;s full name.
+      </div>
+    );
+  }
+  return <SportsStage data={data} />;
+}
+
+/**
+ * The Sport panel: one stage, lit by the place the next match is played.
+ *
+ * What was here before was a card with a small picture on it, sitting on top of
+ * a league table, and it read as two unrelated widgets stacked in a column.
+ * This is one thing. The ground fills the whole panel, the fixture stands in it
+ * at full size, and the lists live underneath on their own plate — so the
+ * section feels like somewhere rather than like a page of results.
+ *
+ * It has to hold four sports that agree on almost nothing: football has two
+ * clubs and a table, the American sports have two franchises and a conference,
+ * a grand prix has neither. So the stage asks only for what all of them have —
+ * something happening, somewhere, on a date — and the three views underneath
+ * (what's coming, what happened, where everyone stands) each fall back to
+ * whatever that sport actually provides.
+ */
+function SportsStage({ data }) {
+  const [view, setView] = useState('next');
+  const fixture = data.fixture ?? null;
+  const fixtures = data.fixtures?.length ? data.fixtures : fixture ? [fixture] : [];
+  const results = data.results ?? [];
+  const isF1 = data.kind === 'f1';
+
+  // The ground. Football and F1 name it outright; the American sports don't, so
+  // the home team is asked for instead, which is how Google finds an arena.
+  const homeName = fixture?.home?.name ?? data.name;
+  const venue = fixture?.venue ?? null;
+  const shot = useVenuePhoto(venue ?? (homeName ? `${homeName} stadium` : null));
+
+  const hasTable = isF1
+    ? Boolean(data.driverStandings?.length || data.constructorStandings?.length)
+    : Boolean(data.standings?.length);
+  const views = [
+    { id: 'next', label: isF1 ? 'Calendar' : 'Fixtures', on: fixtures.length > 0 },
+    { id: 'form', label: 'Results', on: results.length > 0 || Boolean(data.lastRace) },
+    { id: 'table', label: 'Table', on: hasTable },
+  ].filter((v) => v.on);
+  // Never leave the panel showing a view that this sport has nothing for.
+  const active = views.some((v) => v.id === view) ? view : views[0]?.id;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {loading ? (
-        <div className="flex-1 animate-pulse rounded-2xl bg-white/6" />
-      ) : !data?.found ? (
-        <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">
-          Couldn&rsquo;t find &ldquo;{active?.team}&rdquo;. Try the club&rsquo;s full name.
-        </div>
-      ) : (
-        <>
-          <FixtureCard data={data} fixture={fixture} />
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/[0.03]">
+      <Marquee data={data} fixture={fixture} results={results} shot={shot} />
 
-          {data.kind === 'f1' ? (
+      {/* Below the fixture, the picture stops being scenery and starts being in
+          the way, so the lists stand on their own ground: a near-solid plate
+          with a hairline where it meets the photograph. */}
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col border-t border-white/10 bg-[#0b1024]/88 backdrop-blur-md">
+        {views.length > 1 ? (
+          <div className="flex shrink-0 gap-1 px-3 pb-2 pt-2.5">
+            {views.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setView(v.id)}
+                className={[
+                  'rounded-full px-3 py-1 text-[0.75rem] font-semibold transition focus:outline-none',
+                  v.id === active
+                    ? 'bg-white/90 text-[#0b1024]'
+                    : 'text-moon/55 hover:bg-white/10 hover:text-moon/85',
+                ].join(' ')}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="flex min-h-0 flex-1 flex-col px-2.5 pb-2.5 pt-1">
+        {active === 'next' ? (
+          <FixtureList fixtures={fixtures} isF1={isF1} />
+        ) : active === 'form' ? (
+          isF1 ? (
+            <Podium race={data.lastRace} />
+          ) : (
+            <ResultList results={results} />
+          )
+        ) : active === 'table' ? (
+          isF1 ? (
             <SportsF1Standings drivers={data.driverStandings} constructors={data.constructorStandings} />
           ) : data.conferences?.length ? (
             <BallStandings
@@ -335,52 +410,43 @@ function SportsPanel({ activeId, setActiveId }) {
               playoffs={data.playoffs}
               ties={data.ties}
             />
-          ) : data.standings.length ? (
-            <SportsStandings rows={data.standings} variant={data.statSport === 'football' ? 'football' : 'wl'} />
-          ) : data.kind === 'race' ? (
-            <SportsRaces races={data.results} />
           ) : (
-            <SportsResults results={data.results} />
-          )}
-        </>
-      )}
+            <SportsStandings rows={data.standings} variant={data.statSport === 'football' ? 'football' : 'wl'} />
+          )
+        ) : (
+          <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">
+            Nothing scheduled for {data.name} right now.
+          </div>
+        )}
+        </div>
+      </div>
     </div>
   );
 }
 
 /**
- * The next fixture, played as an event rather than filed as a row.
+ * A photograph of a place, held between visits.
  *
- * It borrows the flight card's grammar on purpose, so the two read as the same
- * app: a photograph of the real place behind it, the two ends of the thing in
- * big type with the journey between them, and the practical facts on a hairline
- * underneath. LHR ✈ DOH becomes ARS v LEE.
- *
- * The photograph is of the ground the match is at — looked up by the venue name
- * the fixture now carries, through the same place-photo endpoint the Travel view
- * uses. There is no image-search key in this project, and a photo of the actual
- * stadium beats a stock picture of a football anyway.
+ * A stadium is the definition of something that does not change while you are
+ * looking at it, so the first answer is kept and no second request is made.
  */
-function FixtureCard({ data, fixture }) {
+function useVenuePhoto(query) {
   const [shot, setShot] = useState(null);
-  const venue = fixture?.venue ?? null;
-
   useEffect(() => {
-    if (!venue) {
+    if (!query) {
       setShot(null);
       return undefined;
     }
-    // Warmed between visits: a stadium's photograph is the definition of
-    // something that does not change while you are looking at it.
-    const key = `venue:${venue}`;
+    const key = `venue:${query}`;
     const warmed = peek(key);
     if (warmed) {
       setShot(warmed);
       return undefined;
     }
+    setShot(null);
     let alive = true;
     api.travel
-      .photos({ q: venue, limit: 1 })
+      .photos({ q: query, limit: 1 })
       .then((d) => {
         const first = (d.results ?? [])[0];
         if (!alive || !first) return;
@@ -393,101 +459,68 @@ function FixtureCard({ data, fixture }) {
     return () => {
       alive = false;
     };
-  }, [venue]);
+  }, [query]);
+  return shot;
+}
 
-  // The followed team's own crest, not the competition's: several competition
-  // emblems are dark artwork on transparent (the Premier League's lion among
-  // them) and vanish against this card.
-  const crest = data.kind === 'f1' ? '/logos/f1/trimmed/f1.png' : data.badge;
-  // The quiet greys on this card were chosen against a flat surface. Over a
-  // photograph the same values read as mush, so everything secondary comes up a
-  // stop when there is a picture behind it.
-  const quiet = shot ? 'text-moon/70' : 'text-moon/45';
+/** The top of the stage: what is next, where, when, and how it has been going. */
+function Marquee({ data, fixture, results, shot }) {
+  const quiet = shot ? 'text-moon/75' : 'text-moon/45';
   const quieter = shot ? 'text-moon/60' : 'text-moon/35';
   const home = fixture?.home;
   const away = fixture?.away;
-  // Whoever is at home is named on the left, because that is the side the
-  // photograph belongs to.
   const [left, right] = fixture?.homeFirst === false ? [away, home] : [home, away];
-  // Not every sport is two sides. A grand prix is one event at one circuit, and
-  // drawing it as a match left a bare "v" standing between two empty columns.
   const isMatch = Boolean(home?.name || away?.name);
+  const away_ = countdown(fixture?.date);
 
   return (
-    <div className={`soft-row relative shrink-0 overflow-hidden rounded-2xl p-3.5 ${shot ? 'on-photo' : ''}`}>
+    // The photograph belongs to this block alone, not the whole panel. Spanning
+    // the panel meant its best part sat behind the lists' plate and all that
+    // showed up here was sky.
+    <div className={`relative z-10 shrink-0 overflow-hidden px-3.5 pb-3 pt-3.5 ${shot ? 'on-photo' : ''}`}>
       {shot ? (
         <>
-          <img src={shot} alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.46]" />
+          <img src={shot} alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.6]" />
           <div
-            className="absolute inset-0 bg-gradient-to-tr from-[#0b1024]/92 via-[#0b1024]/72 to-[#0b1024]/48"
+            className="absolute inset-0 bg-gradient-to-b from-[#0b1024]/58 via-[#0b1024]/62 to-[#0b1024]/78"
             aria-hidden="true"
           />
         </>
       ) : null}
 
-      {/* With a fixture on it, the card is about the match, and the two sides
-          below carry the crests and the names. Repeating the followed team's
-          crest and its name up here printed both of them twice on one card —
-          and the team is already named in the selector beside the tabs. Without
-          a fixture there is nothing else to identify the card, so the crest and
-          the name come back. */}
-      {fixture ? (
-        <div className="relative z-10 flex items-baseline gap-2">
-          <p className={`t-label ${shot ? 'text-accent/95' : 'text-accent/70'}`}>{data.league || data.sport}</p>
-          {fixture.matchday ? (
-            <p className={`ml-auto shrink-0 t-label ${quieter}`}>Matchday {fixture.matchday}</p>
-          ) : null}
-        </div>
-      ) : (
-        <div className="relative z-10 flex items-center gap-3">
-          {crest ? (
-            <img
-              src={crest}
-              alt=""
-              className={[
-                'h-11 w-11 shrink-0 rounded-xl object-contain p-1.5',
-                data.kind === 'f1' ? '' : 'bg-white/6',
-              ].join(' ')}
-            />
-          ) : (
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/6">
-              <Trophy className="h-5 w-5 text-moon/50" aria-hidden="true" />
-            </span>
-          )}
-          <div className="min-w-0">
-            <p className="text-[0.75rem] font-semibold text-accent/70">{data.league || data.sport}</p>
-            <p className="display-type truncate text-lg font-light leading-tight text-moon">{data.name}</p>
-          </div>
-        </div>
-      )}
+      <div className="relative flex items-baseline gap-2">
+        <p className={`t-label ${shot ? 'text-accent/95' : 'text-accent/70'}`}>{data.league || data.sport}</p>
+        {fixture?.matchday ? (
+          <p className={`t-label ${quieter}`}>MD {fixture.matchday}</p>
+        ) : null}
+        {away_ ? <p className={`ml-auto shrink-0 t-label ${quieter}`}>{away_}</p> : null}
+      </div>
 
       {!fixture ? (
-        <p className="relative z-10 mt-3 text-xs text-moon/45">No upcoming fixture scheduled.</p>
+        // Why there is no fixture is not something we know: a season can be
+        // over, between rounds, or the feed can simply be having a quiet hour.
+        <p className={`relative mt-3 text-sm ${quiet}`}>No fixture scheduled.</p>
       ) : (
         <>
           {isMatch ? (
-            <div className="relative z-10 mt-2.5 flex items-center justify-between gap-2">
+            <div className="relative mt-3 flex items-center justify-between gap-2">
               <Side side={left} quiet={quiet} />
-              {/* The tie between them, drawn the way the flight card draws a route */}
-              <span className="mb-3 flex flex-1 items-center gap-1.5 text-moon/25" aria-hidden="true">
-                <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/25" />
-                <span className="shrink-0 text-[0.75rem] italic text-accent/70">v</span>
-                <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/25" />
+              <span className="mb-4 flex flex-1 items-center gap-1.5" aria-hidden="true">
+                <span className="h-px flex-1 bg-gradient-to-r from-transparent to-white/30" />
+                <span className="shrink-0 text-[0.8125rem] italic text-accent/80">v</span>
+                <span className="h-px flex-1 bg-gradient-to-l from-transparent to-white/30" />
               </span>
               <Side side={right} align="right" quiet={quiet} />
             </div>
           ) : (
-            <p className="display-type relative z-10 mt-2 line-clamp-2 text-2xl font-light leading-tight text-moon">
+            <p className="display-type relative mt-2 line-clamp-2 text-[1.375rem] font-light leading-tight text-moon">
               {fixture.name}
             </p>
           )}
 
-          <div className="relative z-10 mt-2.5 flex items-center gap-2 border-t border-white/10 pt-2 text-[0.75rem]">
-            {/* The competition is already named at the top of the card, so an
-                empty venue leaves this side of the line empty rather than
-                printing "NBA" under a card headed NBA. */}
-            <span className={`min-w-0 flex-1 truncate ${quiet}`}>{venue ?? ''}</span>
-            <span className={`flex shrink-0 items-center gap-1.5 ${shot ? 'text-moon/85' : 'text-moon/70'}`}>
+          <div className="relative mt-3 flex items-center gap-2 border-t border-white/12 pt-2 text-[0.75rem]">
+            <span className={`min-w-0 flex-1 truncate ${quiet}`}>{fixture.venue ?? fixture.competition ?? ''}</span>
+            <span className={`flex shrink-0 items-center gap-1.5 ${shot ? 'text-moon/90' : 'text-moon/70'}`}>
               <CalendarDays className={`h-3.5 w-3.5 ${quieter}`} aria-hidden="true" />
               {fmtDate(fixture.date)}
             </span>
@@ -500,6 +533,29 @@ function FixtureCard({ data, fixture }) {
           </div>
         </>
       )}
+
+      <Form results={results} quiet={quieter} />
+    </div>
+  );
+}
+
+/** How the last few went, oldest on the left, so the shape of a run is visible. */
+function Form({ results, quiet }) {
+  const run = (results ?? []).filter((r) => r.outcome).slice(0, 5).reverse();
+  if (!run.length) return null;
+  const tone = { W: 'bg-rise/85 text-[#06210f]', D: 'bg-white/35 text-[#0b1024]', L: 'bg-fall/80 text-[#2a0710]' };
+  return (
+    <div className="relative mt-2.5 flex items-center gap-1.5">
+      <span className={`t-label ${quiet}`}>Form</span>
+      {run.map((r) => (
+        <span
+          key={r.id}
+          title={`${r.home ? 'v' : 'at'} ${r.opponent} · ${r.homeScore}–${r.awayScore}`}
+          className={`grid h-4 w-4 place-items-center rounded-[0.3rem] text-[0.625rem] font-bold ${tone[r.outcome]}`}
+        >
+          {r.outcome}
+        </span>
+      ))}
     </div>
   );
 }
@@ -510,15 +566,135 @@ function Side({ side, align = 'left', quiet = 'text-moon/40' }) {
   if (!side) return <div className="min-w-0" />;
   return (
     <div className={`flex min-w-0 items-center gap-2 ${right ? 'flex-row-reverse text-right' : ''}`}>
-      {side.crest ? (
-        <img src={side.crest} alt="" className="h-7 w-7 shrink-0 object-contain" />
-      ) : null}
+      {side.crest ? <img src={side.crest} alt="" className="h-8 w-8 shrink-0 object-contain" /> : null}
       <div className="min-w-0">
-        <p className="clock-figures text-xl font-light leading-none text-moon">{side.tla ?? side.short}</p>
-        <p className={`mt-1 max-w-[7rem] truncate text-[0.75rem] ${quiet}`}>{side.short}</p>
+        <p className="clock-figures text-2xl font-light leading-none text-moon">{side.tla ?? side.short}</p>
+        <p className={`mt-1 max-w-[6.5rem] truncate text-[0.75rem] ${quiet}`}>{side.short}</p>
       </div>
     </div>
   );
+}
+
+/** Everything still to come, not just the next one. */
+function FixtureList({ fixtures, isF1 }) {
+  if (!fixtures.length) {
+    return <Empty>Nothing on the calendar.</Empty>;
+  }
+  return (
+    <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+      {fixtures.map((f, i) => (
+        <div
+          key={f.id ?? `${f.date}-${f.name ?? i}`}
+          className="flex items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-2"
+        >
+          <div className="w-[3.2rem] shrink-0">
+            <p className="clock-figures text-[0.8125rem] font-medium leading-none text-moon/90">{dayMonth(f.date)}</p>
+            <p className="clock-figures mt-1 text-[0.6875rem] leading-none text-moon/40">{fmtTime(f.time) || '—'}</p>
+          </div>
+          <div className="min-w-0 flex-1">
+            {f.home?.name || f.away?.name ? (
+              <p className="truncate text-[0.8125rem] text-moon/90">
+                <span className="font-medium">{f.home?.short}</span>
+                <span className="px-1.5 text-moon/35">{f.homeFirst === false ? 'at' : 'v'}</span>
+                <span className="font-medium">{f.away?.short}</span>
+              </p>
+            ) : (
+              <p className="truncate text-[0.8125rem] text-moon/90">{f.name}</p>
+            )}
+            <p className="mt-0.5 truncate text-[0.6875rem] text-moon/40">
+              {isF1 ? f.venue : (f.competition ?? '')}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** What happened, told from the followed team's side of it. */
+function ResultList({ results }) {
+  if (!results.length) return <Empty>No results yet this season.</Empty>;
+  const tone = { W: 'bg-rise/85 text-[#06210f]', D: 'bg-white/35 text-[#0b1024]', L: 'bg-fall/80 text-[#2a0710]' };
+  return (
+    <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+      {results.map((r) => (
+        <div key={r.id} className="flex items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-2">
+          <span
+            className={`grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[0.75rem] font-bold ${
+              r.outcome ? tone[r.outcome] : 'bg-white/10 text-moon/50'
+            }`}
+          >
+            {r.outcome ?? '–'}
+          </span>
+          {r.opponentCrest ? (
+            <img src={r.opponentCrest} alt="" className="h-5 w-5 shrink-0 object-contain" />
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[0.8125rem] text-moon/90">
+              <span className="text-moon/40">{r.home ? 'v' : 'at'}</span> {r.opponent}
+            </p>
+            <p className="mt-0.5 truncate text-[0.6875rem] text-moon/40">
+              {dayMonth(r.date)}
+              {r.competition ? ` · ${r.competition}` : ''}
+            </p>
+          </div>
+          <span className="clock-figures shrink-0 rounded-md bg-white/10 px-2 py-0.5 text-[0.8125rem] font-semibold text-moon">
+            {r.homeScore ?? '–'}–{r.awayScore ?? '–'}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The last grand prix, which is the only "result" a season of racing has. */
+function Podium({ race }) {
+  if (!race?.podium?.length) return <Empty>No race run yet.</Empty>;
+  const place = ['text-[#e8c76a]', 'text-moon/70', 'text-[#c98b5e]'];
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <p className="mb-1.5 px-1 t-label text-moon/45">{race.name}</p>
+      <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+        {race.podium.map((d, i) => (
+          <div key={d.driverName ?? i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-2">
+            <span className={`clock-figures w-4 shrink-0 text-lg font-light ${place[i] ?? 'text-moon/50'}`}>
+              {i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[0.8125rem] text-moon/90">{d.driverName}</p>
+              <p className="mt-0.5 truncate text-[0.6875rem] text-moon/40">{d.team}</p>
+            </div>
+            {d.time ? <span className="clock-figures shrink-0 text-[0.75rem] text-moon/55">{d.time}</span> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const Empty = ({ children }) => (
+  <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">{children}</div>
+);
+
+/** "Sat 10 Oct" trimmed to "10 Oct", for a list where the column is the date. */
+function dayMonth(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(`${dateStr}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+}
+
+/** How long until it, in the words a person would use. */
+function countdown(dateStr) {
+  if (!dateStr) return null;
+  const then = Date.parse(`${dateStr}T00:00:00`);
+  if (Number.isNaN(then)) return null;
+  const today = new Date();
+  const days = Math.round((then - Date.parse(`${today.toISOString().slice(0, 10)}T00:00:00`)) / 86_400_000);
+  if (days < 0) return null;
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  if (days < 14) return `In ${days} days`;
+  return `In ${Math.round(days / 7)} weeks`;
 }
 
 function winPct(r) {
@@ -755,47 +931,6 @@ function SportsF1Standings({ drivers = [], constructors = [] }) {
       ) : (
         <div className="flex flex-1 items-center justify-center text-xs text-moon/40">Standings unavailable.</div>
       )}
-    </div>
-  );
-}
-
-function SportsResults({ results }) {
-  if (!results?.length) {
-    return <div className="flex flex-1 items-center justify-center text-xs text-moon/40">No recent results.</div>;
-  }
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-1.5 px-1 text-[0.75rem] font-semibold text-moon/38">Recent results</p>
-      <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-        {results.map((r) => (
-          <div key={r.id} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2.5 py-2 text-xs">
-            <span className="min-w-0 flex-1 truncate text-right text-moon/75">{r.homeTeam}</span>
-            <span className="clock-figures shrink-0 rounded-md bg-white/8 px-2 py-0.5 font-semibold text-moon">
-              {`${r.homeScore ?? '–'} – ${r.awayScore ?? '–'}`}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-moon/75">{r.awayTeam}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SportsRaces({ races }) {
-  if (!races?.length) {
-    return <div className="flex flex-1 items-center justify-center text-xs text-moon/40">No recent races.</div>;
-  }
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-1.5 px-1 text-[0.75rem] font-semibold text-moon/38">Recent races</p>
-      <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-        {races.map((r) => (
-          <div key={r.id} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-2.5 py-2 text-xs">
-            <span className="min-w-0 flex-1 truncate text-moon/78">{r.name}</span>
-            <span className="clock-figures shrink-0 text-[0.75rem] text-moon/45">{fmtDate(r.date)}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

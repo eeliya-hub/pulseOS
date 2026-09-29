@@ -113,17 +113,22 @@ export const footballService = {
       .catch(() => null);
 
     let fixture = null;
+    let fixtures = [];
     let results = [];
     if (team) {
       const [nextRaw, lastRaw] = await Promise.all([
-        cache.wrap(`fb:teamnext:${team.id}`, () => footballDataProvider.teamMatches(team.id, 'SCHEDULED', 1)).catch(() => ({})),
+        cache.wrap(`fb:teamnext:${team.id}`, () => footballDataProvider.teamMatches(team.id, 'SCHEDULED', 6)).catch(() => ({})),
         cache.wrap(`fb:teamlast:${team.id}`, () => footballDataProvider.teamMatches(team.id, 'FINISHED', 5)).catch(() => ({})),
       ]);
-      fixture = (nextRaw.matches ?? []).map(mapFixture)[0] ?? null;
+      fixtures = (nextRaw.matches ?? []).map(mapFixture);
+      fixture = fixtures[0] ?? null;
       results = (lastRaw.matches ?? []).map(mapFixture).reverse();
+      // Only the next one is worth a second call for its ground: it is the only
+      // fixture that gets a photograph, and the free tier counts requests.
       if (fixture) {
         const ground = await homeGround(fixture.homeId);
         fixture = { ...fixture, venue: ground?.venue ?? null, homeColours: ground?.colours ?? null };
+        fixtures = [fixture, ...fixtures.slice(1)];
       }
     }
 
@@ -131,6 +136,7 @@ export const footballService = {
       league: standings.competition,
       badge: team?.crest,
       fixture,
+      fixtures,
       results,
       standings: standings.table.map((r) => ({ ...r, me: sameTeam(r.team, teamName) })),
     };
