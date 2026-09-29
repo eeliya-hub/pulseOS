@@ -59,6 +59,12 @@ export const musicController = {
     res.json(await musicService.queue());
   }),
 
+  // POST /api/music/radio { uri } → queue more like it behind the current track
+  radio: asyncHandler(async (req, res) => {
+    const { uri, limit, deviceId } = req.body ?? {};
+    res.json(await musicService.radio(uri, { limit: Number(limit) || undefined, deviceId }));
+  }),
+
   // GET /api/music/search?q=...
   search: asyncHandler(async (req, res) => {
     res.json({ tracks: await musicService.search(req.query.q) });

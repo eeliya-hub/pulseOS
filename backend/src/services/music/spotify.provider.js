@@ -409,11 +409,95 @@ export const spotifyProvider = {
         image: t.album?.images?.[0]?.url,
         durationMs: t.duration_ms,
       };
-    return {
-      current: shape(data.currently_playing),
-      // Spotify returns a generous tail; twenty is more than a column shows.
-      queue: (data.queue ?? []).slice(0, 20).map(shape).filter(Boolean),
+    const current = shape(data.currently_playing);
+
+    // Playing a bare track with `uris` gives Spotify no context to queue from,
+    // and it answers by echoing the current track ten times over. Deduping by
+    // uri kills that; if nothing survives but the song already playing, there
+    // is genuinely no queue and saying so is better than showing a wall of the
+    // same row.
+    const seen = new Set(current?.uri ? [current.uri] : []);
+    const queue = [];
+    for (const item of data.queue ?? []) {
+      const track = shape(item);
+      if (!track?.uri || seen.has(track.uri)) continue;
+      seen.add(track.uri);
+      queue.push(track);
+      if (queue.length >= 20) break;
+    }
+
+    return { current, queue };
+  },
+
+  /**
+   * A radio off one track: more from the same artist, shuffled, queued up.
+   *
+   * Spotify's own recommender is gone for us — /recommendations now 404s
+   * outright, and /artists/{id}/top-tracks and /related-artists both 403 under
+   * Development mode. What still answers is the artist's own catalogue
+   * (/artists/{id}/albums and /albums/{id}/tracks) and search. So this is an
+   * ARTIST radio rather than a true similarity radio: honest about what it can
+   * reach, rather than pretending to know what sounds alike.
+   */
+  async radio(seedUri, { limit = 14 } = {}, user) {
+    const seedId = String(seedUri ?? '').split(':').pop();
+    if (!seedId) throw ApiError.badRequest('Provide a track uri to seed the radio.');
+
+    const seed = await api(`/tracks/${seedId}`, user);
+    const artist = seed.artists?.[0];
+    if (!artist?.id) return { seed: seed.name, tracks: [] };
+
+    const pool = new Map();
+    const add = (t) => {
+      // A nameless entry is a local or unavailable track; it would queue as a blank row.
+      if (!t?.uri || !t?.name || t.uri === seedUri || pool.has(t.uri)) return;
+      pool.set(t.uri, {
+        track: t.name,
+        uri: t.uri,
+        artists: (t.artists ?? []).map((a) => a.name),
+        album: t.album?.name ?? seed.album?.name,
+        image: (t.album?.images ?? seed.album?.images)?.[0]?.url,
+        durationMs: t.duration_ms,
+      });
     };
+
+    // Search first: one call, and it skews to what the artist is known for,
+    // which is what a radio should open with. The catalogue crawl below is
+    // several calls, so it only runs if search did not fill the list.
+    try {
+      const found = await api(
+        `/search?q=${encodeURIComponent(`artist:"${artist.name}"`)}&type=track&limit=${PAGE_SIZE}`,
+        user,
+      );
+      for (const t of found.tracks?.items ?? []) add(t);
+    } catch {
+      /* fall through to the catalogue */
+    }
+
+    if (pool.size < limit) {
+      try {
+        const albums = await api(
+          `/artists/${artist.id}/albums?include_groups=album,single&limit=8`,
+          user,
+        );
+        for (const album of (albums.items ?? []).slice(0, 3)) {
+          if (pool.size >= limit * 2) break;
+          const tracks = await api(`/albums/${album.id}/tracks?limit=${PAGE_SIZE}`, user);
+          for (const t of tracks.items ?? []) add({ ...t, album });
+        }
+      } catch {
+        /* whatever search found is enough */
+      }
+    }
+
+    // Shuffled, or a radio plays the same album in order every time.
+    const tracks = [...pool.values()];
+    for (let i = tracks.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tracks[i], tracks[j]] = [tracks[j], tracks[i]];
+    }
+
+    return { seed: seed.name, artist: artist.name, tracks: tracks.slice(0, limit) };
   },
 
   async recentlyPlayed(user) {

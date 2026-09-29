@@ -19,6 +19,24 @@ export const musicService = {
   playlists: (user) => spotifyProvider.playlists(user),
   recentlyPlayed: (user) => spotifyProvider.recentlyPlayed(user),
   queue: (user) => spotifyProvider.queue(user),
+
+  /**
+   * Start a radio off a track: the seed, then more from the same artist.
+   *
+   * Sent as one `play` with a list of uris rather than repeated POSTs to
+   * /me/player/queue, because Spotify has no way to CLEAR a queue — queued
+   * items survive later play commands, so appending stacks every radio you have
+   * ever started on top of the last one. Handing `play` the whole list replaces
+   * playback outright, which is the only way to make starting a radio mean
+   * starting a radio.
+   */
+  radio: async (seedUri, { limit, deviceId } = {}, user) => {
+    const built = await spotifyProvider.radio(seedUri, { limit }, user);
+    const uris = [seedUri, ...built.tracks.map((t) => t.uri)];
+    await spotifyProvider.play({ deviceId, uris }, user);
+    return { ...built, playing: uris.length };
+  },
+
   search: (query, user) => spotifyProvider.search(query, user),
   audioAnalysis: (trackId, user) => spotifyProvider.audioAnalysis(trackId, user),
 

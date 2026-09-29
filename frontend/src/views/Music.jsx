@@ -165,6 +165,9 @@ export default function Music() {
   // directly. Playing the playlist and reading the player queue back is the one
   // route to its contents — see backend spotify.provider.queue().
   const [openList, setOpenList] = useState(null);
+  // A track played on its own starts a radio: Spotify has no context to carry
+  // on with otherwise, so it would simply stop.
+  const [radio, setRadio] = useState(null);
   const [queue, setQueue] = useState([]);
   const [queueLoading, setQueueLoading] = useState(false);
   const [palette, setPalette] = useState(DEFAULT_PALETTE);
@@ -253,9 +256,42 @@ export default function Music() {
     }
   }, []);
 
+  // Play one song and keep going: queue more from the same artist behind it.
+  // Spotify's own recommender is unavailable to this app (/recommendations 404s,
+  // top-tracks and related-artists 403 under Development mode), so the radio is
+  // built from the artist's catalogue and search — see the backend provider.
+  const playTrack = useCallback(
+    (track) => {
+      setOpenList(null);
+      setRadio({ track: track.track, building: true });
+      setQueue([]);
+      // The radio call starts playback itself, with the seed first and the rest
+      // behind it. Playing here as well would start the track and then restart
+      // it a second later when the radio landed.
+      api.music
+        // Wherever the music actually is: the remote device if one is active,
+        // otherwise this tab's own SDK player.
+        .radio(track.uri, undefined, activeDeviceId ?? deviceId)
+        .then((d) => {
+          // Show the list the radio was built FROM, not the player queue. The
+          // queue also carries anything queued by hand in Spotify itself, which
+          // sits ahead of a new radio and there is no API to clear — so reading
+          // it back would caption someone else's tracks with this radio's name.
+          setRadio({ track: track.track, artist: d.artist, building: false, tracks: d.tracks ?? [] });
+        })
+        .catch(() => {
+          // No radio to be had — at least play the song.
+          setRadio(null);
+          controls.playContext({ uris: [track.uri] });
+        });
+    },
+    [controls, readQueue, activeDeviceId, deviceId],
+  );
+
   const openPlaylist = useCallback(
     (list) => {
       setOpenList(list);
+      setRadio(null);
       setQueue([]);
       setQuery('');
       controls.playContext({ contextUri: list.uri });
@@ -275,7 +311,7 @@ export default function Music() {
 
   const isSearch = query.trim().length > 0;
   // Search wins over an open playlist, which wins over the default shelf.
-  const shown = isSearch ? results : openList ? queue : recent;
+  const shown = isSearch ? results : openList ? queue : radio ? radio.tracks ?? [] : recent;
   // Both lists show only whole rows, so nothing is left cut off at the foot.
   const playlistRows = useWholeRows(playlists.length);
   const trackRows = useWholeRows(shown.length);
@@ -485,12 +521,23 @@ export default function Music() {
         </Column>
 
         <Column
-          label={isSearch ? 'Search results' : openList ? openList.name : 'Recently played'}
+          label={
+            isSearch
+              ? 'Search results'
+              : openList
+                ? openList.name
+                : radio
+                  ? `Radio · ${radio.artist ?? radio.track}`
+                  : 'Recently played'
+          }
           action={
-            openList && !isSearch ? (
+            (openList || radio) && !isSearch ? (
               <button
                 type="button"
-                onClick={() => setOpenList(null)}
+                onClick={() => {
+                  setOpenList(null);
+                  setRadio(null);
+                }}
                 aria-label="Back to recently played"
                 className="pill h-7 px-3 text-[0.75rem]"
               >
@@ -537,7 +584,7 @@ export default function Music() {
                   <button
                     key={`${track.uri}-${index}`}
                     type="button"
-                    onClick={() => controls.playContext({ uris: [track.uri] })}
+                    onClick={() => playTrack(track)}
                     className={[
                       'group/row flex w-full items-center gap-3 rounded-[0.9rem] p-2 text-left transition-colors',
                       isCurrent ? 'bg-white/[0.08]' : 'hover:bg-white/[0.045]',

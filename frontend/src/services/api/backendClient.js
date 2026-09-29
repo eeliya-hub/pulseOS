@@ -181,6 +181,8 @@ export const api = {
     nowPlaying: () => request('/music/now-playing'),
     playlists: () => request('/music/playlists'),
     queue: () => request('/music/queue'),
+    radio: (uri, limit, deviceId) =>
+      request('/music/radio', { method: 'POST', body: { uri, limit, deviceId } }),
     recentlyPlayed: () => request('/music/recently-played'),
     search: (q) => request('/music/search', { params: { q } }),
     // Time-synced lyrics for the immersive player → { found, synced, lines[] }

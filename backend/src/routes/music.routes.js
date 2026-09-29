@@ -22,6 +22,7 @@ musicRouter.get('/now-playing', musicController.nowPlaying);
 musicRouter.get('/playlists', musicController.playlists);
 musicRouter.get('/recently-played', musicController.recentlyPlayed);
 musicRouter.get('/queue', musicController.queue);
+musicRouter.post('/radio', musicController.radio);
 musicRouter.get('/search', musicController.search);
 // Spotify's own musical timeline. Returns { available:false } rather than an
 // error when Spotify withholds it, so the visualiser can degrade gracefully.
