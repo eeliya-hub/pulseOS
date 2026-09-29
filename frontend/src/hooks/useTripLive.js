@@ -12,6 +12,10 @@ import { api } from '../services/api/backendClient.js';
  */
 const WEATHER_MS = 15 * 60 * 1000;
 const FX_MS = 30 * 60 * 1000;
+// The flight number is typed into the card itself, so the tracked list changes
+// on every keystroke. Waiting for the typing to settle is what stops "BA117"
+// costing five lookups — four of them for numbers the user never meant.
+const TYPING_MS = 650;
 
 export function useTripLive(trip) {
   const [weather, setWeather] = useState(null);
@@ -85,12 +89,17 @@ export function useTripLive(trip) {
   const trackedRef = useRef(tracked);
   trackedRef.current = tracked;
 
+  // Passes are numbered so a slow one can't land on top of a newer one. Typing
+  // starts a pass per settled value, and they don't come back in order.
+  const passRef = useRef(0);
+
   const loadFlights = useCallback(async () => {
     const list = trackedRef.current;
     if (!list.length) {
       setFlights({});
       return;
     }
+    const pass = (passRef.current += 1);
     setTracking(true);
     const results = await Promise.all(
       list.map(({ code, date }) =>
@@ -100,7 +109,27 @@ export function useTripLive(trip) {
           .catch(() => [code, null]),
       ),
     );
-    setFlights(Object.fromEntries(results));
+    if (pass !== passRef.current) return; // a newer pass owns the card now
+
+    // Merge, never replace, and keep the better answer per flight number.
+    //
+    // This is what stops the card blanking itself. A lookup can come back empty
+    // for reasons that say nothing about the flight — a rate limit, a blip, a
+    // half-typed number — and both replacing the map wholesale and trusting a
+    // fresh `found: false` would wipe a card that was reading perfectly a second
+    // earlier. A route is keyed on the flight number, so a code we have already
+    // resolved keeps what we know until something better arrives; a code the
+    // user has just changed has no previous answer to keep, and so correctly
+    // shows nothing rather than the last flight's airline under a new number.
+    setFlights((prev) => {
+      const next = {};
+      for (const { code } of list) {
+        const fresh = results.find(([c]) => c === code)?.[1] ?? null;
+        const held = prev[code] ?? null;
+        next[code] = fresh?.found || !held ? fresh : held;
+      }
+      return next;
+    });
     setTracking(false);
   }, []);
 
@@ -109,8 +138,8 @@ export function useTripLive(trip) {
       setFlights({});
       return undefined;
     }
-    loadFlights();
-    return undefined;
+    const timer = window.setTimeout(loadFlights, TYPING_MS);
+    return () => window.clearTimeout(timer);
   }, [trackedKey, loadFlights]);
 
   return { weather, fx, flights, tracking, refreshFlights: loadFlights };

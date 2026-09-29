@@ -13,7 +13,7 @@ import {
   Sun,
   Trophy,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import LiveNewsPlayer from '../components/LiveNewsPlayer.jsx';
 import SettingsButton from '../components/SettingsButton.jsx';
 import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
@@ -50,43 +50,105 @@ function Ticker({ fallback }) {
     };
   }, []);
 
-  const lane = [...assets, ...assets];
+  /*
+   * The tape has to be wider than the window at every moment of its loop, and
+   * two copies of eight symbols are not: one copy measured 937px against a
+   * 1512px window, so the last 575px of every cycle showed empty rail and the
+   * tape looked like it was cut off before it snapped back.
+   *
+   * So the number of copies is measured: enough to cover the window, plus the
+   * one that is mid-wrap. The loop then scrolls exactly one of them — not a
+   * hopeful -50% — expressed as a fraction of the track rather than a pixel
+   * width, because every copy is the same markup and so is exactly 1/n of it by
+   * construction. No sub-pixel to drift the seam a little further each cycle.
+   * Only the duration comes off the ruler, and that is a speed, where half a
+   * pixel does not matter.
+   */
+  const maskRef = useRef(null);
+  const copyRef = useRef(null);
+  const [unit, setUnit] = useState(0);
+  const [copies, setCopies] = useState(3);
+
+  useEffect(() => {
+    const copyEl = copyRef.current;
+    const maskEl = maskRef.current;
+    if (!copyEl || !maskEl) return undefined;
+
+    const measure = () => {
+      const width = copyEl.getBoundingClientRect().width;
+      const window_ = maskEl.getBoundingClientRect().width;
+      if (!width || !window_) return;
+      setUnit(width);
+      setCopies(Math.ceil(window_ / width) + 1);
+    };
+    measure();
+    // Watched rather than measured once, because a price going from 4 digits to
+    // 5, the display font landing after first paint and the window resizing all
+    // change the unit's width — and a unit even a fraction out from the real
+    // one drifts the seam a little further every cycle until it is visible.
+    const watch = new ResizeObserver(measure);
+    watch.observe(copyEl);
+    watch.observe(maskEl);
+    return () => watch.disconnect();
+  }, [assets]);
+
+  const copy = (ref) => (
+    <span ref={ref} className="ticker-copy">
+      {assets.map((asset) => {
+        const up = asset.change >= 0;
+        return (
+          <span
+            key={asset.symbol}
+            /* Spacing rides on the item, never as a flex gap on the track: a gap
+               adds one extra space at the seam, which is exactly the kind of few
+               rem that puts the wrap mid-symbol. */
+            className="flex items-center gap-2.5 whitespace-nowrap pr-10 text-[0.9375rem]"
+          >
+            <span className="font-semibold tracking-tight text-moon">{asset.symbol}</span>
+            <span className="clock-figures text-moon/65">
+              {formatCurrencyDetailed(asset.price, { currency: 'USD' })}
+            </span>
+            <span
+              className={`clock-figures inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.75rem] font-semibold ${
+                up ? 'bg-rise/[0.12] text-rise' : 'bg-fall/[0.12] text-fall'
+              }`}
+            >
+              {up ? (
+                <ArrowUp className="h-3 w-3" aria-hidden="true" />
+              ) : (
+                <ArrowDown className="h-3 w-3" aria-hidden="true" />
+              )}
+              {formatPercent(asset.change)}
+            </span>
+          </span>
+        );
+      })}
+    </span>
+  );
+
   return (
     // The tape: no box, just a band ruled above and below that the prices run
     // along. Symbols in weight, prices in tabular figures, the move as a small
     // pill in the colour of its direction.
-    <div className="ticker-mask relative z-10 mx-[calc(50%-50vw)] shrink-0 overflow-hidden py-3">
-      <div className="ticker-track gap-10 pl-10">
-        {lane.map((asset, index) => {
-          const up = asset.change >= 0;
-          return (
-            <span
-              key={`${asset.symbol}-${index}`}
-              className="flex items-center gap-2.5 whitespace-nowrap text-[0.9375rem]"
-            >
-              <span className="font-semibold tracking-tight text-moon">{asset.symbol}</span>
-              <span className="clock-figures text-moon/65">
-                {formatCurrencyDetailed(asset.price, { currency: 'USD' })}
-              </span>
-              <span
-                className={`clock-figures inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.75rem] font-semibold ${
-                  up ? 'bg-rise/[0.12] text-rise' : 'bg-fall/[0.12] text-fall'
-                }`}
-              >
-                {up ? (
-                  <ArrowUp className="h-3 w-3" aria-hidden="true" />
-                ) : (
-                  <ArrowDown className="h-3 w-3" aria-hidden="true" />
-                )}
-                {formatPercent(asset.change)}
-              </span>
-            </span>
-          );
-        })}
+    <div ref={maskRef} className="ticker-mask relative z-10 mx-[calc(50%-50vw)] shrink-0 overflow-hidden py-3">
+      <div
+        className="ticker-track"
+        style={{
+          '--ticker-shift': `${(100 / copies).toFixed(6)}%`,
+          ...(unit ? { '--ticker-duration': `${(unit / TAPE_PX_PER_SECOND).toFixed(1)}s` } : null),
+        }}
+      >
+        {copy(copyRef)}
+        {Array.from({ length: copies - 1 }, (_, i) => (
+          <Fragment key={`copy-${i}`}>{copy(null)}</Fragment>
+        ))}
       </div>
     </div>
   );
 }
+
+/** How fast the tape reads, in pixels a second. Slow enough to be read at a glance. */
+const TAPE_PX_PER_SECOND = 14.6;
 
 // Scopes: worldwide topics + "Local" (national news for the chosen country).
 const NEWS_SCOPES = [
@@ -805,8 +867,7 @@ function StocksPanel() {
   );
 }
 
-// Map the mock's hourly icon keys and condition text to lucide glyphs.
-const hourlyIcon = { rain: CloudRain, cloud: Cloud, sun: Sun };
+// Map condition text to lucide glyphs.
 const conditionIcon = (condition = '') => {
   const c = condition.toLowerCase();
   if (c.includes('rain') || c.includes('drizzle') || c.includes('shower')) return CloudRain;

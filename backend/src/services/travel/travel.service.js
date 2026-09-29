@@ -140,7 +140,16 @@ export const travelService = {
     // empty, and a flight must not keep its missing times for the rest of the day
     // because of one throttled call.
     if (!found?.found) return found;
-    return { ...found, schedule: await scheduleFor(input, date) };
+    // No date given means "what is this flight doing", so the timetable is read
+    // for today rather than skipped. Times, terminal and gate are the whole
+    // point of typing a flight number; without this the card found the airline
+    // and the route and then had nothing to say about when it actually flies.
+    // `assumedDate` is set when the day was ours rather than the user's, so the
+    // UI can say which day it is quoting instead of implying it is theirs.
+    const iso = (date || '').trim();
+    const dated = /^\d{4}-\d{2}-\d{2}$/.test(iso);
+    const schedule = await scheduleFor(input, dated ? iso : todayIso());
+    return { ...found, schedule: schedule && !dated ? { ...schedule, assumedDate: true } : schedule };
   },
 
   /** Aircraft details for a registration, e.g. the tail on today's flight. */
@@ -275,6 +284,9 @@ async function withZone(airport) {
   const zone = await timeZoneFor(airport.lat, airport.lon);
   return { ...airport, timeZone: zone?.timeZone ?? null, utcOffsetSeconds: zone?.offsetSeconds ?? null };
 }
+
+/** Today where the server stands, as the providers want it: YYYY-MM-DD. */
+const todayIso = () => new Date().toISOString().slice(0, 10);
 
 /** Scheduled times, cached only when the provider actually answered. */
 async function scheduleFor(code, date) {

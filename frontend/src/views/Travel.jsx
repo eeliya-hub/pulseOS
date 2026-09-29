@@ -318,6 +318,7 @@ export default function Travel() {
           trip={trip}
           flight={flight}
           data={flightLive}
+          tracking={live.tracking}
           onSelect={setActiveFlightId}
           onPatch={store.patchFlight}
           onAdd={store.addFlight}
@@ -588,7 +589,7 @@ function MapFilters({ value, onChange, days = [], day = 'all', onDay, className 
  * bottom. It shows the route only — no live position — so a number that flies
  * daily can't put someone else's aeroplane on your trip.
  */
-function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) {
+function FlightCard({ trip, flight, data, tracking, onSelect, onPatch, onAdd, onRemove }) {
   const airline = data?.airline ?? null;
   // Departure is typed in; arrival follows from it unless it's typed in too.
   const times = flightTimes(flight, data);
@@ -712,8 +713,26 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
               ·
             </span>
             <span className="min-w-0 truncate text-moon/45">
-              {airline?.name ?? (flight.code ? 'No route on file for this number' : 'Enter a flight number')}
+              {/* A lookup in flight is not the same as a number that doesn't
+                  exist, and saying so was how the card looked like it kept
+                  losing a flight it had already found. */}
+              {airline?.name ??
+                (!flight.code
+                  ? 'Enter a flight number'
+                  : tracking || !data
+                    ? 'Looking up\u2026'
+                    : 'No route on file for this number')}
             </span>
+            {/* The timetable is today's when no date has been given — say so
+                rather than letting the times pass for the user's own day. */}
+            {!flight.date && data?.schedule?.assumedDate ? (
+              <>
+                <span className="text-moon/20" aria-hidden="true">
+                  ·
+                </span>
+                <span className="shrink-0 text-moon/35">today</span>
+              </>
+            ) : null}
           </div>
 
 
@@ -750,7 +769,7 @@ function FlightCard({ trip, flight, data, onSelect, onPatch, onAdd, onRemove }) 
                 value={data?.distanceKm ? `${data.distanceKm.toLocaleString('en-GB')} km` : '—'}
               />
               <Stat
-                label={times.arrive && !times.arriveEstimated ? 'In the air' : 'In the air ≈'}
+                label={times.minutesEstimated ? 'In the air ≈' : 'In the air'}
                 value={formatDuration(times.minutes)}
               />
             </div>

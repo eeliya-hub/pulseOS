@@ -1083,20 +1083,31 @@ h3,
 .ticker-track {
   display: inline-flex;
   width: max-content;
-  animation: ticker-scroll 64s linear infinite;
+  animation: ticker-scroll var(--ticker-duration, 64s) linear infinite;
+}
+
+/* One repeat of the tape. Measured in JS, because the distance the loop has to
+   travel is the width of exactly one of these and nothing else. */
+.ticker-copy {
+  display: inline-flex;
+  flex: none;
 }
 
 .ticker-mask:hover .ticker-track {
   animation-play-state: paused;
 }
 
+/* Scrolls exactly one repeat, so the tape arrives back where it started with a
+   copy already standing in that place and the seam cannot be seen. The shift is
+   a fraction of the track — 100% / the number of copies — which is exact,
+   where a measured pixel width would be half a pixel out and drift. */
 @keyframes ticker-scroll {
   from {
     transform: translate3d(0, 0, 0);
   }
 
   to {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(calc(-1 * var(--ticker-shift, 50%)), 0, 0);
   }
 }
 

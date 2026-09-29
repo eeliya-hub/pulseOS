@@ -285,7 +285,7 @@ export default function Music() {
           controls.playContext({ uris: [track.uri] });
         });
     },
-    [controls, readQueue, activeDeviceId, deviceId],
+    [controls, activeDeviceId, deviceId],
   );
 
   const openPlaylist = useCallback(

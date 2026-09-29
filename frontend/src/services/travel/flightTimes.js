@@ -109,7 +109,8 @@ const dayGap = (from, to) =>
  * @param {object} data    the looked-up route: { origin, destination, distanceKm }
  * @returns {{
  *   depart: string|null, arrive: string|null, arriveEstimated: boolean,
- *   dayOffset: number, minutes: number|null, originZone: string|null, destZone: string|null,
+ *   minutesEstimated: boolean, dayOffset: number, minutes: number|null,
+ *   originZone: string|null, destZone: string|null,
  * }}
  */
 export function flightTimes(flight, data) {
@@ -127,6 +128,12 @@ export function flightTimes(flight, data) {
     arriveEstimated: false,
     dayOffset: 0,
     minutes: estimate,
+    // The duration starts as the one worked out from the great-circle distance,
+    // and stays flagged as such until something real replaces it. Without this
+    // the card called a distance estimate a time — a flight with times off the
+    // booking but no date has no anchor to derive a true duration from, so it
+    // fell back to the estimate while the label still read "In the air".
+    minutesEstimated: estimate != null,
     originZone,
     destZone,
     scheduled: Boolean(sched),
@@ -136,20 +143,25 @@ export function flightTimes(flight, data) {
     terminal: sched?.departure?.terminal ?? null,
     gate: sched?.departure?.gate ?? null,
   };
-  if (!depart || !date) return out;
-
   // Both ends straight off the timetable: it already knows the real duration and
   // which day the flight lands on, including the rare second midnight. No need
-  // to re-derive either from wall clocks.
+  // to re-derive either from wall clocks — and no need for a stored date either,
+  // which is what lets a bare flight number show a true duration rather than the
+  // distance estimate.
   const fromTimetable = sched && !flight?.departTime && !flight?.arriveTime && sched.departure?.time && sched.arrival?.time;
   if (fromTimetable) {
     const took = utcMinutesBetween(sched.departure.utc, sched.arrival.utc);
-    if (took != null) out.minutes = took;
+    if (took != null) {
+      out.minutes = took;
+      out.minutesEstimated = false;
+    }
     if (sched.departure.date && sched.arrival.date) {
       out.dayOffset = dayGap(sched.departure.date, sched.arrival.date);
     }
     return out;
   }
+
+  if (!depart || !date) return out;
 
   const departAt = zonedToInstant(date, depart, originZone);
   if (!departAt) return out;
@@ -162,6 +174,7 @@ export function flightTimes(flight, data) {
       // A landing "before" take-off is the next day, not a mistake.
       if (arriveAt < departAt) arriveAt = new Date(arriveAt.getTime() + 86_400_000);
       out.minutes = Math.round((arriveAt - departAt) / 60_000);
+      out.minutesEstimated = false;
       const local = instantToZoned(arriveAt, destZone);
       out.dayOffset = dayGap(date, local.date);
     }
