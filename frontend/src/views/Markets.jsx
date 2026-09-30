@@ -369,7 +369,7 @@ function SportsStage({ data }) {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/[0.03]">
-      <Marquee data={data} fixture={fixture} results={results} shot={shot} accent={accent} />
+      <Marquee data={data} fixture={fixture} results={results} shot={shot} accent={accent} circuit={data.circuitMap} />
 
       {/* Below the fixture, the picture stops being scenery and starts being in
           the way, so the lists stand on their own ground: a near-solid plate
@@ -474,7 +474,7 @@ function useVenuePhoto(query) {
 }
 
 /** The top of the stage: what is next, where, when, and how it has been going. */
-function Marquee({ data, fixture, results, shot, accent }) {
+function Marquee({ data, fixture, results, shot, accent, circuit }) {
   const quiet = shot ? 'text-moon/75' : 'text-moon/45';
   const quieter = shot ? 'text-moon/60' : 'text-moon/35';
   const home = fixture?.home;
@@ -522,7 +522,23 @@ function Marquee({ data, fixture, results, shot, accent }) {
         <p className={`relative mt-3 text-sm ${quiet}`}>No fixture scheduled.</p>
       ) : (
         <>
-          {isMatch ? (
+          {circuit ? (
+            /* The track itself, standing where the two teams would. Wikipedia's
+               layout diagrams are dark line art on transparent, which on a night
+               sky is nothing at all — flattened to a white silhouette they read
+               as a drawing, and the same treatment works for every circuit
+               whether its original is monochrome or colour-coded by sector. */
+            <div className="relative mt-2 flex items-center gap-4">
+              <img
+                src={circuit}
+                alt={`${fixture.venue ?? 'Circuit'} layout`}
+                className="h-[5.5rem] w-auto max-w-[45%] shrink-0 object-contain opacity-90 [filter:brightness(0)_invert(1)_drop-shadow(0_1px_3px_rgba(0,0,0,0.6))]"
+              />
+              <p className="display-type min-w-0 flex-1 text-[1.25rem] font-light leading-tight text-moon">
+                {fixture.name}
+              </p>
+            </div>
+          ) : isMatch ? (
             <div className="relative mt-3 flex items-center justify-between gap-2">
               <Side side={left} quiet={quiet} />
               <span className="mb-4 flex flex-1 items-center gap-1.5" aria-hidden="true">

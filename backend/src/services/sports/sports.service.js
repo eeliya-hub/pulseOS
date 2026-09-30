@@ -7,6 +7,7 @@ import { nbaLogo, nflLogo } from './teamLogos.js';
 import { PLAYOFF_LINES, teamGroup } from './teamGroups.js';
 import { espnProvider } from './providers/espn.provider.js';
 import { COMPETITION_COLOUR, identityLookup } from './teamIdentity.js';
+import { wikiPageImage } from '../travel/wikipedia.js';
 
 // Dispatcher that adapts the four per-sport services into the single shape the
 // Sports card already consumes. Keeps API-specific concerns out of the UI.
@@ -266,6 +267,10 @@ async function f1Card(teamName) {
     accent: COMPETITION_COLOUR.f1,
     competitionColour: COMPETITION_COLOUR.f1,
     fixture: next ? { name: next.name, venue: next.circuit, date: next.date, time: next.time } : null,
+    // The shape of the track itself. Wikipedia's lead image for a circuit is its
+    // layout diagram, which is the one picture that says something a photograph
+    // of a grandstand cannot: where the corners are.
+    circuitMap: next?.circuit ? await circuitMap(next.circuit) : null,
     // A season has a calendar, and the panel shows it. Shaped like every other
     // sport's fixture list so one component draws all four.
     fixtures: upcoming.slice(0, 6).map((r) => ({
@@ -290,6 +295,18 @@ async function f1Card(teamName) {
     standings: [],
   };
 }
+
+// A circuit doesn't get redrawn, so this is held for a day and a miss is not
+// cached — a page we failed to reach should be tried again, not written off.
+const circuits = createCache(24 * 60 * 60 * 1000);
+const circuitMap = (name) =>
+  circuits
+    .wrap(`circuit:${name}`, async () => {
+      const url = await wikiPageImage(name);
+      if (!url) throw new Error('no circuit diagram');
+      return url;
+    })
+    .catch(() => null);
 
 export const sportsService = {
   footballService,

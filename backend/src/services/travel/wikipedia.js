@@ -57,3 +57,39 @@ const upscale = (url) => url.replace(/\/(\d{2,4})px-/, '/1280px-');
 
 /** True when a summary has something worth showing. */
 export const usableSummary = (profile) => Boolean(profile?.photo || profile?.extract);
+
+/**
+ * A page's lead image at full size, straight from the pageimages API.
+ *
+ * The REST summary endpoint picks the first image in the infobox, which for a
+ * motor-racing circuit is as likely to be the sponsor's logo as the track —
+ * Sepang's summary returns the Petronas mark. pageimages returns the page's
+ * actual lead image, which for every circuit tried is the layout diagram, and
+ * as an SVG rather than a 330px raster of one.
+ *
+ * @returns {Promise<string|null>} the image URL, or null
+ */
+export async function wikiPageImage(title) {
+  const params = new URLSearchParams({
+    action: 'query',
+    prop: 'pageimages',
+    piprop: 'original',
+    titles: title,
+    redirects: '1',
+    format: 'json',
+    origin: '*',
+  });
+  const data = await fetchJson(`${WIKI}/w/api.php?${params}`, {
+    integration: 'Wikipedia',
+    timeoutMs: 8000,
+    headers: HEADERS,
+  }).catch(() => null);
+
+  const pages = data?.query?.pages ?? {};
+  for (const page of Object.values(pages)) {
+    const src = page?.original?.source;
+    // Wikimedia appends its own analytics query to the URL it hands back.
+    if (src) return src.split('?')[0];
+  }
+  return null;
+}
