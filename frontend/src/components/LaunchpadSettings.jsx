@@ -1,4 +1,4 @@
-import { Check, Globe, ImageUp, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
+import { Check, FolderPlus, Globe, ImageUp, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../services/api/backendClient.js';
@@ -17,8 +17,11 @@ import { DEFAULT_ICON, hostOf, isSite, itemKey, itemLabel, normalizeUrl, toIconD
  * The width goes to a second column rather than to longer rows: the shelf on
  * the left, whatever is in your hand on the right.
  */
-export default function LaunchpadSettings({ selected, installed, onChange, onClose }) {
-  const [picked, setPicked] = useState(null); // itemKey, or 'add'
+export default function LaunchpadSettings({ selected, installed, meta, onChange, onClose }) {
+  // Opens on the add slot, because that is what the button that opens it says,
+  // and because the list of what is installed is worth landing on: it is the
+  // only place to see everything the machine actually has.
+  const [picked, setPicked] = useState('add'); // itemKey, or 'add'
   const current = selected.find((i) => itemKey(i) === picked) ?? null;
 
   useEffect(() => {
@@ -131,7 +134,7 @@ export default function LaunchpadSettings({ selected, installed, onChange, onClo
           {picked === 'add' ? (
             <AddSomething installed={installed} selected={selected} onAdd={add} />
           ) : current ? (
-            <Inspector item={current} onChange={patch} onRemove={() => remove(current)} />
+            <Inspector item={current} meta={meta} onChange={patch} onRemove={() => remove(current)} />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/6 text-moon/30">
@@ -158,11 +161,16 @@ function AddSomething({ installed, selected, onAdd }) {
   const isLink = /\./.test(typed) && !/\s/.test(typed);
   const onPad = useMemo(() => new Set(selected.map(itemKey)), [selected]);
 
+  // Everything installed when nothing is typed, because the list is worth
+  // reading: it is the only place to see what is actually on the machine, and
+  // half of what ends up on a launchpad is something you had forgotten you had.
+  // Things already on it stay in the list, marked, rather than vanishing — a
+  // catalogue with holes in it is hard to trust.
   const matches = useMemo(() => {
-    if (!typed || isLink) return [];
+    if (isLink) return [];
     const q = typed.toLowerCase();
-    return installed.filter((a) => a.name.toLowerCase().includes(q) && !onPad.has(`app:${a.name}`)).slice(0, 40);
-  }, [installed, typed, isLink, onPad]);
+    return q ? installed.filter((a) => a.name.toLowerCase().includes(q)) : installed;
+  }, [installed, typed, isLink]);
 
   const addLink = () => {
     const url = normalizeUrl(typed);
@@ -175,7 +183,9 @@ function AddSomething({ installed, selected, onAdd }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col px-5 pb-5">
-      <p className="t-label shrink-0 text-moon/45">Add</p>
+      <p className="t-label shrink-0 text-moon/45">
+        Add{!typed && !isLink && installed.length ? ` · ${installed.length} installed` : ''}
+      </p>
       <div className="mt-2 flex shrink-0 items-center gap-2">
         <span className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-moon/30" aria-hidden="true" />
@@ -216,20 +226,27 @@ function AddSomething({ installed, selected, onAdd }) {
             Press enter to add <span className="text-moon/70">{hostOf(typed)}</span>, then pick its icon.
           </p>
         ) : matches.length ? (
-          matches.map((a) => (
-            <button
-              key={a.name}
-              type="button"
-              onClick={() => onAdd(a.name)}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/[0.07] focus:outline-none"
-            >
-              <AppIcon app={a.name} className="h-7 w-7" />
-              <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-moon/85">{a.name}</span>
-            </button>
-          ))
+          matches.map((a) => {
+            const already = onPad.has(`app:${a.name}`);
+            return (
+              <button
+                key={a.name}
+                type="button"
+                onClick={() => !already && onAdd(a.name)}
+                disabled={already}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/[0.07] disabled:hover:bg-transparent focus:outline-none"
+              >
+                <AppIcon app={a.name} className={`h-7 w-7 ${already ? 'opacity-30' : ''}`} />
+                <span className={`min-w-0 flex-1 truncate text-[0.8125rem] ${already ? 'text-moon/30' : 'text-moon/85'}`}>
+                  {a.name}
+                </span>
+                {already ? <Check className="h-3.5 w-3.5 shrink-0 text-moon/25" aria-hidden="true" /> : null}
+              </button>
+            );
+          })
         ) : (
           <p className="px-1 py-6 text-center text-xs leading-relaxed text-moon/40">
-            {typed ? `Nothing installed called “${typed}”.` : 'Start typing an application’s name, or paste a web address.'}
+            {typed ? `Nothing installed called “${typed}”.` : 'Looking for your applications…'}
           </p>
         )}
       </div>
@@ -238,7 +255,7 @@ function AddSomething({ installed, selected, onAdd }) {
 }
 
 /** One tile's settings, beside the tile. */
-function Inspector({ item, onChange, onRemove }) {
+function Inspector({ item, meta, onChange, onRemove }) {
   const site = isSite(item);
   return (
     <div className="glass-scroll flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-5">
@@ -253,9 +270,11 @@ function Inspector({ item, onChange, onRemove }) {
         </div>
       </div>
 
+      {meta ? <Folders item={item} meta={meta} /> : null}
+
       {site ? <SiteControls site={item} onChange={onChange} /> : (
         <p className="text-xs leading-relaxed text-moon/40">
-          An application brings its own icon and opens itself. Nothing to set.
+          An application brings its own icon and opens itself.
         </p>
       )}
 
@@ -267,6 +286,72 @@ function Inspector({ item, onChange, onRemove }) {
         <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Take off the launchpad
       </button>
     </div>
+  );
+}
+
+/**
+ * Which folder this lives in.
+ *
+ * Filing something used to mean clicking a chip on the tile over and over to
+ * cycle through every folder until the right one came round — fine with one
+ * folder, tedious with four, and impossible to do deliberately. They are all
+ * here at once now, and you tap the one you mean. Tapping the one it is in
+ * takes it out again.
+ */
+function Folders({ item, meta }) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const current = meta.folderOf[itemKey(item)] ?? '';
+
+  const create = () => {
+    const clean = name.trim();
+    if (!clean) return setAdding(false);
+    meta.addFolder(clean);
+    // Straight into the folder it was made for: making one and then having to
+    // find it in the row to use it is two steps where there is only one thought.
+    meta.setFolder(item, clean.slice(0, 18));
+    setName('');
+    return setAdding(false);
+  };
+
+  return (
+    <section>
+      <p className="t-label text-moon/45">Folder</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <Pill on={!current} onClick={() => meta.setFolder(item, '')}>
+          Loose
+        </Pill>
+        {meta.folders.map((f) => (
+          <Pill key={f} on={current === f} onClick={() => meta.setFolder(item, current === f ? '' : f)}>
+            {f}
+          </Pill>
+        ))}
+        {adding ? (
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={create}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') create();
+              if (e.key === 'Escape') setAdding(false);
+            }}
+            placeholder="Name it"
+            aria-label="New folder name"
+            maxLength={18}
+            className="w-24 rounded-full border border-accent/35 bg-white/8 px-3 py-1.5 text-[0.75rem] text-moon outline-none placeholder:text-moon/30 focus-visible:outline-none"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-2.5 py-1.5 text-[0.75rem] font-medium text-moon/45 transition hover:border-white/40 hover:text-moon/80 focus:outline-none"
+          >
+            <FolderPlus className="h-3.5 w-3.5" aria-hidden="true" /> New
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -637,6 +637,7 @@ export default function Launchpad() {
         <LaunchpadSettings
           selected={items}
           installed={installed}
+          meta={meta}
           onChange={(next) => update({ launchpad: next })}
           onClose={() => setAdding('')}
         />
