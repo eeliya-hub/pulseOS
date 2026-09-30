@@ -42,6 +42,27 @@ async function renderWithSwift(appPath, outPath) {
   await run('swift', [swiftScriptPath, appPath, outPath], { timeout: 20_000 });
 }
 
+/**
+ * The bundle identifier of each app, in the order given.
+ *
+ * One `mdls` for the lot rather than a `defaults read` each: eighty-nine apps
+ * come back in under a tenth of a second, where spawning a process per app
+ * takes seconds.
+ */
+async function bundleIds(paths) {
+  if (!paths.length) return [];
+  try {
+    const { stdout } = await run('mdls', ['-name', 'kMDItemCFBundleIdentifier', '-raw', ...paths], {
+      timeout: 15_000,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    // -raw separates values with NUL and prints "(null)" for anything unindexed.
+    return stdout.split('\0').map((v) => (v === '(null)' ? '' : v.trim()));
+  } catch {
+    return paths.map(() => '');
+  }
+}
+
 // name → full .app path for every installed application.
 async function findApps() {
   const found = new Map();
@@ -98,24 +119,39 @@ async function extractIcon(appPath) {
   return buffer;
 }
 
-// The browsers a link can be told to open in. Matched against what is actually
-// installed, so the picker only ever offers real choices.
+/**
+ * The browsers a link can be told to open in, by bundle identifier.
+ *
+ * Identified by bundle rather than by the name of the .app, because those are
+ * not the same thing: this machine's Brave lives at /Applications/TV.app, so
+ * matching on the filename offered every browser except the one that was
+ * actually installed. A bundle id survives being renamed, and `open -b` will
+ * launch it wherever it has been put.
+ */
 const BROWSERS = [
-  'Safari',
-  'Google Chrome',
-  'Google Chrome Canary',
-  'Firefox',
-  'Firefox Developer Edition',
-  'Microsoft Edge',
-  'Brave Browser',
-  'Arc',
-  'Opera',
-  'Vivaldi',
-  'Zen Browser',
-  'Orion',
-  'Chromium',
-  'DuckDuckGo',
+  ['com.apple.Safari', 'Safari'],
+  ['com.google.Chrome', 'Google Chrome'],
+  ['com.google.Chrome.canary', 'Chrome Canary'],
+  ['org.mozilla.firefox', 'Firefox'],
+  ['org.mozilla.firefoxdeveloperedition', 'Firefox Developer Edition'],
+  ['com.microsoft.edgemac', 'Microsoft Edge'],
+  ['com.brave.Browser', 'Brave Browser'],
+  ['com.brave.Browser.nightly', 'Brave Nightly'],
+  ['company.thebrowser.Browser', 'Arc'],
+  ['company.thebrowser.dia', 'Dia'],
+  ['com.operasoftware.Opera', 'Opera'],
+  ['com.vivaldi.Vivaldi', 'Vivaldi'],
+  ['app.zen-browser.zen', 'Zen Browser'],
+  ['com.kagi.kagimacOS', 'Orion'],
+  ['org.chromium.Chromium', 'Chromium'],
+  ['com.duckduckgo.macos.browser', 'DuckDuckGo'],
+  ['com.sigmaos.sigmaos.macos', 'SigmaOS'],
 ];
+
+// Reading bundle ids costs one `mdls` for every application, which is fast but
+// not free, and a browser is not installed twice in an afternoon.
+let browserCache = { at: 0, browsers: [] };
+const BROWSER_TTL_MS = 60 * 60 * 1000;
 
 export const launchService = {
   /**
@@ -141,8 +177,12 @@ export const launchService = {
       // A named browser is a preference, not a requirement: if it has been
       // uninstalled since the link was made, the link should still open.
       if (browser) {
+        const { browsers } = await this.listBrowsers();
+        const match = browsers.find((b) => b.name === browser || b.id === browser);
         try {
-          await run('open', ['-a', String(browser), String(url)]);
+          // By bundle id where we know it: the .app can be renamed, and on this
+          // machine Brave has been.
+          await run('open', match ? ['-b', match.id, String(url)] : ['-a', String(browser), String(url)]);
           return { launched: 'url', url, browser };
         } catch {
           /* fall through to the default browser */
@@ -159,8 +199,21 @@ export const launchService = {
   /** The browsers actually installed, in the order people expect to see them. */
   async listBrowsers() {
     if (process.platform !== 'darwin') return { browsers: [] };
-    const apps = await findApps();
-    return { browsers: BROWSERS.filter((name) => apps.has(name)).map((name) => ({ name })) };
+    if (Date.now() - browserCache.at < BROWSER_TTL_MS) return { browsers: browserCache.browsers };
+
+    const apps = [...(await findApps())];
+    const ids = await bundleIds(apps.map(([, appPath]) => appPath));
+
+    const found = [];
+    for (const [id, label] of BROWSERS) {
+      const n = ids.indexOf(id);
+      if (n < 0) continue;
+      // `name` is what gets stored on the link and handed back to `open`. The
+      // bundle id is used, so a browser renamed later still opens.
+      found.push({ id, name: label, app: apps[n][0] });
+    }
+    browserCache = { at: Date.now(), browsers: found };
+    return { browsers: found };
   },
 
   // Installed applications the user can add to the launchpad.
@@ -178,7 +231,16 @@ export const launchService = {
     if (inflight.has(name)) return inflight.get(name);
 
     const task = (async () => {
-      const appPath = (await findApps()).get(name);
+      const apps = await findApps();
+      // By the name of the .app first, and by what the app calls itself second:
+      // a bundle can be renamed on disk without changing what it is, and this
+      // machine's Brave sits at TV.app. Without the second lookup the browser
+      // badge asked for an icon that, by filename, nothing had.
+      let appPath = apps.get(name);
+      if (!appPath) {
+        const browser = (await this.listBrowsers()).browsers.find((b) => b.name === name || b.id === name);
+        if (browser) appPath = apps.get(browser.app);
+      }
       if (!appPath) throw ApiError.notFound(`App "${name}" not found.`);
       const buffer = await extractIcon(appPath);
       iconCache.set(name, buffer);

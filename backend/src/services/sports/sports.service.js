@@ -11,7 +11,15 @@ import { wikiPageImage } from '../travel/wikipedia.js';
 
 // Dispatcher that adapts the four per-sport services into the single shape the
 // Sports card already consumes. Keeps API-specific concerns out of the UI.
-const cache = createCache(60 * 60 * 1000); // 1 hour — sports refresh hourly to respect rate limits
+//
+// Assembling a card is cheap once its sources are cached, and the sources hold
+// themselves for an hour to respect the rate limits. The card itself is held
+// for minutes instead, because a card built during a throttled moment is missing
+// a section and pinning that for an hour is how the Jaguars spent an afternoon
+// with results, a table and no fixtures — data that was sitting there the whole
+// time. Ten minutes is long enough to spare the work and short enough that a gap
+// closes itself.
+const cache = createCache(10 * 60 * 1000);
 
 // Map the catalog's league identifiers (API-Sports ids or labels) to
 // Football-Data.org competition codes.
@@ -246,11 +254,12 @@ async function ballCard(service, name, sportLabel, statSport) {
 }
 
 async function f1Card(teamName) {
-  const [upcoming, last, drivers, constructors] = await Promise.all([
+  const [upcoming, last, drivers, constructors, winners] = await Promise.all([
     f1Service.getUpcomingRaces(),
     f1Service.getRecentResults(),
     f1Service.getDriverStandings(),
     f1Service.getConstructorStandings(),
+    f1Service.getSeasonWinners(),
   ]);
   const next = upcoming[0] ?? null;
   const me = (teamName || '').toLowerCase();
@@ -282,9 +291,20 @@ async function f1Card(teamName) {
       round: r.round,
       country: r.country ?? null,
     })),
+    // The whole classification, not the podium: a season is decided by who
+    // finished fourteenth as much as by who finished first, and the card had no
+    // way to show either. `podium` stays for anything still reading it.
     lastRace: last.race
-      ? { name: last.race.name, podium: last.results.slice(0, 3) }
+      ? {
+          name: last.race.name,
+          circuit: last.race.circuit ?? null,
+          date: last.race.date ?? null,
+          results: last.results,
+          podium: last.results.slice(0, 3),
+        }
       : null,
+    // Every race already run, most recent first, with its winner.
+    pastRaces: winners,
     driverStandings: drivers.map((d) => ({ ...d, me: mine(d.team), crest: constructorLogo(d.team) })),
     constructorStandings: constructors.map((c) => ({
       ...c,

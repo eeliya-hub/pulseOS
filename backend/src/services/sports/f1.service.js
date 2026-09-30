@@ -41,8 +41,14 @@ const mapConstructorStanding = (c) => ({
 const mapResult = (r) => ({
   position: Number(r.position),
   driver: driverName(r.Driver),
+  code: r.Driver?.code ?? null,
+  number: r.Driver?.permanentNumber ?? null,
   team: r.Constructor?.name,
+  badge: constructorLogo(r.Constructor?.name),
+  // The gap to the winner, or why they aren't in one: "Accident", "+1 Lap".
   time: r.Time?.time ?? r.status,
+  points: Number(r.points) || 0,
+  grid: Number(r.grid) || null,
 });
 
 async function safe(key, loader, fallback) {
@@ -62,6 +68,35 @@ export const f1Service = {
         const races = data?.MRData?.RaceTable?.Races ?? [];
         const today = new Date().toISOString().slice(0, 10);
         return races.filter((r) => r.date >= today).map(mapRace);
+      },
+      [],
+    );
+  },
+
+  /**
+   * Every race already run this season, with who won it.
+   *
+   * One request: asking Ergast for finishing position 1 across the season
+   * returns each round with a single result on it, which is the whole calendar
+   * so far rather than a round-by-round crawl.
+   */
+  async getSeasonWinners() {
+    return safe(
+      'f1:winners',
+      async () => {
+        const data = await jolpicaProvider.get('current/results/1.json?limit=40');
+        const races = data?.MRData?.RaceTable?.Races ?? [];
+        return races
+          .map((r) => {
+            const win = r.Results?.[0];
+            return {
+              ...mapRace(r),
+              winner: win ? driverName(win.Driver) : null,
+              winnerTeam: win?.Constructor?.name ?? null,
+              winnerBadge: constructorLogo(win?.Constructor?.name),
+            };
+          })
+          .reverse(); // most recent first, which is the order anyone reads it in
       },
       [],
     );

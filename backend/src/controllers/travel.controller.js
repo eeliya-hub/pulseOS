@@ -1,3 +1,4 @@
+import { airlineArtService } from '../services/travel/airlineArt.service.js';
 import { travelService } from '../services/travel/travel.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -72,6 +73,17 @@ export const travelController = {
    * Proxies a Google place photo so the API key stays on the server. Cached hard
    * at the browser — a hotel's photo doesn't change during a trip.
    */
+  /**
+   * GET /api/travel/airline-art?icao=BAW&kind=logos
+   * An airline's crest or banner, with cache headers its bucket refuses to send.
+   */
+  airlineArt: asyncHandler(async (req, res) => {
+    const { buffer, type } = await airlineArtService.fetch(req.query.icao, req.query.kind);
+    res.set('Content-Type', type);
+    res.set('Cache-Control', 'public, max-age=2592000, immutable');
+    res.send(buffer);
+  }),
+
   photo: asyncHandler(async (req, res) => {
     const { buffer, contentType } = await travelService.placePhoto(req.query.ref, req.query.w);
     res.set('content-type', contentType);

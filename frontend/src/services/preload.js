@@ -112,9 +112,16 @@ export async function runPreload(onProgress = () => {}) {
               const code = f.code.trim().toUpperCase();
               const date = (f.date || '').trim();
               return warm(flightKey(code, date), () => api.travel.flight(code, date || undefined)).then(
-                // The airline's photograph is the biggest thing on the card, so
-                // the bytes are pulled too, not just the URL that points at them.
-                (data) => prefetch(data?.airline?.photo?.url),
+                // Every picture the card draws, as bytes rather than as URLs
+                // that point at them. The crest is the one that was arriving
+                // late: it is served from Firebase Storage, which is slower to
+                // first byte than anything else on the card, so it used to pop
+                // in well after the flight around it had settled.
+                (data) =>
+                  Promise.all([
+                    prefetch(data?.airline?.photo?.url),
+                    prefetch(api.travel.airlineArtUrl(data?.airline?.art)),
+                  ]),
               );
             }),
           trip?.destination?.currency?.code && trip.destination.currency.code !== (trip.homeCurrency || 'GBP')

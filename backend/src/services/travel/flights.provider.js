@@ -96,14 +96,19 @@ export const flightsProvider = {
  * complete (some carriers have a logo but no banner), which is why the UI treats
  * both as optional and falls back to its own glyph.
  */
+/**
+ * Whether this airline has artwork to ask for.
+ *
+ * The addresses themselves are built by the client, because they point at our
+ * own airline-art endpoint rather than at the bucket — Firebase Storage sends
+ * `cache-control: private, max-age=0` with every file, so going straight there
+ * refetches the crest on every visit however early it was warmed — and only
+ * the client knows where this API is being served from.
+ */
 function airlineArt(icao) {
-  const base = config.travel.airlineArtBase;
   const code = (icao || '').trim().toUpperCase();
-  if (!base || !/^[A-Z]{3}$/.test(code)) return { logo: null, banner: null };
-  return {
-    logo: `${base}%2Flogos%2F${code}.png?alt=media`,
-    banner: `${base}%2Fbanners%2F${code}.png?alt=media`,
-  };
+  const has = Boolean(config.travel.airlineArtBase) && /^[A-Z]{3}$/.test(code);
+  return { art: has ? code : null };
 }
 
 /**
@@ -143,8 +148,8 @@ function normalizeRoute(route) {
           iata: route.airline.iata ?? null,
           icao: route.airline.icao ?? null,
           country: route.airline.country ?? null,
-          logo: art.logo,
-          banner: art.banner,
+          // The code to ask our own endpoint for; null when there is no artwork.
+          art: art.art,
         }
       : null,
     origin: normalizeAirport(route.origin),

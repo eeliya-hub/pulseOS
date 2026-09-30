@@ -685,7 +685,7 @@ function FlightCard({ trip, flight, data, tracking, onSelect, onPatch, onAdd, on
       ) : (
         <>
           <div className="group relative z-10 mt-2 flex shrink-0 items-center gap-2">
-            <AirlineLogo src={airline?.logo} name={airline?.name} />
+            <AirlineLogo src={api.travel.airlineArtUrl(airline?.art)} name={airline?.name} />
             <input
               value={flight.code}
               onChange={(event) => onPatch(flight.id, { code: event.target.value.toUpperCase() })}

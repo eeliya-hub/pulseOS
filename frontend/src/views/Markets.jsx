@@ -406,7 +406,7 @@ function SportsStage({ data }) {
           <FixtureList fixtures={fixtures} isF1={isF1} league={data.league} />
         ) : active === 'form' ? (
           isF1 ? (
-            <Podium race={data.lastRace} />
+            <RaceResults race={data.lastRace} past={data.pastRaces} />
           ) : (
             <ResultList results={results} />
           )
@@ -692,30 +692,75 @@ function ResultList({ results }) {
   );
 }
 
-/** The last grand prix, which is the only "result" a season of racing has. */
-function Podium({ race }) {
-  if (!race?.podium?.length) return <Empty>No race run yet.</Empty>;
-  const place = ['text-[#e8c76a]', 'text-moon/70', 'text-[#c98b5e]'];
+/**
+ * How the racing has gone: the last grand prix in full, and every one before it.
+ *
+ * The tab used to show three names. A podium is not a result — a season is
+ * decided as much by who finished fourteenth — and it carried no team, no
+ * livery and no way back to the races already run.
+ */
+function RaceResults({ race, past }) {
+  const [round, setRound] = useState('last');
+  if (!race?.results?.length && !past?.length) return <Empty>No race has been run yet.</Empty>;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-1.5 px-1 t-label text-moon/45">{race.name}</p>
+      <div className="mb-1.5 flex shrink-0 items-center gap-2 px-1">
+        <p className="min-w-0 flex-1 truncate t-label text-moon/45">
+          {round === 'last' ? race?.name : `${past?.length ?? 0} races this season`}
+        </p>
+        {past?.length ? (
+          <button
+            type="button"
+            onClick={() => setRound(round === 'last' ? 'season' : 'last')}
+            className="shrink-0 rounded-full bg-white/8 px-2.5 py-0.5 text-[0.75rem] font-semibold text-moon/70 transition hover:bg-white/14 hover:text-moon focus:outline-none"
+          >
+            {round === 'last' ? 'Season' : 'Last race'}
+          </button>
+        ) : null}
+      </div>
+
       <div className="glass-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-        {race.podium.map((d, i) => (
-          <div key={d.driverName ?? i} className="flex items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-2">
-            <span className={`clock-figures w-4 shrink-0 text-lg font-light ${place[i] ?? 'text-moon/50'}`}>
-              {i + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[0.8125rem] text-moon/90">{d.driverName}</p>
-              <p className="mt-0.5 truncate text-[0.6875rem] text-moon/40">{d.team}</p>
-            </div>
-            {d.time ? <span className="clock-figures shrink-0 text-[0.75rem] text-moon/55">{d.time}</span> : null}
-          </div>
-        ))}
+        {round === 'last'
+          ? (race?.results ?? []).map((r) => (
+              <div key={r.position} className="flex items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-2">
+                <span
+                  className={`clock-figures w-5 shrink-0 text-right text-[0.9375rem] font-light ${PLACE[r.position - 1] ?? 'text-moon/45'}`}
+                >
+                  {r.position}
+                </span>
+                {r.badge ? <ConstructorLogo src={r.badge} className="h-4 w-7 shrink-0" /> : null}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.8125rem] text-moon/90">{r.driver}</p>
+                  <p className="mt-0.5 truncate text-[0.6875rem] text-moon/40">{r.team}</p>
+                </div>
+                {r.points ? (
+                  <span className="clock-figures shrink-0 text-[0.6875rem] text-moon/40">{r.points} pts</span>
+                ) : null}
+                <span className="clock-figures w-[4.5rem] shrink-0 truncate text-right text-[0.75rem] text-moon/60">
+                  {r.time}
+                </span>
+              </div>
+            ))
+          : (past ?? []).map((r) => (
+              <div key={r.id} className="flex items-center gap-2.5 rounded-xl bg-white/[0.05] px-2.5 py-2">
+                <span className="clock-figures w-[3.2rem] shrink-0 text-[0.75rem] text-moon/45">{dayMonth(r.date)}</span>
+                {r.winnerBadge ? <ConstructorLogo src={r.winnerBadge} className="h-4 w-7 shrink-0" /> : null}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.8125rem] text-moon/90">{r.name}</p>
+                  <p className="mt-0.5 truncate text-[0.6875rem] text-moon/40">
+                    {r.winner ? `${r.winner} \u00b7 ${r.winnerTeam}` : r.circuit}
+                  </p>
+                </div>
+              </div>
+            ))}
       </div>
     </div>
   );
 }
+
+/** Gold, silver, bronze — and everyone else in the same grey. */
+const PLACE = ['text-[#e8c76a]', 'text-moon/75', 'text-[#c98b5e]'];
 
 const Empty = ({ children }) => (
   <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">{children}</div>
@@ -846,7 +891,7 @@ function BallStandings({ rows, conferences, playoffs, ties }) {
                 <span className={`clock-figures ${r.me ? 'text-accent' : 'text-moon/45'}`}>{r.seed ?? '–'}</span>
                 <span className="flex min-w-0 items-center gap-1.5 truncate font-medium">
                   {r.crest ? (
-                    <img src={r.crest} alt="" className="h-4 w-4 shrink-0 rounded-sm bg-white/6 object-contain" />
+                    <img src={r.crest} alt="" className="h-4 w-4 shrink-0 object-contain" />
                   ) : null}
                   <span className="truncate">{r.team}</span>
                 </span>
@@ -914,7 +959,7 @@ function SportsStandings({ rows, variant = 'football' }) {
               <span className="text-moon/45">{r.rank}</span>
               <span className="flex min-w-0 items-center gap-1.5 truncate font-medium">
                 {r.crest ? (
-                  <img src={r.crest} alt="" className="h-4 w-4 shrink-0 rounded-sm bg-white/6 object-contain" />
+                  <img src={r.crest} alt="" className="h-4 w-4 shrink-0 object-contain" />
                 ) : null}
                 <span className="truncate">{r.team}</span>
               </span>

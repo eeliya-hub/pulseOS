@@ -17,4 +17,6 @@ travelRouter.get('/fx', travelController.fx);
 travelRouter.get('/places', travelController.places);
 travelRouter.get('/photos', travelController.photos);
 travelRouter.get('/photo', travelController.photo);
+// GET /api/travel/airline-art?icao=BAW&kind=logos|banners
+travelRouter.get('/airline-art', travelController.airlineArt);
 travelRouter.get('/places/:id', travelController.placeDetails);

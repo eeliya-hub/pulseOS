@@ -173,6 +173,11 @@ export const api = {
     place: (id) => request(`/travel/places/${encodeURIComponent(id)}`),
     // Pictures for a place or landmark — Google photos when keyed, Wikipedia otherwise.
     photos: (params) => request('/travel/photos', { params }),
+    // An airline's crest, through us rather than its bucket: Firebase Storage
+    // sends `cache-control: private, max-age=0`, so going direct refetches it
+    // every visit and no amount of warming helps.
+    airlineArtUrl: (code, kind = 'logos') =>
+      code ? `${BASE_URL}/travel/airline-art?icao=${encodeURIComponent(code)}&kind=${kind}` : null,
     // Google photos are proxied so the API key never reaches the browser.
     photoUrl: (ref, width = 640) =>
       `${BASE_URL}/travel/photo?ref=${encodeURIComponent(ref)}&w=${width}`,
