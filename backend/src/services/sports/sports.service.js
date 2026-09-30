@@ -6,6 +6,7 @@ import { f1Service } from './f1.service.js';
 import { nbaLogo, nflLogo } from './teamLogos.js';
 import { PLAYOFF_LINES, teamGroup } from './teamGroups.js';
 import { espnProvider } from './providers/espn.provider.js';
+import { COMPETITION_COLOUR, identityLookup } from './teamIdentity.js';
 
 // Dispatcher that adapts the four per-sport services into the single shape the
 // Sports card already consumes. Keeps API-specific concerns out of the UI.
@@ -48,17 +49,23 @@ const splitIso = (iso) => {
  * which the providers were already handing us. `name` stays for anything still
  * reading it; everything else is new.
  */
-function fixtureCard(f, sep) {
+function fixtureCard(f, sep, identity = () => null) {
   if (!f) return null;
   const { date, time } = splitIso(f.date);
-  const side = (name, short, tla, crest) => ({
-    name: name ?? null,
-    short: short ?? name ?? null,
-    // Not every sport gives a three-letter code; the initials of the short name
-    // are a decent stand-in, and the UI falls back to the name when neither fits.
-    tla: tla ?? initials(short ?? name),
-    crest: crest ?? null,
-  });
+  const side = (name, short, tla, crest) => {
+    const known = identity(name);
+    return {
+      name: name ?? null,
+      short: short ?? known?.short ?? name ?? null,
+      // Not every sport gives a three-letter code; the initials of the short name
+      // are a decent stand-in, and the UI falls back to the name when neither fits.
+      tla: tla ?? known?.tla ?? initials(short ?? name),
+      // The providers hand back a crest for some teams and not others, which is
+      // why a fixture had two badges and the table under it had none.
+      crest: crest ?? known?.crest ?? null,
+      colour: known?.colour ?? null,
+    };
+  };
   return {
     name: `${f.homeTeam} ${sep} ${f.awayTeam}`,
     home: side(f.homeTeam, f.homeShort, f.homeTla, f.homeCrest),
@@ -91,7 +98,7 @@ function initials(name) {
  * day. Which team is "mine" is known here and nowhere else downstream, so the
  * verdict is worked out here too.
  */
-const resultRow = (me) => (f) => {
+const resultRow = (me, identity = () => null) => (f) => {
   const { date, time } = splitIso(f.date);
   const iAmHome = sameName(f.homeTeam, me);
   const mineScore = iAmHome ? f.homeScore : f.awayScore;
@@ -112,7 +119,8 @@ const resultRow = (me) => (f) => {
     time,
     // The other side, and how it went: 'W' | 'D' | 'L' | null.
     opponent: (iAmHome ? f.awayShort ?? f.awayTeam : f.homeShort ?? f.homeTeam) ?? null,
-    opponentCrest: (iAmHome ? f.awayCrest : f.homeCrest) ?? null,
+    opponentCrest:
+      (iAmHome ? f.awayCrest : f.homeCrest) ?? identity(iAmHome ? f.awayTeam : f.homeTeam)?.crest ?? null,
     home: iAmHome,
     outcome: decided ? (mineScore > theirScore ? 'W' : mineScore < theirScore ? 'L' : 'D') : null,
   };
@@ -126,8 +134,13 @@ function sameName(a, b) {
 }
 
 async function footballCard(name, code) {
-  const sum = await footballService.teamSummary(code, name);
+  const [sum, identity] = await Promise.all([footballService.teamSummary(code, name), identityLookup(code)]);
+  const me = identity(name);
   return {
+    // What this card is coloured by: the followed club's own colour where it is
+    // known, and the competition's where it isn't.
+    accent: me?.colour ?? COMPETITION_COLOUR[code] ?? null,
+    competitionColour: COMPETITION_COLOUR[code] ?? null,
     found: true,
     kind: 'team',
     statSport: 'football',
@@ -135,12 +148,14 @@ async function footballCard(name, code) {
     name,
     badge: sum.badge ?? null,
     league: sum.league,
-    fixture: fixtureCard(sum.fixture, 'vs'),
-    fixtures: (sum.fixtures ?? []).map((f) => fixtureCard(f, 'vs')).filter(Boolean),
-    results: sum.results.map(resultRow(name)),
+    fixture: fixtureCard(sum.fixture, 'vs', identity),
+    fixtures: (sum.fixtures ?? []).map((f) => fixtureCard(f, 'vs', identity)).filter(Boolean),
+    results: sum.results.map(resultRow(name, identity)),
     standings: sum.standings.map((r) => ({
       rank: r.position,
       team: r.team,
+      crest: r.crest ?? identity(r.team)?.crest ?? null,
+      colour: identity(r.team)?.colour ?? null,
       played: r.played,
       won: r.won,
       lost: r.lost,
@@ -182,12 +197,16 @@ async function ballStandings(sportKey, service, team) {
 async function ballCard(service, name, sportLabel, statSport) {
   const sportKey = statSport === 'basketball' ? 'nba' : 'nfl';
   const logo = service === nbaService ? nbaLogo : nflLogo;
-  const [sum, standings] = await Promise.all([
+  const [sum, standings, identity] = await Promise.all([
     service.teamSummary(name),
     ballStandings(sportKey, service, name),
+    identityLookup(sportKey),
   ]);
+  const me = identity(name);
 
   return {
+    accent: me?.colour ?? COMPETITION_COLOUR[sportKey] ?? null,
+    competitionColour: COMPETITION_COLOUR[sportKey] ?? null,
     found: true,
     kind: 'team',
     statSport,
@@ -195,9 +214,9 @@ async function ballCard(service, name, sportLabel, statSport) {
     name,
     badge: logo(name),
     league: sum.league,
-    fixture: fixtureCard(sum.fixture, '@'),
-    fixtures: (sum.fixtures ?? []).map((f) => fixtureCard(f, '@')).filter(Boolean),
-    results: sum.results.map(resultRow(name)),
+    fixture: fixtureCard(sum.fixture, '@', identity),
+    fixtures: (sum.fixtures ?? []).map((f) => fixtureCard(f, '@', identity)).filter(Boolean),
+    results: sum.results.map(resultRow(name, identity)),
     conferences: [...new Set(standings.map((r) => r.conference).filter(Boolean))],
     playoffs: PLAYOFF_LINES[sportKey] ?? null,
     ties: standings.some((r) => (r.drawn ?? 0) > 0), // NFL only, and only when there are any
@@ -207,7 +226,8 @@ async function ballCard(service, name, sportLabel, statSport) {
       conference: r.conference ?? null,
       division: r.division ?? null,
       team: r.team,
-      crest: logo(r.team),
+      crest: logo(r.team) ?? identity(r.team)?.crest ?? null,
+      colour: identity(r.team)?.colour ?? null,
       played: r.played ?? (r.won ?? 0) + (r.lost ?? 0) + (r.drawn ?? 0),
       won: r.won,
       lost: r.lost,
@@ -243,6 +263,8 @@ async function f1Card(teamName) {
     name: 'Formula 1',
     badge,
     league: 'Formula 1',
+    accent: COMPETITION_COLOUR.f1,
+    competitionColour: COMPETITION_COLOUR.f1,
     fixture: next ? { name: next.name, venue: next.circuit, date: next.date, time: next.time } : null,
     // A season has a calendar, and the panel shows it. Shaped like every other
     // sport's fixture list so one component draws all four.

@@ -24,15 +24,6 @@ function currentSeason(sport, date = new Date()) {
   return sport === 'nba' ? (m >= 9 ? y : y - 1) : m >= 8 ? y : y - 1;
 }
 
-function upcomingSeason(sport, date = new Date()) {
-  const y = date.getUTCFullYear();
-  const m = date.getUTCMonth();
-  // During the offseason, upcoming fixtures belong to the next season even
-  // though standings still belong to the season that just finished.
-  if (sport === 'nba') return m >= 6 ? y : currentSeason(sport, date);
-  return m >= 2 ? y : currentSeason(sport, date);
-}
-
 function seasonQuery(sport, season) {
   const params = new URLSearchParams({ per_page: '100' });
   params.append('seasons[]', String(season));
@@ -176,7 +167,46 @@ function makeService(sport) {
     safeWith(
       standingsCache,
       `${sport}:games:${season}`,
-      async () => (await allGames(sport, seasonQuery(sport, season))).map(gmeta),
+      async () => {
+        const games = (await allGames(sport, seasonQuery(sport, season))).map(gmeta);
+        // An empty read is the tier saying no, not a season with no games in
+        // it. Throwing leaves it uncached, so the next request tries again
+        // rather than living with the blank for an hour.
+        if (!games.length) throw new Error('no games');
+        return games;
+      },
+      [],
+    );
+
+  // Windows to look back through, nearest first. A month of an NBA season is
+  // about 360 games, which two pages covers; the wider spans only come into
+  // play out of season, when there are few games in them by definition.
+  const LOOKBACK = [
+    [-30, 0],
+    [-75, -30],
+    [-150, -75],
+    [-300, -150],
+  ];
+
+  /** The most recent window that has any games in it. */
+  const latestWindow = async () => {
+    for (const [from, to] of LOOKBACK) {
+      const games = await windowGames(from, to);
+      if (games.length) return games;
+    }
+    return [];
+  };
+
+  /** Games in a window around today. NBA only — the NFL endpoint ignores dates. */
+  const windowGames = (from, to) =>
+    safeWith(
+      cache,
+      `${sport}:window:${from}:${to}:${offsetDay(0)}`,
+      async () => {
+        const games = (await allGames(sport, dateWindowQuery(from, to), 2)).map(gmeta);
+        if (!games.length) throw new Error('no games');
+        return games;
+      },
       [],
     );
 
@@ -228,23 +258,46 @@ function makeService(sport) {
       return build(season - 1);
     },
 
+    /**
+     * The games still to come.
+     *
+     * In September the NBA's current season is the one that just ended, so the
+     * fixtures belong to a season that has not started — which used to mean a
+     * second whole-season read, four more paginated requests on a tier that is
+     * rate limited per minute. With four followed teams warming at launch those
+     * reads collided, came back 429, and the card said "no fixture" for an hour
+     * over data that was sitting right there.
+     *
+     * The NBA endpoint honours start_date and end_date, so its fixtures come
+     * from a window instead: one request, and no season arithmetic to be wrong
+     * about. The NFL endpoint accepts those same parameters and ignores them
+     * — asking it for June 2026 returns games from 2002 — so it keeps the
+     * season read, which for the NFL is the season actually being played and is
+     * the same cached list its results come from.
+     */
     async getUpcomingGames() {
       const today = offsetDay(0);
-      const ahead = (games) =>
-        games.filter((g) => !finished(g) && dayOf(g.date) >= today).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-      const thisSeason = ahead(await seasonGames(currentSeason(sport)));
-      if (thisSeason.length) return thisSeason;
-      // Nothing left in the season that is running: out of season the next
-      // fixtures belong to the one about to start.
-      const next = upcomingSeason(sport);
-      return next === currentSeason(sport) ? [] : ahead(await seasonGames(next));
+      const pool = sport === 'nba' ? await windowGames(0, 120) : await seasonGames(currentSeason(sport));
+      return pool
+        .filter((g) => !finished(g) && dayOf(g.date) >= today)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
     },
 
+    /**
+     * The games just played.
+     *
+     * The season read is paginated oldest-first and stops after four pages,
+     * which for the NBA is about four hundred of roughly thirteen hundred
+     * games — so "recent results" in September were games from the previous
+     * December. The NFL season is short enough that four pages is all of it,
+     * so it keeps the season read; the NBA walks back through date windows,
+     * newest first, and stops at the first one with anything in it. That finds
+     * the last games actually played in one or two requests whether the season
+     * is running, in the playoffs, or three months over.
+     */
     async getRecentGames() {
-      return (await seasonGames(currentSeason(sport)))
-        .filter(finished)
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      const pool = sport === 'nba' ? await latestWindow() : await seasonGames(currentSeason(sport));
+      return pool.filter(finished).sort((a, b) => new Date(b.date) - new Date(a.date));
     },
 
     // Powers the unified team card.

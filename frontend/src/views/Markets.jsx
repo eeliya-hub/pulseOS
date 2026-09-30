@@ -341,6 +341,10 @@ function SportsPanel({ activeId, setActiveId }) {
  */
 function SportsStage({ data }) {
   const [view, setView] = useState('next');
+  // The club's own colour where it reads against this sky, and the
+  // competition's where it doesn't — Leeds play in white, which against a
+  // night sky is not a colour, it is the absence of one.
+  const accent = wearable(data.accent) ?? wearable(data.competitionColour) ?? null;
   const fixture = data.fixture ?? null;
   const fixtures = data.fixtures?.length ? data.fixtures : fixture ? [fixture] : [];
   const results = data.results ?? [];
@@ -365,12 +369,15 @@ function SportsStage({ data }) {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/[0.03]">
-      <Marquee data={data} fixture={fixture} results={results} shot={shot} />
+      <Marquee data={data} fixture={fixture} results={results} shot={shot} accent={accent} />
 
       {/* Below the fixture, the picture stops being scenery and starts being in
           the way, so the lists stand on their own ground: a near-solid plate
           with a hairline where it meets the photograph. */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col border-t border-white/10 bg-[#0b1024]/88 backdrop-blur-md">
+      <div
+        className="relative z-10 flex min-h-0 flex-1 flex-col border-t bg-[#0b1024]/88 backdrop-blur-md"
+        style={{ borderColor: accent ? `${accent}55` : 'rgba(255,255,255,0.1)' }}
+      >
         {views.length > 1 ? (
           <div className="flex shrink-0 gap-1 px-3 pb-2 pt-2.5">
             {views.map((v) => (
@@ -380,10 +387,13 @@ function SportsStage({ data }) {
                 onClick={() => setView(v.id)}
                 className={[
                   'rounded-full px-3 py-1 text-[0.75rem] font-semibold transition focus:outline-none',
-                  v.id === active
-                    ? 'bg-white/90 text-[#0b1024]'
-                    : 'text-moon/55 hover:bg-white/10 hover:text-moon/85',
+                  v.id === active ? '' : 'text-moon/55 hover:bg-white/10 hover:text-moon/85',
                 ].join(' ')}
+                style={
+                  v.id === active
+                    ? { backgroundColor: accent ?? 'rgba(255,255,255,0.9)', color: readableOn(accent) }
+                    : undefined
+                }
               >
                 {v.label}
               </button>
@@ -393,7 +403,7 @@ function SportsStage({ data }) {
 
         <div className="flex min-h-0 flex-1 flex-col px-2.5 pb-2.5 pt-1">
         {active === 'next' ? (
-          <FixtureList fixtures={fixtures} isF1={isF1} />
+          <FixtureList fixtures={fixtures} isF1={isF1} league={data.league} />
         ) : active === 'form' ? (
           isF1 ? (
             <Podium race={data.lastRace} />
@@ -464,7 +474,7 @@ function useVenuePhoto(query) {
 }
 
 /** The top of the stage: what is next, where, when, and how it has been going. */
-function Marquee({ data, fixture, results, shot }) {
+function Marquee({ data, fixture, results, shot, accent }) {
   const quiet = shot ? 'text-moon/75' : 'text-moon/45';
   const quieter = shot ? 'text-moon/60' : 'text-moon/35';
   const home = fixture?.home;
@@ -481,15 +491,25 @@ function Marquee({ data, fixture, results, shot }) {
       {shot ? (
         <>
           <img src={shot} alt="" className="absolute inset-0 h-full w-full object-cover opacity-[0.6]" />
+          {/* The scrim carries the team's colour rather than a neutral dark, so
+              the ground is lit in the colours of whoever plays on it. */}
           <div
-            className="absolute inset-0 bg-gradient-to-b from-[#0b1024]/58 via-[#0b1024]/62 to-[#0b1024]/78"
+            className="absolute inset-0"
+            style={{
+              backgroundImage: accent
+                ? `linear-gradient(to bottom, ${accent}66, #0b1024cc 56%, #0b1024e6)`
+                : 'linear-gradient(to bottom, #0b102494, #0b10249e 56%, #0b1024c7)',
+            }}
             aria-hidden="true"
           />
         </>
       ) : null}
 
       <div className="relative flex items-baseline gap-2">
-        <p className={`t-label ${shot ? 'text-accent/95' : 'text-accent/70'}`}>{data.league || data.sport}</p>
+        {/* The wash behind this is already the team's colour, so the label
+            cannot also be it — red on red is not an accent, it is a hole. The
+            colour identity lives in the wash, the rules and the tab. */}
+        <p className="t-label text-moon/90">{data.league || data.sport}</p>
         {fixture?.matchday ? (
           <p className={`t-label ${quieter}`}>MD {fixture.matchday}</p>
         ) : null}
@@ -518,8 +538,12 @@ function Marquee({ data, fixture, results, shot }) {
             </p>
           )}
 
-          <div className="relative mt-3 flex items-center gap-2 border-t border-white/12 pt-2 text-[0.75rem]">
-            <span className={`min-w-0 flex-1 truncate ${quiet}`}>{fixture.venue ?? fixture.competition ?? ''}</span>
+          <div
+            className="relative mt-3 flex items-center gap-2 border-t pt-2 text-[0.75rem]"
+            style={{ borderColor: accent ? `${accent}77` : 'rgba(255,255,255,0.12)' }}
+          >
+            {/* The competition is named at the top of the card already */}
+            <span className={`min-w-0 flex-1 truncate ${quiet}`}>{fixture.venue ?? ''}</span>
             <span className={`flex shrink-0 items-center gap-1.5 ${shot ? 'text-moon/90' : 'text-moon/70'}`}>
               <CalendarDays className={`h-3.5 w-3.5 ${quieter}`} aria-hidden="true" />
               {fmtDate(fixture.date)}
@@ -576,7 +600,7 @@ function Side({ side, align = 'left', quiet = 'text-moon/40' }) {
 }
 
 /** Everything still to come, not just the next one. */
-function FixtureList({ fixtures, isF1 }) {
+function FixtureList({ fixtures, isF1, league }) {
   if (!fixtures.length) {
     return <Empty>Nothing on the calendar.</Empty>;
   }
@@ -593,16 +617,21 @@ function FixtureList({ fixtures, isF1 }) {
           </div>
           <div className="min-w-0 flex-1">
             {f.home?.name || f.away?.name ? (
-              <p className="truncate text-[0.8125rem] text-moon/90">
+              <p className="flex min-w-0 items-center gap-1.5 truncate text-[0.8125rem] text-moon/90">
+                {f.home?.crest ? <img src={f.home.crest} alt="" className="h-4 w-4 shrink-0 object-contain" /> : null}
                 <span className="font-medium">{f.home?.short}</span>
-                <span className="px-1.5 text-moon/35">{f.homeFirst === false ? 'at' : 'v'}</span>
-                <span className="font-medium">{f.away?.short}</span>
+                <span className="text-moon/35">{f.homeFirst === false ? 'at' : 'v'}</span>
+                {f.away?.crest ? <img src={f.away.crest} alt="" className="h-4 w-4 shrink-0 object-contain" /> : null}
+                <span className="truncate font-medium">{f.away?.short}</span>
               </p>
             ) : (
               <p className="truncate text-[0.8125rem] text-moon/90">{f.name}</p>
             )}
+            {/* The competition, but only when it says something: a Champions
+                League night among league games is worth marking, "NFL" under a
+                card headed NFL is not. */}
             <p className="mt-0.5 truncate text-[0.6875rem] text-moon/40">
-              {isF1 ? f.venue : (f.competition ?? '')}
+              {isF1 ? f.venue : f.competition && f.competition !== league ? f.competition : ''}
             </p>
           </div>
         </div>
@@ -675,6 +704,32 @@ function Podium({ race }) {
 const Empty = ({ children }) => (
   <div className="flex flex-1 items-center justify-center px-6 text-center text-xs text-moon/45">{children}</div>
 );
+
+/**
+ * A colour only if it can be worn against this sky.
+ *
+ * Club colours are real and some of them are white, black or so close to either
+ * that they vanish or glare: Leeds play in white, Brooklyn in black. Those carry
+ * no identity here, so the competition's colour is used instead.
+ */
+function wearable(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? '');
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  // Rec. 709 luma, which tracks how bright a colour actually looks.
+  const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luma > 0.82 || luma < 0.08 ? null : `#${m[1].toLowerCase()}`;
+}
+
+/** Ink that can be read on a given background. */
+function readableOn(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? '');
+  if (!m) return '#0b1024';
+  const n = parseInt(m[1], 16);
+  const luma = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  return luma > 0.55 ? '#0b1024' : '#f6f7fb';
+}
 
 /** "Sat 10 Oct" trimmed to "10 Oct", for a list where the column is the date. */
 function dayMonth(dateStr) {
