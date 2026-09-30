@@ -98,8 +98,34 @@ async function extractIcon(appPath) {
   return buffer;
 }
 
+// The browsers a link can be told to open in. Matched against what is actually
+// installed, so the picker only ever offers real choices.
+const BROWSERS = [
+  'Safari',
+  'Google Chrome',
+  'Google Chrome Canary',
+  'Firefox',
+  'Firefox Developer Edition',
+  'Microsoft Edge',
+  'Brave Browser',
+  'Arc',
+  'Opera',
+  'Vivaldi',
+  'Zen Browser',
+  'Orion',
+  'Chromium',
+  'DuckDuckGo',
+];
+
 export const launchService = {
-  async open({ app, url }) {
+  /**
+   * @param {object} opts
+   * @param {string} [opts.app]     a macOS application name
+   * @param {string} [opts.url]     a web address
+   * @param {string} [opts.browser] which browser to open `url` in; the system
+   *   default when absent or not installed
+   */
+  async open({ app, url, browser }) {
     if (process.platform !== 'darwin') {
       throw ApiError.badRequest('App launching is only supported on macOS.');
     }
@@ -112,12 +138,29 @@ export const launchService = {
       }
     }
     if (url && /^https?:\/\//i.test(url)) {
+      // A named browser is a preference, not a requirement: if it has been
+      // uninstalled since the link was made, the link should still open.
+      if (browser) {
+        try {
+          await run('open', ['-a', String(browser), String(url)]);
+          return { launched: 'url', url, browser };
+        } catch {
+          /* fall through to the default browser */
+        }
+      }
       await run('open', [String(url)]);
       return { launched: 'url', url };
     }
     throw ApiError.badRequest(
       app ? `Couldn't open "${app}", and no web fallback was provided.` : 'Provide an `app` or `url`.',
     );
+  },
+
+  /** The browsers actually installed, in the order people expect to see them. */
+  async listBrowsers() {
+    if (process.platform !== 'darwin') return { browsers: [] };
+    const apps = await findApps();
+    return { browsers: BROWSERS.filter((name) => apps.has(name)).map((name) => ({ name })) };
   },
 
   // Installed applications the user can add to the launchpad.

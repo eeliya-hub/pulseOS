@@ -1,7 +1,17 @@
 // A launchpad item is either a macOS app name (a plain string, opened with
-// `open -a`) or a website shortcut ({ url, name }, opened in the browser).
-// These helpers normalize the two so the grid, the picker and the Home card can
-// all treat them the same.
+// `open -a`) or a website shortcut, opened in a browser. These helpers
+// normalize the two so the grid, the picker and the Home card can all treat
+// them the same.
+//
+// A website is:
+//   {
+//     url, name,
+//     icon?:    { src, zoom, x, y }  a chosen or uploaded image, and how it sits
+//     browser?: 'Google Chrome'      which browser to open it in
+//     badge?:   'browser' | 'none'   whether the tile admits it is a link
+//   }
+// Every one of those is optional, and absent means the behaviour this had
+// before any of them existed.
 
 import { api } from '../api/backendClient.js';
 
@@ -68,6 +78,85 @@ export function reorderWithin(all, keys, order) {
  * better than an error dialog on a dashboard nobody is sitting in front of.
  */
 export function launchItem(item) {
-  if (isSite(item)) return api.launch(undefined, item.url).catch(() => {});
+  if (isSite(item)) return api.launch(undefined, item.url, item.browser).catch(() => {});
   return api.launch(item).catch(() => {});
+}
+
+/**
+ * The items Home should show, out of the whole launchpad.
+ *
+ * Home and the Launchpad tab used to be the same list, with Home showing its
+ * first twelve — so the only way to change what was on the home screen was to
+ * reorder the launchpad. They are separable now, and `keys` is the separation:
+ * itemKeys, in the order Home should draw them. A key for something since
+ * removed is skipped rather than drawn as a hole.
+ *
+ * @param {Array} launchpad the whole list
+ * @param {string[]|null} keys the Home selection, or null for "the first few"
+ */
+export function homeItems(launchpad, keys, limit = 12) {
+  const all = launchpad ?? [];
+  if (!Array.isArray(keys)) return all.slice(0, limit);
+  const byKey = new Map(all.map((item) => [itemKey(item), item]));
+  return keys.map((k) => byKey.get(k)).filter(Boolean).slice(0, limit);
+}
+
+/* ── Icons ──────────────────────────────────────────────────────── */
+
+/** The default framing for an icon: filling its tile, centred, unzoomed. */
+export const DEFAULT_ICON = { src: '', zoom: 1, x: 0, y: 0 };
+
+/** How a site's icon should be drawn, whatever it was given. */
+export const iconOf = (item) => ({ ...DEFAULT_ICON, ...(item?.icon ?? {}) });
+
+/** True when someone has chosen this site's icon rather than letting it guess. */
+export const hasCustomIcon = (item) => Boolean(item?.icon?.src);
+
+/**
+ * The best icon a site publishes, resolved by the backend.
+ *
+ * Google's favicon service is a 32px image upscaled to whatever you ask for,
+ * and blank for anything it hasn't crawled. Sites declare far better icons in
+ * their own HTML, so we read those and keep Google as the last resort.
+ */
+export const resolveSiteIcon = (url) =>
+  api.launch
+    .siteIcon(url)
+    .then((d) => (d?.best ? api.launch.siteIconUrl(d.best) : null))
+    .catch(() => null);
+
+/**
+ * Shrink an uploaded image to one tile's worth of pixels, square, transparent
+ * where the image doesn't reach.
+ *
+ * Icons the user supplies arrive at whatever size their screenshot was, and
+ * storing those verbatim both blows the settings out and leaves a tile whose
+ * artwork is a different scale from every tile beside it. A square canvas at
+ * the size the grid actually draws makes an uploaded image an icon rather than
+ * a picture: `contain` so nothing is cropped, and no fill, so a logo on
+ * transparency stays on transparency instead of gaining the white card its
+ * source had.
+ */
+export function toIconDataUrl(file, size = 256) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('That file is not an image.'));
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const scale = Math.min(size / img.width, size / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }

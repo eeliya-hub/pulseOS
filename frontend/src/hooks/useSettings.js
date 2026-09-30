@@ -28,6 +28,11 @@ const DEFAULTS = {
     { id: 'Formula 1:Formula 1', sport: 'f1', leagueId: null, leagueLabel: 'Formula 1', team: 'Formula 1' },
   ],
   stocks: ['AAPL', 'NVDA', 'TSLA', 'MSFT', 'AMZN', 'GOOGL'],
+  // Which of the launchpad shows on Home, as itemKeys and in the order Home
+  // draws them. `null` means "whatever the launchpad's first twelve are", which
+  // is how this behaved before the two could differ — so an existing setup
+  // keeps its Home card until someone deliberately picks a different one.
+  homeLaunchpad: null,
   // The tape across the top of Markets. Separate from the watchlist above on
   // purpose: the watchlist is what you hold, the tape is what you glance at.
   // Equities and coins both work — a symbol traded as a coin is priced as one.

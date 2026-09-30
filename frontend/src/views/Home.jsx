@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import LaunchIcon, { AppIcon, SiteIcon } from '../components/LaunchIcon.jsx';
+import LaunchIcon, { AppIcon, BrowserBadge, SiteIcon } from '../components/LaunchIcon.jsx';
 import { Column, Ground, SkyZone } from '../components/Stage.jsx';
 import SettingsButton from '../components/SettingsButton.jsx';
 import { loadedUntil, useCalendarEvents } from '../hooks/useCalendarEvents.js';
@@ -24,7 +24,8 @@ import { calendarColor, dateKey, keyToDate, occursOn, useLifeData } from '../hoo
 import { useSettings } from '../hooks/useSettings.js';
 import { useWeather } from '../hooks/useWeather.js';
 import { api } from '../services/api/backendClient.js';
-import { hostOf, isSite, itemKey, itemLabel, launchItem, normalizeUrl } from '../services/launchpad/items.js';
+import SiteEditor from '../components/SiteEditor.jsx';
+import { homeItems, hostOf, isSite, itemKey, itemLabel, launchItem, normalizeUrl } from '../services/launchpad/items.js';
 import { getGreeting } from '../utils/dateTime.js';
 
 // Start-of-event helpers for the "Upcoming" list.
@@ -203,7 +204,10 @@ export default function Home({ onAskPulse }) {
   }, [pinned.excludeFromUpcoming, pinned.match, pinnedEvent, upcoming]);
   const next5 = visibleUpcoming.slice(0, 5);
   const [showPinnedConfig, setShowPinnedConfig] = useState(false);
-  const launchpad = settings.launchpad ?? [];
+  const launchpad = useMemo(() => settings.launchpad ?? [], [settings.launchpad]);
+  // Home's own selection out of the launchpad, which used to be forced to be
+  // the launchpad's first twelve.
+  const shown = useMemo(() => homeItems(launchpad, settings.homeLaunchpad), [launchpad, settings.homeLaunchpad]);
   const [showLaunchpad, setShowLaunchpad] = useState(false);
 
   const askPulse = (text) => {
@@ -454,13 +458,13 @@ export default function Home({ onAskPulse }) {
           }
           className="ground-rule pl-8 pt-7"
         >
-          {launchpad.length === 0 ? (
+          {shown.length === 0 ? (
             <button type="button" onClick={() => setShowLaunchpad(true)} className="pill mt-7 h-9 px-4">
               Choose apps and sites to add
             </button>
           ) : (
             <div className="cascade mt-[0.625rem] grid grid-cols-3 gap-x-2 gap-y-2">
-              {launchpad.slice(0, 12).map((item) => {
+              {shown.map((item) => {
                 const label = itemLabel(item);
                 return (
                   <button
@@ -470,10 +474,10 @@ export default function Home({ onAskPulse }) {
                     aria-label={`Open ${label}`}
                     className="group flex min-w-0 flex-col items-center gap-2 rounded-2xl px-1 py-2.5 transition hover:bg-white/[0.05] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
                   >
-                    <LaunchIcon
-                      item={item}
-                      className="h-12 w-12 transition-transform duration-300 group-hover:-translate-y-0.5"
-                    />
+                    <span className="relative block h-12 w-12 transition-transform duration-300 group-hover:-translate-y-0.5">
+                      <LaunchIcon item={item} className="h-full w-full" />
+                      <BrowserBadge item={item} />
+                    </span>
                     <span className="w-full truncate text-center text-[0.75rem] text-haze transition group-hover:text-moon">
                       {label}
                     </span>
@@ -496,7 +500,9 @@ export default function Home({ onAskPulse }) {
       {showLaunchpad && (
         <LaunchpadPicker
           selected={launchpad}
+          homeKeys={settings.homeLaunchpad}
           onChange={(apps) => update({ launchpad: apps })}
+          onHomeChange={(keys) => update({ homeLaunchpad: keys })}
           onClose={() => setShowLaunchpad(false)}
         />
       )}
@@ -750,13 +756,14 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
 }
 
 // Pick which installed apps + website shortcuts show on the launchpad.
-function LaunchpadPicker({ selected, onChange, onClose }) {
+function LaunchpadPicker({ selected, homeKeys, onChange, onHomeChange, onClose }) {
   const [apps, setApps] = useState(null);
   const [query, setQuery] = useState('');
-  const [tab, setTab] = useState('apps'); // 'apps' | 'sites'
+  const [tab, setTab] = useState('apps'); // 'apps' | 'sites' | 'home'
   const [siteName, setSiteName] = useState('');
   const [siteUrl, setSiteUrl] = useState('');
   const [siteError, setSiteError] = useState('');
+  const [editing, setEditing] = useState(null); // the site whose tile is being set up
 
   useEffect(() => {
     api.launch
@@ -793,6 +800,19 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
     setSiteError('');
   };
   const removeSite = (url) => onChange(selected.filter((item) => !(isSite(item) && item.url === url)));
+  // A site's own settings are written back in place, so its position in the
+  // launchpad and anything pointing at it by key are undisturbed.
+  const saveSite = (next) =>
+    onChange(selected.map((item) => (isSite(item) && item.url === editing.url ? next : item)));
+
+  // Home shows its own choice out of the launchpad; `null` means it is still
+  // following the first twelve, which is what this did before they could differ.
+  const homeSelection = Array.isArray(homeKeys) ? homeKeys : selected.slice(0, 12).map(itemKey);
+  const onHome = new Set(homeSelection);
+  const toggleHome = (item) => {
+    const k = itemKey(item);
+    onHomeChange(onHome.has(k) ? homeSelection.filter((x) => x !== k) : [...homeSelection, k]);
+  };
   const filtered = (apps ?? []).filter((a) => a.name.toLowerCase().includes(query.trim().toLowerCase()));
 
   return createPortal(
@@ -822,6 +842,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
           {[
             ['apps', 'Apps'],
             ['sites', 'Websites'],
+            ['home', 'On Home'],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -834,6 +855,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
             >
               {label}
               {id === 'sites' && sites.length ? ` · ${sites.length}` : ''}
+              {id === 'home' && homeSelection.length ? ` · ${homeSelection.length}` : ''}
             </button>
           ))}
         </div>
@@ -882,7 +904,7 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
               Pick up to 10 items. Icons come straight from each app; tap a launchpad tile to open it.
             </p>
           </>
-        ) : (
+        ) : tab === 'sites' ? (
           <>
             <div className="mb-3 shrink-0 space-y-2">
               <div className="flex gap-2">
@@ -932,13 +954,27 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
                       key={site.url}
                       className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-2.5 py-2"
                     >
-                      <SiteIcon url={site.url} className="h-8 w-8" />
+                      <span className="relative block h-8 w-8 shrink-0">
+                        <SiteIcon item={site} className="h-full w-full" />
+                        <BrowserBadge item={site} />
+                      </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-xs font-medium text-moon">
                           {site.name || hostOf(site.url)}
                         </span>
-                        <span className="block truncate text-[0.8125rem] text-moon/40">{hostOf(site.url)}</span>
+                        <span className="block truncate text-[0.8125rem] text-moon/40">
+                          {hostOf(site.url)}
+                          {site.browser ? ` · ${site.browser}` : ''}
+                        </span>
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(site)}
+                        aria-label={`Set up ${site.name || hostOf(site.url)}`}
+                        className="shrink-0 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/50 transition hover:bg-white/10 hover:text-moon focus:outline-none"
+                      >
+                        Set up
+                      </button>
                       <button
                         type="button"
                         onClick={() => removeSite(site.url)}
@@ -954,11 +990,74 @@ function LaunchpadPicker({ selected, onChange, onClose }) {
             </div>
 
             <p className="mt-3 shrink-0 text-[0.75rem] text-moon/38">
-              Pick up to 10 items total. Websites open in your default browser.
+              Pick up to 10 items total. &ldquo;Set up&rdquo; chooses a site&rsquo;s icon and which browser opens it.
             </p>
           </>
-        )}
+        ) : tab === 'home' ? (
+          <>
+            {/* Which of the launchpad the Home screen shows. These used to be
+                the same list, so the only way to change the home screen was to
+                reorder the launchpad. */}
+            <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+              {selected.length === 0 ? (
+                <p className="py-10 text-center text-xs text-moon/40">
+                  Add some apps or websites first, then choose which of them Home shows.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {selected.map((item) => {
+                    const on = onHome.has(itemKey(item));
+                    return (
+                      <button
+                        key={itemKey(item)}
+                        type="button"
+                        onClick={() => toggleHome(item)}
+                        className={[
+                          'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none',
+                          on ? 'bg-accent/12 ring-1 ring-accent/25' : 'bg-white/[0.04] hover:bg-white/[0.07]',
+                        ].join(' ')}
+                      >
+                        <span className="relative block h-8 w-8 shrink-0">
+                          <LaunchIcon item={item} className="h-full w-full" />
+                          <BrowserBadge item={item} />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-xs font-medium text-moon">
+                          {itemLabel(item)}
+                        </span>
+                        <span
+                          className={[
+                            'grid h-5 w-5 shrink-0 place-items-center rounded-full text-[0.625rem] font-bold',
+                            on ? 'bg-accent/80 text-[#0b1024]' : 'ring-1 ring-white/15',
+                          ].join(' ')}
+                          aria-hidden="true"
+                        >
+                          {on ? '✓' : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="mt-3 flex shrink-0 items-center gap-2">
+              <p className="min-w-0 flex-1 text-[0.75rem] text-moon/38">
+                Home draws these, in this order. Twelve fit.
+              </p>
+              {Array.isArray(homeKeys) ? (
+                <button
+                  type="button"
+                  onClick={() => onHomeChange(null)}
+                  className="shrink-0 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/50 transition hover:text-moon"
+                >
+                  Follow the launchpad
+                </button>
+              ) : null}
+            </div>
+          </>
+        ) : null}
       </div>
+
+      {editing ? <SiteEditor site={editing} onSave={saveSite} onClose={() => setEditing(null)} /> : null}
     </div>,
     document.body,
   );

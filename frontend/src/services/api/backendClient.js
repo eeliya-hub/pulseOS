@@ -131,8 +131,16 @@ export const api = {
     // a long instruction set overflowed the upgrade request's header limit.
     voiceWsUrl: () => `${BASE_URL.replace(/^http/i, 'ws')}/voice`,
   },
-  launch: Object.assign((app, url) => request('/launch', { method: 'POST', body: { app, url } }), {
+  launch: Object.assign((app, url, browser) => request('/launch', { method: 'POST', body: { app, url, browser } }), {
     apps: () => request('/launch/apps'),
+    // The browsers actually installed, so the picker offers only real choices.
+    browsers: () => request('/launch/browsers'),
+    // The best icon a site publishes, rather than a 32px favicon upscaled.
+    siteIcon: (url) => request('/launch/site-icon', { params: { url } }),
+    // That icon's bytes through the backend. Some sites serve their icon to a
+    // server and refuse it to a page — WhatsApp's is a real PNG a browser
+    // cannot load — so the tile asks us for it instead of the site.
+    siteIconUrl: (url) => `${BASE_URL}/launch/site-icon/image?url=${encodeURIComponent(url)}`,
     iconUrl: (app) => `${BASE_URL}/launch/icon?app=${encodeURIComponent(app)}`,
   }),
   calendar: {

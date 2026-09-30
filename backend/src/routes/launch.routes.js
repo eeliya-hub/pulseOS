@@ -9,3 +9,9 @@ launchRouter.post('/', launchController.open);
 launchRouter.get('/apps', launchController.apps);
 // GET /api/launch/icon?app=Name  — the app's own icon (PNG)
 launchRouter.get('/icon', launchController.icon);
+// GET /api/launch/browsers  — installed browsers a link can be opened in
+launchRouter.get('/browsers', launchController.browsers);
+// GET /api/launch/site-icon?url=  — the best icon a website publishes
+launchRouter.get('/site-icon', launchController.siteIcon);
+// GET /api/launch/site-icon/image?url=  — that icon's bytes, proxied
+launchRouter.get('/site-icon/image', launchController.siteIconImage);

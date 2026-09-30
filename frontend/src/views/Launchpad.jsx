@@ -1,7 +1,7 @@
 import { Check, Globe, MoreVertical, Pin, Plus, Search, Settings2, Star, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import LaunchIcon, { AppIcon, SiteIcon } from '../components/LaunchIcon.jsx';
+import LaunchIcon, { AppIcon, BrowserBadge, SiteIcon } from '../components/LaunchIcon.jsx';
 import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { useDragSort } from '../hooks/useDragSort.js';
 import { useLaunchpadMeta } from '../hooks/useLaunchpadMeta.js';
@@ -71,10 +71,10 @@ function Tile({ item, accent, editing, launching, folder, pinned, drag, onOpen, 
           className="pointer-events-none absolute left-1/2 top-3 h-20 w-20 -translate-x-1/2 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
           style={{ background: rgba(accent, 0.6), opacity: launching ? 1 : undefined }}
         />
-        <LaunchIcon
-          item={item}
-          className="relative h-[3.75rem] w-[3.75rem] transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-[1.05]"
-        />
+        <span className="relative block h-[3.75rem] w-[3.75rem] transition-transform duration-500 group-hover:-translate-y-1 group-hover:scale-[1.05]">
+          <LaunchIcon item={item} className="h-full w-full" />
+          <BrowserBadge item={item} />
+        </span>
         <span className="relative w-full truncate px-1 text-center text-[0.8125rem] text-haze transition-colors group-hover:text-moon">
           {launching ? 'Opening…' : label}
         </span>
@@ -129,7 +129,7 @@ const KIND_LABEL = { app: 'App', site: 'Saved site', url: 'Website', web: 'Web s
 
 function ResultIcon({ result }) {
   if (result.kind === 'app') return <AppIcon app={result.item} className="h-8 w-8" />;
-  if (result.kind === 'site') return <SiteIcon url={result.item.url} className="h-8 w-8" />;
+  if (result.kind === 'site') return <SiteIcon item={result.item} className="h-8 w-8" />;
   if (result.kind === 'url') return <SiteIcon url={result.url} className="h-8 w-8" />;
   return (
     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[0.6rem] bg-white/10 ring-1 ring-white/10">
@@ -455,7 +455,7 @@ function SitesCard({ sites, launching, onOpen, onAdd, editing, onRemove, sort })
               aria-label={`Open ${itemLabel(site)}`}
               className="flex w-full flex-col items-center gap-1.5 rounded-[1rem] px-1 py-2.5 transition hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 group-data-[dragging]:bg-white/[0.1] group-data-[dragging]:shadow-[0_20px_40px_-12px_rgba(3,5,16,0.75)]"
             >
-              <SiteIcon url={site.url} className="h-10 w-10" />
+              <SiteIcon item={site} className="h-10 w-10" />
               <span className="w-full truncate text-center text-[0.75rem] text-haze transition group-hover:text-moon">
                 {launching === itemKey(site) ? 'Opening…' : itemLabel(site)}
               </span>
