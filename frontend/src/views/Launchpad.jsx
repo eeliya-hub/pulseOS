@@ -12,6 +12,7 @@ import { hashAccent, iconAccent } from '../services/launchpad/iconAccent.js';
 import {
   faviconUrl,
   hostOf,
+  appIdOf,
   isSite,
   itemKey,
   itemLabel,
@@ -34,7 +35,7 @@ function useAccent(item) {
   const [rgb, setRgb] = useState(() => hashAccent(label));
   useEffect(() => {
     let alive = true;
-    const src = isSite(item) ? faviconUrl(item.url) : api.launch.iconUrl(item);
+    const src = isSite(item) ? faviconUrl(item.url) : api.launch.iconUrl(appIdOf(item));
     iconAccent(src, label).then((c) => alive && setRgb(c));
     return () => {
       alive = false;

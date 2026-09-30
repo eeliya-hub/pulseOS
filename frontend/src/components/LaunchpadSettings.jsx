@@ -3,7 +3,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../services/api/backendClient.js';
 import LaunchIcon, { AppIcon, BrowserBadge } from './LaunchIcon.jsx';
-import { DEFAULT_ICON, hostOf, isSite, itemKey, itemLabel, normalizeUrl, toIconDataUrl } from '../services/launchpad/items.js';
+import {
+  appIdOf,
+  asEditable,
+  DEFAULT_ICON,
+  hostOf,
+  isSite,
+  itemKey,
+  itemLabel,
+  normalizeUrl,
+  tidyItem,
+} from '../services/launchpad/items.js';
+import { toIconDataUrl } from '../services/launchpad/items.js';
 
 /**
  * The launchpad, edited as the launchpad.
@@ -39,7 +50,7 @@ export default function LaunchpadSettings({ selected, installed, meta, onChange,
     onChange(selected.filter((i) => itemKey(i) !== itemKey(item)));
     setPicked(null);
   };
-  const patch = (next) => onChange(selected.map((i) => (itemKey(i) === picked ? next : i)));
+  const patch = (next) => onChange(selected.map((i) => (itemKey(i) === picked ? tidyItem(next) : i)));
 
   return createPortal(
     <div
@@ -277,18 +288,25 @@ function Inspector({ item, meta, onChange, onRemove }) {
           <BrowserBadge item={item} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="display-type truncate text-lg font-light leading-tight text-moon">{itemLabel(item)}</p>
-          <p className="truncate text-[0.75rem] text-moon/40">{site ? hostOf(item.url) : 'Application'}</p>
+          {/* The name is editable in place. What a thing is called on your own
+              launchpad is your business: "(11) Google Gemini" is what Edge named
+              it, not what anybody calls it. */}
+          <input
+            value={item.name ?? ''}
+            onChange={(e) => onChange({ ...asEditable(item), name: e.target.value })}
+            placeholder={site ? hostOf(item.url) : appIdOf(item)}
+            aria-label="Name"
+            className="display-type w-full truncate border-b border-transparent bg-transparent text-lg font-light leading-tight text-moon outline-none transition placeholder:text-moon/45 hover:border-white/15 focus:border-white/35 focus-visible:outline-none"
+          />
+          <p className="truncate text-[0.75rem] text-moon/40">{site ? hostOf(item.url) : appIdOf(item)}</p>
         </div>
       </div>
 
       {meta ? <Folders item={item} meta={meta} /> : null}
 
-      {site ? <SiteControls site={item} onChange={onChange} /> : (
-        <p className="text-xs leading-relaxed text-moon/40">
-          An application brings its own icon and opens itself.
-        </p>
-      )}
+      <IconControls item={item} onChange={onChange} />
+
+      {site ? <SiteControls site={item} onChange={onChange} /> : null}
 
       <button
         type="button"
@@ -367,34 +385,41 @@ function Folders({ item, meta }) {
   );
 }
 
-/** Icon, zoom, browser and corner mark — everything a link can be told. */
-function SiteControls({ site, onChange }) {
-  const [browsers, setBrowsers] = useState([]);
+/**
+ * The icon, for anything on the launchpad.
+ *
+ * A website is asked what it publishes; an application already has an icon and
+ * that is the default, because the reason to change one is that a handful are
+ * ugly, not that any are missing. Either way you can upload your own, and zoom
+ * crops into whatever is there — a native icon can have too much air around it
+ * just as a logo can.
+ */
+function IconControls({ item, onChange }) {
+  const site = isSite(item);
   const [choices, setChoices] = useState([]);
   const [broken, setBroken] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
-  const icon = { ...DEFAULT_ICON, ...(site.icon ?? {}) };
-  const setIcon = (patch) => onChange({ ...site, icon: { ...icon, ...patch } });
+  const icon = { ...DEFAULT_ICON, ...(item.icon ?? {}) };
+  const setIcon = (patch) => onChange({ ...asEditable(item), icon: { ...icon, ...patch } });
 
   useEffect(() => {
-    api.launch
-      .browsers()
-      .then((d) => setBrowsers(d.browsers ?? []))
-      .catch(() => setBrowsers([]));
-  }, []);
-
-  useEffect(() => {
+    if (!site) {
+      // An application's own icon is the only automatic choice there is.
+      setChoices([api.launch.iconUrl(appIdOf(item))]);
+      return undefined;
+    }
     let alive = true;
     setBroken(new Set());
     api.launch
-      .siteIcon(site.url)
+      .siteIcon(item.url)
       .then((d) => alive && setChoices((d.icons ?? []).map((i) => api.launch.siteIconUrl(i.url))))
       .catch(() => alive && setChoices([]));
     return () => {
       alive = false;
     };
-  }, [site.url]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on what identifies the item
+  }, [site, site ? item.url : appIdOf(item)]);
 
   const upload = async (file) => {
     if (!file) return;
@@ -409,73 +434,92 @@ function SiteControls({ site, onChange }) {
   const live = choices.filter((src) => !broken.has(src));
 
   return (
-    <>
-      <section>
-        <div className="flex items-center justify-between">
-          <p className="t-label text-moon/45">Icon</p>
-          <div className="flex items-center gap-1">
+    <section>
+      <div className="flex items-center justify-between">
+        <p className="t-label text-moon/45">Icon</p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/60 transition hover:bg-white/10 hover:text-moon focus:outline-none"
+          >
+            <ImageUp className="h-3.5 w-3.5" aria-hidden="true" /> {busy ? 'Reading…' : 'Upload'}
+          </button>
+          {item.icon?.src ? (
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/60 transition hover:bg-white/10 hover:text-moon focus:outline-none"
+              onClick={() => onChange({ ...asEditable(item), icon: undefined })}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/45 transition hover:text-moon focus:outline-none"
             >
-              <ImageUp className="h-3.5 w-3.5" aria-hidden="true" /> {busy ? 'Reading…' : 'Upload'}
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Its own
             </button>
-            {site.icon?.src ? (
-              <button
-                type="button"
-                onClick={() => onChange({ ...site, icon: undefined })}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/45 transition hover:text-moon focus:outline-none"
-              >
-                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Auto
-              </button>
-            ) : null}
-          </div>
-        </div>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
-
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {live.map((src) => (
-            <button
-              key={src}
-              type="button"
-              onClick={() => setIcon({ src })}
-              aria-label="Use this icon"
-              className={[
-                'grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-white/8 p-1 transition focus:outline-none',
-                icon.src === src ? 'ring-2 ring-accent/70' : 'ring-1 ring-white/10 hover:ring-white/30',
-              ].join(' ')}
-            >
-              <img
-                src={src}
-                alt=""
-                onError={() => setBroken((prev) => new Set(prev).add(src))}
-                className="h-full w-full object-contain"
-              />
-            </button>
-          ))}
-          {!live.length ? (
-            <p className="text-[0.75rem] text-moon/35">Looking for what {hostOf(site.url)} publishes…</p>
           ) : null}
         </div>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
 
-        <label className="mt-3 block">
-          <span className="flex items-baseline justify-between text-[0.75rem] text-moon/45">
-            Zoom
-            <span className="clock-figures">{icon.zoom.toFixed(2)}×</span>
-          </span>
-          <input
-            type="range"
-            min="0.6"
-            max="2.4"
-            step="0.02"
-            value={icon.zoom}
-            onChange={(e) => setIcon({ zoom: Number(e.target.value) })}
-            className="mt-1 w-full"
-          />
-        </label>
-      </section>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {live.map((src, n) => {
+          // Nothing chosen means the automatic one is the one in use, so it
+          // should look chosen rather than leaving the row with no answer in it.
+          const on = icon.src ? icon.src === src : n === 0;
+          return (
+          <button
+            key={src}
+            type="button"
+            onClick={() => setIcon({ src: n === 0 && !site ? '' : src })}
+            aria-label="Use this icon"
+            className={[
+              'grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-white/8 p-1 transition focus:outline-none',
+              on ? 'ring-2 ring-accent/70' : 'ring-1 ring-white/10 hover:ring-white/30',
+            ].join(' ')}
+          >
+            <img
+              src={src}
+              alt=""
+              onError={() => setBroken((prev) => new Set(prev).add(src))}
+              className="h-full w-full object-contain"
+            />
+          </button>
+          );
+        })}
+        {!live.length ? (
+          <p className="text-[0.75rem] text-moon/35">Looking for what {hostOf(item.url)} publishes…</p>
+        ) : null}
+      </div>
 
+      <label className="mt-3 block">
+        <span className="flex items-baseline justify-between text-[0.75rem] text-moon/45">
+          Zoom
+          <span className="clock-figures">{icon.zoom.toFixed(2)}×</span>
+        </span>
+        <input
+          type="range"
+          min="0.6"
+          max="2.4"
+          step="0.02"
+          value={icon.zoom}
+          onChange={(e) => setIcon({ zoom: Number(e.target.value) })}
+          className="mt-1 w-full"
+        />
+      </label>
+    </section>
+  );
+}
+
+/** Which browser opens a link, and whether the tile says so. */
+function SiteControls({ site, onChange }) {
+  const [browsers, setBrowsers] = useState([]);
+
+  useEffect(() => {
+    api.launch
+      .browsers()
+      .then((d) => setBrowsers(d.browsers ?? []))
+      .catch(() => setBrowsers([]));
+  }, []);
+
+  return (
+    <>
       <section>
         <p className="t-label text-moon/45">Opens in</p>
         <div className="mt-2 flex flex-wrap gap-1.5">

@@ -1,21 +1,27 @@
-// A launchpad item is either a macOS app name (a plain string, opened with
-// `open -a`) or a website shortcut, opened in a browser. These helpers
+// A launchpad item is an application or a website shortcut. These helpers
 // normalize the two so the grid, the picker and the Home card can all treat
 // them the same.
 //
-// A website is:
-//   {
-//     url, name,
-//     icon?:    { src, zoom, x, y }  a chosen or uploaded image, and how it sits
-//     browser?: 'Google Chrome'      which browser to open it in
-//     badge?:   'browser' | 'none'   whether the tile admits it is a link
-//   }
+//   app:   'Safari'                   — or { app: 'Safari', name?, icon? }
+//   site:  { url, name?, icon?, browser?, badge? }
+//
+//   name?:    what to call it, when its own name isn't what you call it
+//   icon?:    { src, zoom, x, y }     a chosen or uploaded image, and how it sits
+//   browser?: 'Google Chrome'         which browser opens it (sites only)
+//   badge?:   'browser' | 'none'      whether the tile admits it is a link
+//
 // Every one of those is optional, and absent means the behaviour this had
-// before any of them existed.
+// before any of them existed. An application is still allowed to be the bare
+// string it always was: it becomes an object the moment it is given a name or
+// an icon, and `itemKey` is deliberately the same either way, so the folders,
+// the usage counts and Home's selection all keep pointing at it.
 
 import { api } from '../api/backendClient.js';
 
 export const isSite = (item) => Boolean(item) && typeof item === 'object' && typeof item.url === 'string';
+
+/** The macOS application name, whichever shape the item is in. */
+export const appIdOf = (item) => (typeof item === 'string' ? item : (item?.app ?? ''));
 
 export const hostOf = (url) => {
   try {
@@ -25,8 +31,28 @@ export const hostOf = (url) => {
   }
 };
 
-export const itemKey = (item) => (isSite(item) ? `site:${item.url}` : `app:${item}`);
-export const itemLabel = (item) => (isSite(item) ? item.name || hostOf(item.url) : item);
+export const itemKey = (item) => (isSite(item) ? `site:${item.url}` : `app:${appIdOf(item)}`);
+export const itemLabel = (item) =>
+  item?.name || (isSite(item) ? hostOf(item.url) : appIdOf(item));
+
+/** The same item as an object, so it can be given a name or an icon. */
+export const asEditable = (item) => (typeof item === 'string' ? { app: item } : item);
+
+/**
+ * An application with nothing set on it is stored as the bare string it always
+ * was. Clearing the last customisation puts it back, so a launchpad that has
+ * never been fiddled with reads exactly as it used to.
+ */
+export function tidyItem(item) {
+  if (isSite(item)) return item;
+  const { app, name, icon } = item ?? {};
+  // Framing counts as customisation even without a picture: an application's
+  // own icon can be zoomed, and dropping that because there was no uploaded
+  // image threw the setting away the moment it was made.
+  const framed = icon && (Boolean(icon.src) || icon.zoom !== 1 || icon.x || icon.y);
+  if (!name && !framed) return app;
+  return { app, ...(name ? { name } : {}), ...(framed ? { icon } : {}) };
+}
 
 export const faviconUrl = (url, size = 128) =>
   `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostOf(url))}&sz=${size}`;
@@ -79,7 +105,7 @@ export function reorderWithin(all, keys, order) {
  */
 export function launchItem(item) {
   if (isSite(item)) return api.launch(undefined, item.url, item.browser).catch(() => {});
-  return api.launch(item).catch(() => {});
+  return api.launch(appIdOf(item)).catch(() => {});
 }
 
 /**
@@ -109,7 +135,7 @@ export const DEFAULT_ICON = { src: '', zoom: 1, x: 0, y: 0 };
 /** How a site's icon should be drawn, whatever it was given. */
 export const iconOf = (item) => ({ ...DEFAULT_ICON, ...(item?.icon ?? {}) });
 
-/** True when someone has chosen this site's icon rather than letting it guess. */
+/** True when someone has chosen this item's icon rather than letting it guess. */
 export const hasCustomIcon = (item) => Boolean(item?.icon?.src);
 
 /**

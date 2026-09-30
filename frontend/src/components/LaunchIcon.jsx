@@ -1,13 +1,13 @@
 import { Globe } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api } from '../services/api/backendClient.js';
-import { faviconUrl, hasCustomIcon, iconOf, isSite, resolveSiteIcon } from '../services/launchpad/items.js';
+import { appIdOf, faviconUrl, hasCustomIcon, iconOf, isSite, resolveSiteIcon } from '../services/launchpad/items.js';
 
 /**
  * An app's own macOS icon, served by the backend, with a lettered fallback for
  * the ones whose icon can't be read.
  */
-export function AppIcon({ app, className = 'h-11 w-11' }) {
+export function AppIcon({ app, className = 'h-11 w-11', style }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
     return (
@@ -25,6 +25,7 @@ export function AppIcon({ app, className = 'h-11 w-11' }) {
       loading="lazy"
       draggable={false}
       onError={() => setFailed(true)}
+      style={style}
       className={`${className} shrink-0 object-contain drop-shadow-lg`}
     />
   );
@@ -145,7 +146,45 @@ export function BrowserBadge({ item, className = '' }) {
   );
 }
 
+/**
+ * An application's tile.
+ *
+ * Its own macOS icon unless one has been chosen for it, which is the honest
+ * default: an application already has an icon, and the point of being able to
+ * change it is that a handful of them are ugly, not that any of them are
+ * missing. Zoom applies either way, because a native icon can have too much air
+ * around it too.
+ */
+export function AppTile({ item, className = 'h-11 w-11' }) {
+  const { zoom, x, y } = iconOf(item);
+  const custom = hasCustomIcon(item);
+  const framed = zoom !== 1 || x || y;
+
+  if (!custom) {
+    return framed ? (
+      <span className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem]`}>
+        <AppIcon app={appIdOf(item)} className="h-full w-full" style={{ transform: `translate(${x}%, ${y}%) scale(${zoom})` }} />
+      </span>
+    ) : (
+      <AppIcon app={appIdOf(item)} className={className} />
+    );
+  }
+
+  return (
+    <span className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem] drop-shadow-lg`}>
+      <img
+        src={item.icon.src}
+        alt=""
+        loading="lazy"
+        draggable={false}
+        className="h-full w-full object-contain"
+        style={framed ? { transform: `translate(${x}%, ${y}%) scale(${zoom})` } : undefined}
+      />
+    </span>
+  );
+}
+
 /** Either of the two, chosen by the item's shape. */
 export default function LaunchIcon({ item, className }) {
-  return isSite(item) ? <SiteIcon item={item} className={className} /> : <AppIcon app={item} className={className} />;
+  return isSite(item) ? <SiteIcon item={item} className={className} /> : <AppTile item={item} className={className} />;
 }
