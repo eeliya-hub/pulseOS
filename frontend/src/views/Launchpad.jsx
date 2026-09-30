@@ -393,10 +393,16 @@ export default function Launchpad() {
     meta.setFolder(item, ring[(ring.indexOf(current) + 1) % ring.length]);
   };
 
-  const visibleApps = useMemo(
-    () => (folder === ALL ? apps : apps.filter((a) => (meta.folderOf[itemKey(a)] ?? '') === folder)),
-    [apps, folder, meta.folderOf],
-  );
+  const visibleApps = useMemo(() => {
+    if (folder !== ALL) return apps.filter((a) => (meta.folderOf[itemKey(a)] ?? '') === folder);
+    // All shows everything except the things put in a folder and marked as
+    // living only there — filing something away is a separate decision from
+    // filing it, and most of the time you want it in both places.
+    return apps.filter((a) => {
+      const key = itemKey(a);
+      return !(meta.folderOf[key] && meta.filedAway[key]);
+    });
+  }, [apps, folder, meta.folderOf, meta.filedAway]);
 
   // Dropping a tile reorders it among the ones you can see, and writes those
   // back into the slots they already held in the stored list — so reordering

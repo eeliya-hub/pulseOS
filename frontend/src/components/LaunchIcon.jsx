@@ -4,18 +4,77 @@ import { api } from '../services/api/backendClient.js';
 import { appIdOf, faviconUrl, hasCustomIcon, iconOf, isSite, resolveSiteIcon } from '../services/launchpad/items.js';
 
 /**
+ * How much of a tile an icon's body fills.
+ *
+ * Everything on the launchpad is drawn to this one measure, because it was not:
+ * a favicon sat at 58% of its tile, an uploaded image filled 100% of the same
+ * tile, and the two next to each other looked like two different grids.
+ *
+ * 82% is not arbitrary. macOS icons are drawn on Apple's grid, where the body
+ * of the icon occupies about four fifths of its canvas and the rest is
+ * deliberate transparent margin — so an application's icon rendered at full
+ * size already presents a body of roughly this width. Giving everything else
+ * the same body is what makes them match.
+ */
+const BODY = '82%';
+
+/**
+ * The square an icon's artwork lives in: same size for every kind of tile,
+ * centred, and carrying the background when one has been chosen.
+ */
+function Body({ className, bg, plated, children }) {
+  return (
+    <span className={`grid ${className} shrink-0 place-items-center`}>
+      <span
+        className={[
+          'grid place-items-center overflow-hidden rounded-[22%]',
+          bg ? 'shadow-lg' : '',
+          // The soft tile a link gets when nobody has chosen anything for it.
+          !bg && plated ? 'bg-white/10 shadow-lg ring-1 ring-white/10' : '',
+        ].join(' ')}
+        style={{ width: BODY, height: BODY, backgroundColor: bg || undefined }}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
+
+/** The artwork itself, framed by whatever zoom and offset it has been given. */
+function Art({ src, icon, onError }) {
+  const { zoom, x, y } = icon;
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      draggable={false}
+      onError={onError}
+      className="h-full w-full object-contain"
+      style={
+        zoom !== 1 || x || y
+          ? { transform: `translate(${x}%, ${y}%) scale(${zoom})`, transformOrigin: 'center' }
+          : undefined
+      }
+    />
+  );
+}
+
+/**
  * An app's own macOS icon, served by the backend, with a lettered fallback for
  * the ones whose icon can't be read.
+ *
+ * Drawn at the full size of whatever box it is given, because Apple's artwork
+ * carries its own margin — insetting it again would make every application
+ * smaller than every link.
  */
 export function AppIcon({ app, className = 'h-11 w-11', style }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
     return (
-      <span
-        className={`grid ${className} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 font-semibold text-moon/70 shadow-lg`}
-      >
-        {app.slice(0, 1).toUpperCase()}
-      </span>
+      <Body className={className} plated>
+        <span className="text-[0.9em] font-semibold text-moon/70">{(app || '?').slice(0, 1).toUpperCase()}</span>
+      </Body>
     );
   }
   return (
@@ -66,23 +125,16 @@ function useSiteIcon(item) {
 /**
  * A website shortcut's tile.
  *
- * Two ways for it to look, and which one is a choice rather than a consequence
- * of where the artwork came from:
- *
- * - Left alone, it is plainly a link: a small mark centred on a soft tile.
- * - Given an icon of its own, it fills the tile edge to edge like an
- *   application does, with no ring around it — the ring was the white line that
- *   made an uploaded logo look pasted on rather than cut to shape.
- *
- * `zoom` crops into the artwork, because logos are published with wildly
- * different amounts of air around them and the only person who can say how much
- * is too much is the one looking at it.
+ * Left alone it is plainly a link — its mark on a soft tile. Given an icon of
+ * its own, or a background, it drops the soft tile and sits in the grid the way
+ * an application does. Either way its body is the same size as everything
+ * else's, which is the whole point.
  */
 export function SiteIcon({ item, url, className = 'h-11 w-11' }) {
   const site = item ?? (url ? { url } : null);
   const [failed, setFailed] = useState(null); // the src that didn't load, if any
   const src = useSiteIcon(site);
-  const { zoom, x, y, bg } = iconOf(site);
+  const icon = iconOf(site);
   const custom = hasCustomIcon(site);
 
   // Keyed on the address rather than a bare flag: the icon starts as the
@@ -90,38 +142,16 @@ export function SiteIcon({ item, url, className = 'h-11 w-11' }) {
   // the first must not condemn the second.
   if (!src || failed === src) {
     return (
-      <span
-        className={`grid ${className} shrink-0 place-items-center rounded-[0.85rem] bg-white/10 shadow-lg ring-1 ring-white/10`}
-      >
+      <Body className={className} plated>
         <Globe className="h-1/2 w-1/2 text-accent/70" strokeWidth={1.6} aria-hidden="true" />
-      </span>
+      </Body>
     );
   }
 
   return (
-    <span
-      className={[
-        `grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem] shadow-lg`,
-        // A chosen background replaces the default plate; without either, a
-        // custom icon sits bare and an automatic one keeps the soft tile.
-        custom || bg ? '' : 'bg-white/10 ring-1 ring-white/10',
-      ].join(' ')}
-      style={bg ? { backgroundColor: bg } : undefined}
-    >
-      <img
-        src={src}
-        alt=""
-        loading="lazy"
-        draggable={false}
-        onError={() => setFailed(src)}
-        className={custom ? 'h-full w-full object-contain' : 'h-[58%] w-[58%] rounded object-contain'}
-        style={
-          zoom !== 1 || x || y
-            ? { transform: `translate(${x}%, ${y}%) scale(${zoom})`, transformOrigin: 'center' }
-            : undefined
-        }
-      />
-    </span>
+    <Body className={className} bg={icon.bg} plated={!custom}>
+      <Art src={src} icon={icon} onError={() => setFailed(src)} />
+    </Body>
   );
 }
 
@@ -137,7 +167,7 @@ export function BrowserBadge({ item, className = '' }) {
   const browser = item.browser;
   return (
     <span
-      className={`pointer-events-none absolute -bottom-0.5 -right-0.5 grid h-[42%] w-[42%] place-items-center overflow-hidden rounded-[0.4rem] bg-[#0b1024] ring-1 ring-white/15 ${className}`}
+      className={`pointer-events-none absolute bottom-0 right-0 grid h-[38%] w-[38%] place-items-center overflow-hidden rounded-[0.4rem] bg-[#0b1024] ring-1 ring-white/15 ${className}`}
       title={browser ? `Opens in ${browser}` : 'Opens in your browser'}
     >
       {browser ? (
@@ -159,32 +189,38 @@ export function BrowserBadge({ item, className = '' }) {
  * around it too.
  */
 export function AppTile({ item, className = 'h-11 w-11' }) {
-  const { zoom, x, y, bg } = iconOf(item);
+  const icon = iconOf(item);
   const custom = hasCustomIcon(item);
-  const framed = zoom !== 1 || x || y;
+  const framed = icon.zoom !== 1 || icon.x || icon.y;
 
-  if (!custom && !bg) {
-    return framed ? (
-      <span className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem]`}>
-        <AppIcon app={appIdOf(item)} className="h-full w-full" style={{ transform: `translate(${x}%, ${y}%) scale(${zoom})` }} />
+  // The plain case: Apple's own artwork, at full size, already the right body.
+  if (!custom && !icon.bg && !framed) return <AppIcon app={appIdOf(item)} className={className} />;
+
+  // Zoomed but still Apple's: the same full-size drawing, cropped to the box.
+  if (!custom && !icon.bg) {
+    return (
+      <span className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[18%]`}>
+        <AppIcon
+          app={appIdOf(item)}
+          className="h-full w-full"
+          style={{ transform: `translate(${icon.x}%, ${icon.y}%) scale(${icon.zoom})` }}
+        />
       </span>
-    ) : (
-      <AppIcon app={appIdOf(item)} className={className} />
     );
   }
 
-  const style = framed ? { transform: `translate(${x}%, ${y}%) scale(${zoom})` } : undefined;
   return (
-    <span
-      className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem] drop-shadow-lg`}
-      style={bg ? { backgroundColor: bg } : undefined}
-    >
+    <Body className={className} bg={icon.bg}>
       {custom ? (
-        <img src={item.icon.src} alt="" loading="lazy" draggable={false} className="h-full w-full object-contain" style={style} />
+        <Art src={icon.src} icon={icon} />
       ) : (
-        <AppIcon app={appIdOf(item)} className="h-full w-full" style={style} />
+        <AppIcon
+          app={appIdOf(item)}
+          className="h-full w-full"
+          style={framed ? { transform: `translate(${icon.x}%, ${icon.y}%) scale(${icon.zoom})` } : undefined}
+        />
       )}
-    </span>
+    </Body>
   );
 }
 

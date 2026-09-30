@@ -11,6 +11,10 @@ const KEY = 'pulse.launchpad.meta.v2';
 const DEFAULTS = {
   folders: [], // user-created; the launchpad ships with none on purpose
   folderOf: {}, // itemKey → folder name ('' = loose, shows only under All)
+  // itemKey → true for things that should appear ONLY in their folder. Filing
+  // something is not the same as wanting it out of the way: most of the time
+  // you want both, which is why All shows everything unless you say otherwise.
+  filedAway: {},
   usage: {}, // itemKey → { count, lastAt }
   highlighted: '', // itemKey of the app on the highlight card; '' = none chosen
 };
@@ -67,6 +71,15 @@ export function useLaunchpadMeta() {
     write({ ...state, folders: [...state.folders, clean] });
   }, []);
 
+  /** Whether something in a folder should also show under All. */
+  const setFiledAway = useCallback((item, away) => {
+    const key = itemKey(item);
+    const filedAway = { ...state.filedAway };
+    if (away) filedAway[key] = true;
+    else delete filedAway[key];
+    write({ ...state, filedAway });
+  }, []);
+
   /** Move a folder in the row. The order of the chips is the order you read. */
   const reorderFolders = useCallback((from, to) => {
     const next = [...state.folders];
@@ -94,10 +107,21 @@ export function useLaunchpadMeta() {
     write({
       ...state,
       folderOf: drop(state.folderOf),
+      filedAway: drop(state.filedAway),
       usage: drop(state.usage),
       highlighted: state.highlighted === key ? '' : state.highlighted,
     });
   }, []);
 
-  return { ...meta, recordLaunch, setFolder, addFolder, removeFolder, reorderFolders, toggleHighlight, forget };
+  return {
+    ...meta,
+    recordLaunch,
+    setFolder,
+    setFiledAway,
+    addFolder,
+    removeFolder,
+    reorderFolders,
+    toggleHighlight,
+    forget,
+  };
 }

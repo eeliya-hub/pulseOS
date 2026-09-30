@@ -382,6 +382,20 @@ function Folders({ item, meta }) {
           </button>
         )}
       </div>
+
+      {/* Only worth asking once something is actually in a folder. Filing a
+          thing and putting it out of the way are two decisions, and the second
+          one only exists because of the first. */}
+      {current ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <Pill on={!meta.filedAway[itemKey(item)]} onClick={() => meta.setFiledAway(item, false)}>
+            Also in All
+          </Pill>
+          <Pill on={Boolean(meta.filedAway[itemKey(item)])} onClick={() => meta.setFiledAway(item, true)}>
+            Only in {current}
+          </Pill>
+        </div>
+      ) : null}
     </section>
   );
 }
