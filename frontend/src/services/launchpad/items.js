@@ -6,7 +6,8 @@
 //   site:  { url, name?, icon?, browser?, badge? }
 //
 //   name?:    what to call it, when its own name isn't what you call it
-//   icon?:    { src, zoom, x, y }     a chosen or uploaded image, and how it sits
+//   icon?:    { src, zoom, x, y, bg } a chosen or uploaded image, how it sits,
+//                                     and what it sits on
 //   browser?: 'Google Chrome'         which browser opens it (sites only)
 //   badge?:   'browser' | 'none'      whether the tile admits it is a link
 //
@@ -49,7 +50,7 @@ export function tidyItem(item) {
   // Framing counts as customisation even without a picture: an application's
   // own icon can be zoomed, and dropping that because there was no uploaded
   // image threw the setting away the moment it was made.
-  const framed = icon && (Boolean(icon.src) || icon.zoom !== 1 || icon.x || icon.y);
+  const framed = icon && (Boolean(icon.src) || icon.zoom !== 1 || icon.x || icon.y || Boolean(icon.bg));
   if (!name && !framed) return app;
   return { app, ...(name ? { name } : {}), ...(framed ? { icon } : {}) };
 }
@@ -129,8 +130,27 @@ export function homeItems(launchpad, keys, limit = 12) {
 
 /* ── Icons ──────────────────────────────────────────────────────── */
 
-/** The default framing for an icon: filling its tile, centred, unzoomed. */
-export const DEFAULT_ICON = { src: '', zoom: 1, x: 0, y: 0 };
+/** The default framing for an icon: filling its tile, centred, unzoomed, bare. */
+export const DEFAULT_ICON = { src: '', zoom: 1, x: 0, y: 0, bg: '' };
+
+/**
+ * Backgrounds an icon can sit on.
+ *
+ * A logo cut out on transparency looks like a sticker on a dark grid; the same
+ * logo on a plate looks like an application. Which of those you want depends on
+ * the artwork, so it is a choice. The first is no plate at all.
+ */
+export const ICON_BACKGROUNDS = [
+  '',
+  '#ffffff',
+  '#0b1024',
+  '#1c2238',
+  '#e8734a',
+  '#4a7fe8',
+  '#3fa87a',
+  '#c2508f',
+  '#e8c76a',
+];
 
 /** How a site's icon should be drawn, whatever it was given. */
 export const iconOf = (item) => ({ ...DEFAULT_ICON, ...(item?.icon ?? {}) });

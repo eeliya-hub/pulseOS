@@ -60,10 +60,13 @@ function Tile({ item, accent, editing, launching, folder, pinned, drag, onOpen, 
         onClick={onOpen}
         aria-label={`Open ${label}`}
         className={[
-          'relative flex w-full flex-col items-center gap-2.5 rounded-[1.25rem] px-2 pb-3 pt-4 transition-colors duration-300 hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
+          'relative flex w-full flex-col items-center gap-2.5 rounded-[1.25rem] px-2 pt-4 transition-colors duration-300 hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
           'group-data-[dragging]:bg-white/[0.1] group-data-[dragging]:shadow-[0_26px_50px_-12px_rgba(3,5,16,0.75)]',
-          // Room at the bottom for the folder chip, so it isn't sat on the name.
-          editing ? 'pb-10' : '',
+          // Room at the bottom for the folder chip. Written as one padding and
+          // not two: `pb-3 pb-10` are both real classes, and which one wins is
+          // decided by the order they sit in the stylesheet rather than the
+          // order they are written here — so the name was landing on the chip.
+          editing ? 'pb-11' : 'pb-3',
         ].join(' ')}
       >
         {/* The app's own colour, pooled behind its icon — only when you reach it. */}
@@ -409,6 +412,7 @@ export default function Launchpad() {
     [items, update],
   );
   const appSort = useDragSort({ count: visibleApps.length, onReorder: reorder(visibleApps) });
+  const folderSort = useDragSort({ count: meta.folders.length, onReorder: meta.reorderFolders });
   const siteSort = useDragSort({ count: sites.length, onReorder: reorder(sites) });
 
   const highlight = items.find((i) => itemKey(i) === meta.highlighted) ?? null;
@@ -529,13 +533,25 @@ export default function Launchpad() {
         <div className="flex min-h-0 min-w-0 flex-col pr-8 pt-7">
           <div className="col-head justify-start gap-2">
             <div className="pill-group">
-              {[[ALL, 'All'], ...meta.folders.map((f) => [f, f])].map(([id, name]) => (
+              <button
+                type="button"
+                onClick={() => setFolder(ALL)}
+                aria-pressed={folder === ALL}
+                className="pill h-8 px-3.5 text-[0.8125rem]"
+              >
+                All
+              </button>
+              {/* While arranging, the folders can be dragged into the order you
+                  want to read them in — the same gesture as the tiles, so there
+                  is one way to rearrange things rather than two. */}
+              {meta.folders.map((name, i) => (
                 <button
-                  key={id}
+                  key={name}
                   type="button"
-                  onClick={() => setFolder(id)}
-                  aria-pressed={folder === id}
-                  className="pill h-8 px-3.5 text-[0.8125rem]"
+                  {...(editing ? folderSort.itemProps(i) : {})}
+                  onClick={() => setFolder(name)}
+                  aria-pressed={folder === name}
+                  className={`pill h-8 px-3.5 text-[0.8125rem] ${editing ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   {name}
                 </button>

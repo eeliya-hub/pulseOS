@@ -8,6 +8,7 @@ import {
   asEditable,
   DEFAULT_ICON,
   hostOf,
+  ICON_BACKGROUNDS,
   isSite,
   itemKey,
   itemLabel,
@@ -486,6 +487,45 @@ function IconControls({ item, onChange }) {
         {!live.length ? (
           <p className="text-[0.75rem] text-moon/35">Looking for what {hostOf(item.url)} publishes…</p>
         ) : null}
+      </div>
+
+      {/* What the artwork sits on. A logo cut out on transparency reads as a
+          sticker on a dark grid; the same logo on a plate reads as an app. */}
+      <div className="mt-3">
+        <p className="text-[0.75rem] text-moon/45">Background</p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {ICON_BACKGROUNDS.map((colour) => {
+            const on = (icon.bg || '') === colour;
+            return (
+              <button
+                key={colour || 'none'}
+                type="button"
+                onClick={() => setIcon({ bg: colour })}
+                aria-label={colour ? `Background ${colour}` : 'No background'}
+                className={[
+                  'grid h-7 w-7 place-items-center overflow-hidden rounded-lg transition focus:outline-none',
+                  on ? 'ring-2 ring-accent/70' : 'ring-1 ring-white/12 hover:ring-white/35',
+                ].join(' ')}
+                style={colour ? { backgroundColor: colour } : undefined}
+              >
+                {/* No background is drawn as a cross-hatch, the way transparency
+                    is drawn everywhere else. */}
+                {!colour ? (
+                  <span
+                    className="h-full w-full"
+                    style={{
+                      backgroundImage:
+                        'linear-gradient(45deg,rgba(255,255,255,0.16) 25%,transparent 25%,transparent 75%,rgba(255,255,255,0.16) 75%),linear-gradient(45deg,rgba(255,255,255,0.16) 25%,transparent 25%,transparent 75%,rgba(255,255,255,0.16) 75%)',
+                      backgroundSize: '8px 8px',
+                      backgroundPosition: '0 0, 4px 4px',
+                    }}
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <label className="mt-3 block">

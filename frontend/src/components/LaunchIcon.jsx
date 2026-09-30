@@ -82,7 +82,7 @@ export function SiteIcon({ item, url, className = 'h-11 w-11' }) {
   const site = item ?? (url ? { url } : null);
   const [failed, setFailed] = useState(null); // the src that didn't load, if any
   const src = useSiteIcon(site);
-  const { zoom, x, y } = iconOf(site);
+  const { zoom, x, y, bg } = iconOf(site);
   const custom = hasCustomIcon(site);
 
   // Keyed on the address rather than a bare flag: the icon starts as the
@@ -102,8 +102,11 @@ export function SiteIcon({ item, url, className = 'h-11 w-11' }) {
     <span
       className={[
         `grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem] shadow-lg`,
-        custom ? '' : 'bg-white/10 ring-1 ring-white/10',
+        // A chosen background replaces the default plate; without either, a
+        // custom icon sits bare and an automatic one keeps the soft tile.
+        custom || bg ? '' : 'bg-white/10 ring-1 ring-white/10',
       ].join(' ')}
+      style={bg ? { backgroundColor: bg } : undefined}
     >
       <img
         src={src}
@@ -156,11 +159,11 @@ export function BrowserBadge({ item, className = '' }) {
  * around it too.
  */
 export function AppTile({ item, className = 'h-11 w-11' }) {
-  const { zoom, x, y } = iconOf(item);
+  const { zoom, x, y, bg } = iconOf(item);
   const custom = hasCustomIcon(item);
   const framed = zoom !== 1 || x || y;
 
-  if (!custom) {
+  if (!custom && !bg) {
     return framed ? (
       <span className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem]`}>
         <AppIcon app={appIdOf(item)} className="h-full w-full" style={{ transform: `translate(${x}%, ${y}%) scale(${zoom})` }} />
@@ -170,16 +173,17 @@ export function AppTile({ item, className = 'h-11 w-11' }) {
     );
   }
 
+  const style = framed ? { transform: `translate(${x}%, ${y}%) scale(${zoom})` } : undefined;
   return (
-    <span className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem] drop-shadow-lg`}>
-      <img
-        src={item.icon.src}
-        alt=""
-        loading="lazy"
-        draggable={false}
-        className="h-full w-full object-contain"
-        style={framed ? { transform: `translate(${x}%, ${y}%) scale(${zoom})` } : undefined}
-      />
+    <span
+      className={`grid ${className} shrink-0 place-items-center overflow-hidden rounded-[0.85rem] drop-shadow-lg`}
+      style={bg ? { backgroundColor: bg } : undefined}
+    >
+      {custom ? (
+        <img src={item.icon.src} alt="" loading="lazy" draggable={false} className="h-full w-full object-contain" style={style} />
+      ) : (
+        <AppIcon app={appIdOf(item)} className="h-full w-full" style={style} />
+      )}
     </span>
   );
 }

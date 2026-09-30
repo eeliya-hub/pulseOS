@@ -67,6 +67,14 @@ export function useLaunchpadMeta() {
     write({ ...state, folders: [...state.folders, clean] });
   }, []);
 
+  /** Move a folder in the row. The order of the chips is the order you read. */
+  const reorderFolders = useCallback((from, to) => {
+    const next = [...state.folders];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    write({ ...state, folders: next });
+  }, []);
+
   /** Deleting a folder doesn't delete its apps — they go loose again. */
   const removeFolder = useCallback((name) => {
     const folderOf = Object.fromEntries(Object.entries(state.folderOf).filter(([, f]) => f !== name));
@@ -91,5 +99,5 @@ export function useLaunchpadMeta() {
     });
   }, []);
 
-  return { ...meta, recordLaunch, setFolder, addFolder, removeFolder, toggleHighlight, forget };
+  return { ...meta, recordLaunch, setFolder, addFolder, removeFolder, reorderFolders, toggleHighlight, forget };
 }

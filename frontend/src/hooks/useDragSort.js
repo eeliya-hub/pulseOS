@@ -17,6 +17,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *  - The DOM order never changes mid-drag. Tiles are moved with `transform`
  *    only — which is why they can glide rather than jump, and why the target
  *    index stays stable while they do.
+ *  - The tile in your hand is moved by writing its transform straight to the
+ *    node, and React is only re-rendered when the target slot actually changes.
+ *    Rendering on every pointer event meant a pass over every tile in the grid
+ *    for each of the ~120 events a second a trackpad sends, which is what made
+ *    it feel like it was catching.
+ *  - Pointer events are coalesced to one update per frame, because more than
+ *    one update per frame cannot be seen and is only work.
  *  - The list is committed once, on release.
  *
  * @param {object} p
@@ -41,12 +48,15 @@ export function useDragSort({ count, onReorder }) {
   const scroller = useRef(null);
   const drag = useRef(null);
   const raf = useRef(0);
+  const frame = useRef(0); // the coalescing frame for pointer moves
+  const pending = useRef(null); // the newest pointer position in this frame
   const settle = useRef(0);
   const [state, setState] = useState(null);
 
   useEffect(
     () => () => {
       cancelAnimationFrame(raf.current);
+      cancelAnimationFrame(frame.current);
       clearTimeout(settle.current);
     },
     [],
@@ -64,6 +74,13 @@ export function useDragSort({ count, onReorder }) {
       return { left: r.left - base.left + sx, top: r.top - base.top + sy, w: r.width, h: r.height };
     });
   }, [count]);
+
+  /** Write the held tile's position straight to the node, no render involved. */
+  const paint = useCallback(() => {
+    const d = drag.current;
+    const el = d && nodes.current[d.from];
+    if (el) el.style.transform = `translate3d(${d.dx}px, ${d.dy}px, 0) scale(1.04)`;
+  }, []);
 
   const update = useCallback((clientX, clientY) => {
     const d = drag.current;
@@ -98,8 +115,11 @@ export function useDragSort({ count, onReorder }) {
       dy: clientY - d.startPointer.y + scrolledY,
       last: { x: clientX, y: clientY },
     };
-    setState(drag.current);
-  }, []);
+    paint();
+    // Only the other tiles need React, and only when the slot they should be
+    // standing in has actually changed.
+    if (to !== d.to) setState(drag.current);
+  }, [paint]);
 
   // Hold near an edge and the list scrolls, so a long grid can be reordered
   // without letting go.
@@ -128,6 +148,14 @@ export function useDragSort({ count, onReorder }) {
   }, [update]);
 
   const stop = useCallback(() => {
+    cancelAnimationFrame(frame.current);
+    frame.current = 0;
+    pending.current = null;
+    // The transform was written straight to the node, so it has to be taken off
+    // the same way — React never put it there and will not remove it.
+    const d = drag.current;
+    const el = d && nodes.current[d.from];
+    if (el) el.style.transform = '';
     drag.current = null;
     setState(null);
   }, []);
@@ -161,7 +189,16 @@ export function useDragSort({ count, onReorder }) {
           if (!raf.current) raf.current = requestAnimationFrame(tick);
         }
         e.preventDefault(); // no text selection while dragging
-        update(e.clientX, e.clientY);
+        // A trackpad reports far faster than the screen redraws, so the last
+        // position in a frame is the only one worth acting on.
+        pending.current = { x: e.clientX, y: e.clientY };
+        if (!frame.current) {
+          frame.current = requestAnimationFrame(() => {
+            frame.current = 0;
+            const at = pending.current;
+            if (at) update(at.x, at.y);
+          });
+        }
       };
 
       const finish = () => {
@@ -227,7 +264,10 @@ export function useDragSort({ count, onReorder }) {
       const style = { touchAction: 'none' };
 
       if (d && isDragged) {
-        style.transform = `translate3d(${d.dx}px, ${d.dy}px, 0)${d.settling ? '' : ' scale(1.05)'}`;
+        // From the ref rather than from state: a render happens when the target
+        // slot changes, and by then state's offsets are a frame old.
+        const live = drag.current ?? d;
+        style.transform = `translate3d(${live.dx}px, ${live.dy}px, 0)${d.settling ? '' : ' scale(1.04)'}`;
         style.transition = d.settling ? `transform ${SETTLE_MS}ms ${EASE}` : 'none';
         style.zIndex = 40;
         style.willChange = 'transform';
