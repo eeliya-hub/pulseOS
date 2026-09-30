@@ -142,6 +142,18 @@ export const api = {
     // cannot load — so the tile asks us for it instead of the site.
     siteIconUrl: (url) => `${BASE_URL}/launch/site-icon/image?url=${encodeURIComponent(url)}`,
     iconUrl: (app) => `${BASE_URL}/launch/icon?app=${encodeURIComponent(app)}`,
+    // An uploaded file a browser can't decode — .icns above all — rendered to
+    // a PNG by macOS. Sent as raw bytes: an icon is a file, and base64 through
+    // the JSON parser would cost a third more to say the same thing.
+    convertIcon: async (file) => {
+      const res = await fetch(`${BASE_URL}/launch/icon-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+      });
+      if (!res.ok) throw new Error("That file isn't an image this can read.");
+      return res.blob();
+    },
   }),
   calendar: {
     status: () => request('/calendar/status'),

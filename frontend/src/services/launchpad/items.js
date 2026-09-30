@@ -183,7 +183,21 @@ export const resolveSiteIcon = (url) =>
  * transparency stays on transparency instead of gaining the white card its
  * source had.
  */
-export function toIconDataUrl(file, size = 256) {
+/** True for the formats a browser cannot draw and macOS can. */
+const needsConverting = (file) =>
+  /\.(icns|tiff?|bmp|heic|ico)$/i.test(file?.name ?? '') ||
+  ['image/x-icns', 'image/vnd.microsoft.icon', 'image/x-icon', 'image/tiff', 'image/heic'].includes(file?.type);
+
+export async function toIconDataUrl(file, size = 256) {
+  // A .icns is not an image so much as a container of them, sometimes holding
+  // JPEG 2000, and no browser will decode it. macOS reads it happily, and it is
+  // already the thing rendering every application's icon for this launchpad, so
+  // the file goes there first and comes back as a PNG the canvas below can use.
+  const source = needsConverting(file) ? await api.launch.convertIcon(file) : file;
+  return drawToSquare(source, size);
+}
+
+function drawToSquare(file, size) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('Could not read that file.'));

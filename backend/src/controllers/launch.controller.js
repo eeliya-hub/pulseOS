@@ -29,6 +29,16 @@ export const launchController = {
     res.send(buffer);
   }),
 
+  /**
+   * POST /api/launch/icon-file — raw image bytes in, a PNG out.
+   * For the formats a browser can't decode on its own, .icns above all.
+   */
+  convertIcon: asyncHandler(async (req, res) => {
+    const png = await launchService.convertIcon(req.body);
+    res.set('Content-Type', 'image/png');
+    res.send(png);
+  }),
+
   // GET /api/launch/apps → { apps: [{ name }] }
   apps: asyncHandler(async (_req, res) => {
     res.json(await launchService.listApps());

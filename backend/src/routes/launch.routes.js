@@ -1,10 +1,14 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { launchController } from '../controllers/launch.controller.js';
 
 export const launchRouter = Router();
 
 // POST /api/launch  — open a native app (or URL fallback) on the local machine.
 launchRouter.post('/', launchController.open);
+// POST /api/launch/icon-file  — an uploaded .icns (or similar) rendered to PNG.
+// Raw bytes rather than JSON: an icon is a file, and base64 through the JSON
+// parser would cost a third more bandwidth to say the same thing.
+launchRouter.post('/icon-file', express.raw({ type: 'application/octet-stream', limit: '8mb' }), launchController.convertIcon);
 // GET /api/launch/apps  — installed applications
 launchRouter.get('/apps', launchController.apps);
 // GET /api/launch/icon?app=Name  — the app's own icon (PNG)

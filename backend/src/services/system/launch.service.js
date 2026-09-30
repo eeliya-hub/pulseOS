@@ -228,7 +228,54 @@ const BROWSERS = [
 let browserCache = { at: 0, browsers: [] };
 const BROWSER_TTL_MS = 60 * 60 * 1000;
 
+/**
+ * Any image macOS can read, rendered to a square PNG the size of a tile.
+ *
+ * `.icns` is the reason this exists. It is not an image a browser can decode —
+ * it is a container holding several sizes, sometimes as PNGs and sometimes as
+ * JPEG 2000 — so the canvas the front end uses for every other upload cannot
+ * touch it. `sips` reads it, along with tiff, bmp, gif and the rest, and this
+ * is the same tool that already renders an application's own .icns for the
+ * launchpad, so nothing new is being trusted.
+ *
+ * @param {Buffer} buffer the uploaded file
+ * @param {number} size   the square to fit it into
+ * @returns {Promise<Buffer>} a PNG
+ */
+async function renderToPng(buffer, size = 256) {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const from = path.join(os.tmpdir(), `pulse-upload-${stamp}`);
+  const to = path.join(os.tmpdir(), `pulse-upload-${stamp}.png`);
+  try {
+    await fs.writeFile(from, buffer);
+    // -Z fits the longest edge, so nothing is cropped and the aspect is kept;
+    // the front end centres it on a square canvas the same way it does a PNG.
+    await run('sips', ['-s', 'format', 'png', '-Z', String(size), from, '--out', to], { timeout: 20_000 });
+    return await fs.readFile(to);
+  } finally {
+    fs.unlink(from).catch(() => {});
+    fs.unlink(to).catch(() => {});
+  }
+}
+
 export const launchService = {
+  /**
+   * Convert an uploaded icon to a PNG the browser can draw.
+   *
+   * Only for the formats a browser cannot read itself; a PNG or an SVG never
+   * gets here, because sending it to a server and back would be a round trip
+   * to achieve nothing.
+   */
+  async convertIcon(buffer) {
+    if (process.platform !== 'darwin') throw ApiError.badRequest('Icon conversion is only supported on macOS.');
+    if (!buffer?.length) throw ApiError.badRequest('No file received.');
+    try {
+      return await renderToPng(buffer);
+    } catch {
+      throw ApiError.badRequest("That file isn't an image this can read.");
+    }
+  },
+
   /**
    * @param {object} opts
    * @param {string} [opts.app]     a macOS application name

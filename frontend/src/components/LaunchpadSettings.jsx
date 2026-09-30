@@ -436,11 +436,17 @@ function IconControls({ item, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on what identifies the item
   }, [site, site ? item.url : appIdOf(item)]);
 
+  const [failed, setFailed] = useState('');
   const upload = async (file) => {
     if (!file) return;
     setBusy(true);
+    setFailed('');
     try {
       setIcon({ src: await toIconDataUrl(file) });
+    } catch (e) {
+      // Something had to be said. The upload used to fail in silence, which
+      // looks identical to nothing having been clicked.
+      setFailed(e?.message || "That file couldn't be used as an icon.");
     } finally {
       setBusy(false);
     }
@@ -471,7 +477,17 @@ function IconControls({ item, onChange }) {
           ) : null}
         </div>
       </div>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
+      {/* .icns is named outright: macOS does not report a type for it, so
+          `image/*` alone leaves it greyed out in the file picker even though it
+          is the most obvious thing to reach for on this platform. */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,.icns,.tiff,.tif,.bmp,.ico,.heic"
+        className="hidden"
+        onChange={(e) => upload(e.target.files?.[0])}
+      />
+      {failed ? <p className="mt-2 text-[0.75rem] text-rose-300">{failed}</p> : null}
 
       <div className="mt-2 flex flex-wrap gap-1.5">
         {live.map((src, n) => {
