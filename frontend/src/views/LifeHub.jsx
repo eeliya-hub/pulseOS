@@ -3,7 +3,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock,
   CloudOff,
   ExternalLink,
   Eye,
@@ -19,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Column, ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { ensureCalendarRange, SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { api } from '../services/api/backendClient.js';
@@ -514,7 +514,7 @@ function EventMap({ lat, lon, label }) {
   const link = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
   return (
     <div className="overflow-hidden rounded-xl ring-1 ring-white/10">
-      <iframe title={`Map — ${label}`} src={src} className="h-40 w-full border-0" loading="lazy" />
+      <iframe title={`Map — ${label}`} src={src} className="h-56 w-full border-0" loading="lazy" />
       <a
         href={link}
         target="_blank"
@@ -525,6 +525,41 @@ function EventMap({ lat, lon, label }) {
       </a>
     </div>
   );
+}
+
+/**
+ * How far off it is, in the words a person would use.
+ *
+ * The panel already says the date and the time; what it could not say was
+ * whether that meant now, later or last Tuesday — which is the first thing
+ * anyone wants from an event they have just tapped.
+ */
+function whenFromNow(event) {
+  const day = keyToDate(event.date);
+  if (!day || Number.isNaN(day.getTime())) return null;
+  const [h, m] = (event.time || '').split(':').map(Number);
+  const at = new Date(day);
+  if (Number.isFinite(h)) at.setHours(h, Number.isFinite(m) ? m : 0, 0, 0);
+
+  const mins = Math.round((at - Date.now()) / 60_000);
+  // An all-day event has no clock to count down to, so it counts in days.
+  if (!Number.isFinite(h)) {
+    const days = Math.round((at.setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86_400_000);
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Tomorrow';
+    if (days === -1) return 'Yesterday';
+    return days > 0 ? `In ${days} days` : `${Math.abs(days)} days ago`;
+  }
+  if (mins >= -180 && mins <= 0) return 'Happening now';
+  if (mins < 0) {
+    const ago = Math.abs(mins);
+    if (ago < 60) return `${ago} min ago`;
+    if (ago < 1440) return `${Math.round(ago / 60)}h ago`;
+    return `${Math.round(ago / 1440)} days ago`;
+  }
+  if (mins < 60) return `In ${mins} min`;
+  if (mins < 1440) return `In ${Math.round(mins / 60)}h`;
+  return `In ${Math.round(mins / 1440)} days`;
 }
 
 function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
@@ -551,47 +586,87 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
     day: 'numeric',
     month: 'long',
   });
+  const relative = whenFromNow(event);
 
-  return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center p-3">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-900/95" />
-      <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl">
-        <div className="flex items-start gap-3 p-4 pb-3">
-          <span className="mt-1 h-10 w-1 shrink-0 rounded-full" style={{ backgroundColor: event.color }} />
+  // The scrim used to be `absolute inset-0` inside the view, so it covered the
+  // view's box and nothing else: a grey slab with the page showing around its
+  // edges. A portal and `fixed` put it over the window, where an overlay
+  // belongs, and it dims rather than paints over.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="absolute inset-0 bg-[#070b18]/72 backdrop-blur-md" aria-hidden="true" />
+
+      <div className="theme-card fade-in relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-3xl">
+        {/* The calendar's own colour, as light thrown up the head of the panel
+            rather than as a 1px bar beside the title. */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-[0.55]"
+          style={{ background: `linear-gradient(to bottom, ${event.color}, transparent 78%)` }}
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-px"
+          style={{ backgroundColor: event.color }}
+          aria-hidden="true"
+        />
+
+        <div className="relative flex items-start gap-3 px-6 pb-4 pt-5">
           <div className="min-w-0 flex-1">
-            <p className="display-type text-lg font-normal leading-tight text-moon">{event.title}</p>
-            {event.calendarName && <p className="mt-0.5 truncate text-[0.8125rem] text-moon/45">{event.calendarName}</p>}
+            <p className="t-label" style={{ color: event.color }}>
+              {event.calendarName || sourceLabel || 'Event'}
+            </p>
+            <p className="display-type mt-1 text-[1.75rem] font-light leading-tight text-moon">{event.title}</p>
           </div>
           <IconButton onClick={onClose} label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
           </IconButton>
         </div>
 
-        <div className="glass-scroll min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pb-4">
-          <div className="space-y-1.5 text-sm text-moon/75">
-            <p className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 shrink-0 text-moon/40" aria-hidden="true" />
-              {dateLabel}
-            </p>
-            <p className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-moon/40" aria-hidden="true" />
-              {event.time || 'All day'}
-            </p>
-            {location && (
-              <p className="flex items-start gap-2">
+        <div className="glass-scroll relative min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-5">
+          {/* When it is, at the size the one thing you opened this for deserves */}
+          <div className="flex items-end gap-5 border-y border-white/10 py-3.5">
+            <div>
+              <p className="t-label text-moon/40">When</p>
+              <p className="clock-figures mt-1 text-2xl font-light leading-none text-moon">
+                {event.time || 'All day'}
+              </p>
+              <p className="mt-1.5 text-[0.8125rem] text-moon/50">{dateLabel}</p>
+            </div>
+            {relative ? (
+              <p className="ml-auto shrink-0 rounded-full bg-white/8 px-3 py-1 text-[0.8125rem] font-semibold text-moon/80 ring-1 ring-white/12">
+                {relative}
+              </p>
+            ) : null}
+          </div>
+
+          {location && (
+            <div>
+              <p className="t-label text-moon/40">Where</p>
+              <p className="mt-1 flex items-start gap-2 text-sm text-moon/85">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-moon/40" aria-hidden="true" />
                 <span className="min-w-0">{location}</span>
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {event.description && (
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-moon/55">{stripHtml(event.description)}</p>
+            <div>
+              <p className="t-label text-moon/40">Notes</p>
+              <p className="mt-1 whitespace-pre-wrap text-[0.8125rem] leading-relaxed text-moon/60">
+                {stripHtml(event.description)}
+              </p>
+            </div>
           )}
 
           {geo && <EventMap lat={geo.lat} lon={geo.lon} label={location} />}
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 border-t border-white/10 pt-3">
             <SourceLogo source={event.source} className="h-4 w-4" />
             {sourceLabel && (
               <span className="text-[0.75rem] font-medium text-moon/45">{sourceLabel}</span>
@@ -643,7 +718,8 @@ function EventDetailPopup({ event, onClose, onEdit, onDelete }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

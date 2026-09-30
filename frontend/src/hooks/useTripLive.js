@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../services/api/backendClient.js';
+import { peek, put } from '../services/warmCache.js';
 
 /**
  * The live half of a trip: destination weather, the exchange rate, and the route
@@ -16,6 +17,9 @@ const FX_MS = 30 * 60 * 1000;
 // on every keystroke. Waiting for the typing to settle is what stops "BA117"
 // costing five lookups — four of them for numbers the user never meant.
 const TYPING_MS = 650;
+
+/** Shared with the launch preload, so both sides agree on what was warmed. */
+export const flightKey = (code, date) => `travel:flight:${code}@${date || ''}`;
 
 export function useTripLive(trip) {
   const [weather, setWeather] = useState(null);
@@ -101,11 +105,23 @@ export function useTripLive(trip) {
     }
     const pass = (passRef.current += 1);
     setTracking(true);
+    // Whatever the launch sequence already fetched, on screen before the
+    // network is touched — the card opens on a route rather than on "Looking
+    // up…" and then filling in under the eye.
+    const warmed = {};
+    for (const { code, date } of list) {
+      const hit = peek(flightKey(code, date));
+      if (hit?.found) warmed[code] = hit;
+    }
+    if (Object.keys(warmed).length) setFlights((prev) => ({ ...warmed, ...prev }));
     const results = await Promise.all(
       list.map(({ code, date }) =>
         api.travel
           .flight(code, date || undefined)
-          .then((data) => [code, data])
+          .then((data) => {
+            if (data?.found) put(flightKey(code, date), data);
+            return [code, data];
+          })
           .catch(() => [code, null]),
       ),
     );

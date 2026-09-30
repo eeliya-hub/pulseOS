@@ -8,6 +8,12 @@
 // refreshes in the background and overwrites it.
 
 const store = new Map();
+// Warms still in the air, so asking twice for the same thing asks the network
+// once. React double-invokes effects in development and the launch sequence
+// runs from one, which was quietly doubling every request it makes — including
+// the flight timetable, which is rate limited per second and answers a burst
+// with an error body rather than an error status.
+const inFlight = new Map();
 
 // Old enough that showing it first would be misleading rather than seamless.
 const MAX_AGE_MS = 30 * 60 * 1000;
@@ -17,12 +23,18 @@ const MAX_AGE_MS = 30 * 60 * 1000;
  * Failures are not stored — a view falls back to its own fetch.
  */
 export function warm(key, run) {
-  return Promise.resolve()
+  const running = inFlight.get(key);
+  if (running) return running;
+
+  const promise = Promise.resolve()
     .then(run)
     .then((value) => {
       store.set(key, { value, at: Date.now() });
       return value;
-    });
+    })
+    .finally(() => inFlight.delete(key));
+  inFlight.set(key, promise);
+  return promise;
 }
 
 /** Synchronously read a warmed value; `undefined` when there isn't a fresh one. */

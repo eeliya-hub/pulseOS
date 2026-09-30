@@ -1,9 +1,12 @@
 import { warmCalendar } from '../hooks/useCalendarEvents.js';
+import { getTravelState } from '../hooks/useTravelStore.js';
+import { flightKey } from '../hooks/useTripLive.js';
 import { fetchNews, newsKey } from '../hooks/useNews.js';
 import { getSettings } from '../hooks/useSettings.js';
 import { whenPlayerSettled } from '../hooks/useSpotifyPlayer.js';
 import { api } from './api/backendClient.js';
 import { getWeatherSummary } from './api/weather.js';
+import { placePhotoUrl } from '../utils/places.js';
 import { warm } from './warmCache.js';
 
 // Race a promise against a timeout so one slow/unreachable source can't stall
@@ -12,6 +15,32 @@ const withTimeout = (promise, ms) =>
   Promise.race([Promise.resolve(promise), new Promise((resolve) => setTimeout(resolve, ms))]);
 
 const settle = (promises) => Promise.allSettled(promises);
+
+/** Pull an image into the browser cache; failures are not worth knowing about. */
+function prefetch(url) {
+  if (!url) return Promise.resolve();
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = resolve;
+    img.onerror = resolve;
+    img.src = url;
+  });
+}
+
+/** Every picture the open trip will paint: where you're staying, and each stop. */
+function tripPhotos(trip) {
+  if (!trip) return [];
+  const out = [];
+  const take = (photos) => {
+    const url = placePhotoUrl((photos ?? [])[0], 640);
+    if (url) out.push(url);
+  };
+  take(trip.stay?.photos);
+  for (const day of trip.itinerary ?? []) {
+    for (const item of day.items ?? []) take(item.photos);
+  }
+  return out.slice(0, 24); // a launch sequence, not a whole trip's gallery
+}
 
 /**
  * Warm the app's data on launch so no view ever has to show a spinner: the
@@ -29,6 +58,10 @@ export async function runPreload(onProgress = () => {}) {
   // Matches the Markets view's own persisted choice.
   const newsScope = localStorage.getItem('pulse.news.scope') || 'top';
   const follows = s.follows ?? [];
+
+  // The open trip, read straight off the store rather than a mounted hook.
+  const travel = getTravelState();
+  const trip = travel.trips.find((t) => t.id === travel.activeId) ?? travel.trips[0] ?? null;
 
   const tasks = [
     ['Calendar', () => warmCalendar()],
@@ -64,6 +97,42 @@ export async function runPreload(onProgress = () => {}) {
             warm(`sports:${f.id}`, () => api.sports.team(f.team, f.sport, f.leagueId, f.leagueLabel)),
           ),
         ),
+    ],
+    [
+      'Travel',
+      // The flight lookup is several hops deep — a route database, then the
+      // live ADS-B feeds, then a rate-limited timetable — and the place photos
+      // are a search followed by an image fetch. All of it used to happen when
+      // the view opened, which is exactly when there is someone watching.
+      () =>
+        settle([
+          ...(trip?.flights ?? [])
+            .filter((f) => (f.code || '').trim())
+            .map((f) => {
+              const code = f.code.trim().toUpperCase();
+              const date = (f.date || '').trim();
+              return warm(flightKey(code, date), () => api.travel.flight(code, date || undefined)).then(
+                // The airline's photograph is the biggest thing on the card, so
+                // the bytes are pulled too, not just the URL that points at them.
+                (data) => prefetch(data?.airline?.photo?.url),
+              );
+            }),
+          trip?.destination?.currency?.code && trip.destination.currency.code !== (trip.homeCurrency || 'GBP')
+            ? warm(`travel:fx:${trip.homeCurrency || 'GBP'}:${trip.destination.currency.code}`, () =>
+                api.travel.fx(trip.homeCurrency || 'GBP', trip.destination.currency.code),
+              )
+            : null,
+          // By coordinates, which getWeatherSummary doesn't take — this warms
+          // the backend's own cache, which is what the view reads through.
+          trip?.destination?.lat != null
+            ? warm(`travel:weather:${trip.destination.lat},${trip.destination.lon}`, () =>
+                api.weather.summary({ lat: trip.destination.lat, lon: trip.destination.lon }),
+              )
+            : null,
+          // Hotel and itinerary pictures, fetched as images so they are in the
+          // browser's cache and paint instantly rather than popping in.
+          ...tripPhotos(trip).map((url) => prefetch(url)),
+        ]),
     ],
     [
       'Music',
