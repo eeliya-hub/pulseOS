@@ -35,8 +35,6 @@ import { useSettings } from '../hooks/useSettings.js';
 
 const inputClass =
   'w-full rounded-lg bg-white/8 px-3 py-2 text-sm text-moon placeholder:text-moon/35 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/45';
-const selectClass =
-  'rounded-lg bg-white/8 px-2 py-2 text-xs font-medium text-moon ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/45';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const projectAccents = ['#0A84FF', '#BF5AF2', '#30D158', '#FF9F0A', '#FF453A'];
@@ -285,7 +283,12 @@ function CalendarConnectPopup({ calendar, onClose }) {
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center p-3">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-900/95" />
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-[#070b18]/72 backdrop-blur-md"
+      />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[0.75rem] font-semibold text-moon/42">Connect calendars</p>
@@ -778,7 +781,12 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center p-3">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 cursor-default bg-slate-900/95" />
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-[#070b18]/72 backdrop-blur-md"
+      />
       <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[0.75rem] font-semibold text-moon/42">
@@ -970,34 +978,59 @@ function AddEditPopup({ life, calendar, selectedKey, event, onClose }) {
   const mode = isNew ? type : 'event';
   const connectedCalendars = calendar?.writableCalendars ?? [];
 
-  return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center p-3">
-      {/* Opaque cover — hides the card content behind the popup */}
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 cursor-default bg-slate-900/95"
-      />
-      <div className="theme-card relative z-10 flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-[0.75rem] font-semibold text-moon/42">
-            {isNew ? (type === 'task' ? 'New task' : 'New event') : 'Edit event'}
-          </p>
+  // The colour of whichever calendar the event is going on, so the panel is lit
+  // by its subject from the first keystroke rather than after it is saved.
+  const [tint, setTint] = useState(
+    () => [...CALENDARS, ...connectedCalendars].find((c) => c.id === (event?.calendar ?? 'personal'))?.color ?? '#8ea2ff',
+  );
+
+  // Same treatment as the detail panel: over the window rather than over the
+  // card, dimming what is behind instead of painting a grey rectangle on it.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="absolute inset-0 bg-[#070b18]/72 backdrop-blur-md" aria-hidden="true" />
+
+      <div className="theme-card fade-in relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-3xl">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-[0.55] transition-[background] duration-500"
+          style={{ background: `linear-gradient(to bottom, ${tint}, transparent 78%)` }}
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-px transition-colors duration-500"
+          style={{ backgroundColor: tint }}
+          aria-hidden="true"
+        />
+
+        <div className="relative flex items-start justify-between gap-3 px-6 pb-4 pt-5">
+          <div>
+            <p className="t-label" style={{ color: tint }}>
+              {isNew ? 'New' : 'Editing'}
+            </p>
+            <p className="display-type mt-1 text-2xl font-light leading-tight text-moon">
+              {relativeDayLabel(selectedKey)}
+            </p>
+          </div>
           <IconButton onClick={onClose} label="Close">
             <X className="h-4 w-4" aria-hidden="true" />
           </IconButton>
         </div>
 
         {isNew && (
-          <div className="mb-3 flex gap-1 rounded-full bg-white/6 p-1">
+          <div className="relative mx-6 mb-3 flex gap-1 rounded-full bg-white/6 p-1">
             {['event', 'task'].map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setType(option)}
                 className={[
-                  'flex-1 rounded-full py-1 text-xs font-semibold capitalize transition',
+                  'flex-1 rounded-full py-1.5 text-xs font-semibold capitalize transition',
                   type === option ? 'glow-ring bg-white/15 text-moon' : 'text-moon/50 hover:text-moon/80',
                 ].join(' ')}
               >
@@ -1048,10 +1081,12 @@ function AddEditPopup({ life, calendar, selectedKey, event, onClose }) {
                 : null
             }
             onCancel={onClose}
+            onTint={setTint}
           />
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1067,35 +1102,40 @@ function TaskForm({ onSave, onCancel }) {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <input
-        autoFocus
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder="Task"
-        className={inputClass}
-      />
-      <label className="flex items-center gap-2 text-[0.8125rem] text-moon/45">
-        <Repeat className="h-3.5 w-3.5" aria-hidden="true" />
-        <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${selectClass} flex-1`}>
-          {REPEAT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value} className="bg-slate-800">
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex items-center gap-2 pt-1">
+    <form onSubmit={submit} className="relative flex min-h-0 flex-1 flex-col">
+      <div className="glass-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-5">
+        <input
+          autoFocus
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="What needs doing?"
+          aria-label="Task"
+          className="display-type w-full border-b border-white/12 bg-transparent pb-2 text-[1.75rem] font-light leading-tight text-moon outline-none transition placeholder:text-moon/25 focus:border-white/35 focus-visible:outline-none"
+        />
+        <section>
+          <p className="t-label text-moon/45">Repeats</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {REPEAT_OPTIONS.map((option) => (
+              <Chip key={option.value} on={repeat === option.value} onClick={() => setRepeat(option.value)}>
+                {option.value === 'none' ? null : <Repeat className="h-3 w-3" aria-hidden="true" />}
+                {option.label}
+              </Chip>
+            ))}
+          </div>
+        </section>
+      </div>
+      <div className="relative flex shrink-0 items-center gap-2 border-t border-white/10 px-6 py-3">
         <button
           type="button"
           onClick={onCancel}
-          className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-moon/55 transition hover:text-moon"
+          className="ml-auto rounded-lg px-3 py-1.5 text-xs font-semibold text-moon/55 transition hover:text-moon"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="soft-button rounded-lg px-4 py-2 text-xs font-semibold text-moon/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          disabled={!label.trim()}
+          className="soft-button rounded-lg px-4 py-1.5 text-xs font-semibold text-moon/90 transition disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
           Add
         </button>
@@ -1104,13 +1144,20 @@ function TaskForm({ onSave, onCancel }) {
   );
 }
 
-function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel }) {
+function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel, onTint }) {
   const [title, setTitle] = useState(event?.title ?? '');
   const [time, setTime] = useState(event?.time ?? '');
   const [place, setPlace] = useState(event?.place ?? '');
   const [calendar, setCalendar] = useState(event?.calendar ?? 'personal');
   const [repeat, setRepeat] = useState(event?.repeat ?? 'none');
   const [busy, setBusy] = useState(false);
+  const calendars = [...CALENDARS, ...connectedCalendars];
+
+  // The panel around this takes its colour from the calendar being chosen.
+  useEffect(() => {
+    onTint?.(calendars.find((c) => c.id === calendar)?.color ?? '#8ea2ff');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `calendars` is rebuilt each render
+  }, [calendar]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -1125,66 +1172,93 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
   };
 
   return (
-    <form onSubmit={submit} className="glass-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-      <input
-        autoFocus
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title"
-        className={inputClass}
-      />
-      <input
-        value={time}
-        onChange={(e) => setTime(e.target.value)}
-        placeholder="Time · e.g. 14:00 – 15:00"
-        className={inputClass}
-      />
-      <input
-        value={place}
-        onChange={(e) => setPlace(e.target.value)}
-        placeholder="Location"
-        className={inputClass}
-      />
+    <form onSubmit={submit} className="relative flex min-h-0 flex-1 flex-col">
+      <div className="glass-scroll min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-5">
+        {/* The title is the event. It gets written, not filled in — so it is set
+            at the size it will be read at, on a rule rather than in a box. */}
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="What is it?"
+          aria-label="Title"
+          className="display-type w-full border-b border-white/12 bg-transparent pb-2 text-[1.75rem] font-light leading-tight text-moon outline-none transition placeholder:text-moon/25 focus:border-white/35 focus-visible:outline-none"
+        />
 
-      <div>
-        <p className="mb-1.5 text-[0.75rem] font-semibold text-moon/42">Calendar</p>
-        <div className="flex flex-wrap gap-1.5">
-          {[...CALENDARS, ...connectedCalendars].map((cal) => (
-            <button
-              key={cal.id}
-              type="button"
-              onClick={() => setCalendar(cal.id)}
-              className={[
-                'flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3 text-xs transition',
-                calendar === cal.id
-                  ? 'bg-white/12 text-moon ring-1 ring-white/25'
-                  : 'text-moon/55 hover:bg-white/6',
-              ].join(' ')}
-            >
-              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: cal.color || '#888' }} />
-              {cal.name}
-            </button>
-          ))}
-        </div>
+        <section>
+          <p className="t-label text-moon/45">When</p>
+          <input
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            placeholder="All day"
+            aria-label="Time"
+            className="clock-figures mt-1 w-full bg-transparent text-2xl font-light text-moon outline-none placeholder:text-moon/25"
+          />
+          {/* The times a day actually gets divided at, so the common case is a
+              tap rather than eight keystrokes. */}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {['09:00 – 10:00', '12:00 – 13:00', '14:00 – 15:00', '18:00 – 19:00'].map((slot) => (
+              <Chip key={slot} on={time === slot} onClick={() => setTime(time === slot ? '' : slot)}>
+                {slot}
+              </Chip>
+            ))}
+            <Chip on={!time} onClick={() => setTime('')}>
+              All day
+            </Chip>
+          </div>
+        </section>
+
+        <section>
+          <p className="t-label text-moon/45">Where</p>
+          <input
+            value={place}
+            onChange={(e) => setPlace(e.target.value)}
+            placeholder="Add a place"
+            aria-label="Location"
+            className="mt-1 w-full bg-transparent text-sm text-moon outline-none placeholder:text-moon/25"
+          />
+        </section>
+
+        <section>
+          <p className="t-label text-moon/45">Calendar</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {calendars.map((cal) => (
+              <button
+                key={cal.id}
+                type="button"
+                onClick={() => setCalendar(cal.id)}
+                className={[
+                  'flex items-center gap-2 rounded-full py-1.5 pl-2 pr-3.5 text-[0.8125rem] transition focus:outline-none',
+                  calendar === cal.id ? 'bg-white/12 text-moon' : 'text-moon/55 hover:bg-white/6',
+                ].join(' ')}
+                style={calendar === cal.id ? { boxShadow: `inset 0 0 0 1px ${cal.color || '#888'}` } : undefined}
+              >
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: cal.color || '#888' }} />
+                {cal.name}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <p className="t-label text-moon/45">Repeats</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {REPEAT_OPTIONS.map((option) => (
+              <Chip key={option.value} on={repeat === option.value} onClick={() => setRepeat(option.value)}>
+                {option.value === 'none' ? null : <Repeat className="h-3 w-3" aria-hidden="true" />}
+                {option.label}
+              </Chip>
+            ))}
+          </div>
+        </section>
       </div>
 
-      <label className="flex items-center gap-2 text-[0.8125rem] text-moon/45">
-        <Repeat className="h-3.5 w-3.5" aria-hidden="true" />
-        <select value={repeat} onChange={(e) => setRepeat(e.target.value)} className={`${selectClass} flex-1`}>
-          {REPEAT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value} className="bg-slate-800">
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="flex items-center gap-2 pt-1">
+      <div className="relative flex shrink-0 items-center gap-2 border-t border-white/10 px-6 py-3">
         {onDelete && (
           <button
             type="button"
             onClick={onDelete}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-rose-300 transition hover:bg-rose-400/10"
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-400/10"
           >
             <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
             Delete
@@ -1193,20 +1267,36 @@ function EventForm({ event, connectedCalendars = [], onSave, onDelete, onCancel 
         <button
           type="button"
           onClick={onCancel}
-          className="ml-auto rounded-lg px-3 py-2 text-xs font-semibold text-moon/55 transition hover:text-moon"
+          className="ml-auto rounded-lg px-3 py-1.5 text-xs font-semibold text-moon/55 transition hover:text-moon"
         >
           Cancel
         </button>
         <button
           type="submit"
-          disabled={busy}
-          className="soft-button inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-moon/90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          disabled={busy || !title.trim()}
+          className="soft-button inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold text-moon/90 transition disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
           {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
           {busy ? 'Saving…' : 'Save'}
         </button>
       </div>
     </form>
+  );
+}
+
+/** A small either-or in a row of them. */
+function Chip({ on, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.8125rem] font-medium transition focus:outline-none',
+        on ? 'bg-accent/18 text-accent ring-1 ring-accent/35' : 'bg-white/6 text-moon/55 ring-1 ring-white/10 hover:text-moon/90',
+      ].join(' ')}
+    >
+      {children}
+    </button>
   );
 }
 
