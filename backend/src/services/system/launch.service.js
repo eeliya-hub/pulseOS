@@ -12,6 +12,10 @@ const APP_DIRS = [
   '/Applications',
   '/Applications/Utilities',
   '/System/Applications',
+  // Terminal, Disk Utility, Activity Monitor and the rest of the built-in
+  // utilities live a directory deeper than the others, and were missing.
+  '/System/Applications/Utilities',
+  '/System/Library/CoreServices/Applications',
   path.join(os.homedir(), 'Applications'),
 ];
 

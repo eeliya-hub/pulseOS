@@ -5,27 +5,24 @@ import {
   Droplets,
   ImagePlus,
   Leaf,
-  Plus,
   Settings2,
   Sparkles,
   Sun,
   Thermometer,
-  Trash2,
   Wind,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import LaunchIcon, { AppIcon, BrowserBadge, SiteIcon } from '../components/LaunchIcon.jsx';
+import LaunchIcon, { BrowserBadge } from '../components/LaunchIcon.jsx';
 import { Column, Ground, SkyZone } from '../components/Stage.jsx';
 import SettingsButton from '../components/SettingsButton.jsx';
 import { loadedUntil, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { calendarColor, dateKey, keyToDate, occursOn, useLifeData } from '../hooks/useLifeData.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { useWeather } from '../hooks/useWeather.js';
-import { api } from '../services/api/backendClient.js';
-import SiteEditor from '../components/SiteEditor.jsx';
-import { homeItems, hostOf, isSite, itemKey, itemLabel, launchItem, normalizeUrl } from '../services/launchpad/items.js';
+import LaunchpadPanel from '../components/LaunchpadPanel.jsx';
+import { homeItems, itemKey, itemLabel, launchItem } from '../services/launchpad/items.js';
 import { getGreeting } from '../utils/dateTime.js';
 
 // Start-of-event helpers for the "Upcoming" list.
@@ -498,7 +495,7 @@ export default function Home({ onAskPulse }) {
         />
       )}
       {showLaunchpad && (
-        <LaunchpadPicker
+        <LaunchpadPanel
           selected={launchpad}
           homeKeys={settings.homeLaunchpad}
           onChange={(apps) => update({ launchpad: apps })}
@@ -756,309 +753,3 @@ function PinnedConfig({ pinned, events, onSave, onClose }) {
 }
 
 // Pick which installed apps + website shortcuts show on the launchpad.
-function LaunchpadPicker({ selected, homeKeys, onChange, onHomeChange, onClose }) {
-  const [apps, setApps] = useState(null);
-  const [query, setQuery] = useState('');
-  const [tab, setTab] = useState('apps'); // 'apps' | 'sites' | 'home'
-  const [siteName, setSiteName] = useState('');
-  const [siteUrl, setSiteUrl] = useState('');
-  const [siteError, setSiteError] = useState('');
-  const [editing, setEditing] = useState(null); // the site whose tile is being set up
-
-  useEffect(() => {
-    api.launch
-      .apps()
-      .then((d) => setApps(d.apps ?? []))
-      .catch(() => setApps([]));
-  }, []);
-
-  const sel = new Set(selected.filter((item) => !isSite(item)));
-  const sites = selected.filter(isSite);
-  const atLimit = selected.length >= 10;
-
-  const toggle = (name) => {
-    if (sel.has(name)) onChange(selected.filter((a) => isSite(a) || a !== name));
-    else if (!atLimit) onChange([...selected, name]);
-  };
-  const addSite = () => {
-    const url = normalizeUrl(siteUrl);
-    if (!url) {
-      setSiteError('Enter a valid web address, e.g. figma.com');
-      return;
-    }
-    if (selected.some((item) => isSite(item) && item.url === url)) {
-      setSiteError('That site is already on your launchpad.');
-      return;
-    }
-    if (atLimit) {
-      setSiteError('Launchpad is full — remove something first.');
-      return;
-    }
-    onChange([...selected, { url, name: siteName.trim() || hostOf(url) }]);
-    setSiteName('');
-    setSiteUrl('');
-    setSiteError('');
-  };
-  const removeSite = (url) => onChange(selected.filter((item) => !(isSite(item) && item.url === url)));
-  // A site's own settings are written back in place, so its position in the
-  // launchpad and anything pointing at it by key are undisturbed.
-  const saveSite = (next) =>
-    onChange(selected.map((item) => (isSite(item) && item.url === editing.url ? next : item)));
-
-  // Home shows its own choice out of the launchpad; `null` means it is still
-  // following the first twelve, which is what this did before they could differ.
-  const homeSelection = Array.isArray(homeKeys) ? homeKeys : selected.slice(0, 12).map(itemKey);
-  const onHome = new Set(homeSelection);
-  const toggleHome = (item) => {
-    const k = itemKey(item);
-    onHomeChange(onHome.has(k) ? homeSelection.filter((x) => x !== k) : [...homeSelection, k]);
-  };
-  const filtered = (apps ?? []).filter((a) => a.name.toLowerCase().includes(query.trim().toLowerCase()));
-
-  return createPortal(
-    <div
-      data-settings=""
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="absolute inset-0 bg-[#070b18]/70 backdrop-blur-sm" aria-hidden="true" />
-      <div className="theme-card fade-in relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-3xl p-5">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="display-type text-lg font-light text-moon text-glow">Launchpad</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-[0.8125rem] font-medium text-moon/40">{selected.length}/10</span>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="grid h-8 w-8 place-items-center rounded-full text-moon/50 transition hover:bg-white/10 hover:text-moon focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-
-        <div className="mb-3 flex shrink-0 gap-1 rounded-xl bg-white/6 p-1 text-xs font-semibold">
-          {[
-            ['apps', 'Apps'],
-            ['sites', 'Websites'],
-            ['home', 'On Home'],
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={[
-                'flex-1 rounded-lg px-3 py-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-                tab === id ? 'bg-white/12 text-moon ring-1 ring-white/10' : 'text-moon/50 hover:text-moon/80',
-              ].join(' ')}
-            >
-              {label}
-              {id === 'sites' && sites.length ? ` · ${sites.length}` : ''}
-              {id === 'home' && homeSelection.length ? ` · ${homeSelection.length}` : ''}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'apps' ? (
-          <>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search apps…"
-              className="mb-3 w-full shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
-            />
-
-            <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
-              {apps === null ? (
-                <p className="py-10 text-center text-xs text-moon/40">Reading your applications…</p>
-              ) : filtered.length === 0 ? (
-                <p className="py-10 text-center text-xs text-moon/40">No apps found.</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                  {filtered.map((a) => {
-                    const on = sel.has(a.name);
-                    return (
-                      <button
-                        key={a.name}
-                        type="button"
-                        onClick={() => toggle(a.name)}
-                        className={[
-                          'flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
-                          on ? 'bg-accent/12 ring-1 ring-accent/25' : 'hover:bg-white/[0.06]',
-                        ].join(' ')}
-                      >
-                        <AppIcon app={a.name} className="h-8 w-8" />
-                        <span className={`min-w-0 flex-1 truncate text-xs ${on ? 'text-moon' : 'text-moon/70'}`}>
-                          {a.name}
-                        </span>
-                        {on && <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <p className="mt-3 shrink-0 text-[0.75rem] text-moon/38">
-              Pick up to 10 items. Icons come straight from each app; tap a launchpad tile to open it.
-            </p>
-          </>
-        ) : tab === 'sites' ? (
-          <>
-            <div className="mb-3 shrink-0 space-y-2">
-              <div className="flex gap-2">
-                <input
-                  value={siteName}
-                  onChange={(e) => setSiteName(e.target.value)}
-                  placeholder="Name (optional)"
-                  className="w-1/3 shrink-0 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
-                />
-                <input
-                  value={siteUrl}
-                  onChange={(e) => {
-                    setSiteUrl(e.target.value);
-                    setSiteError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addSite();
-                    }
-                  }}
-                  placeholder="figma.com"
-                  className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-moon outline-none transition placeholder:text-moon/30 focus:border-accent/40 focus:bg-white/12"
-                />
-                <button
-                  type="button"
-                  onClick={addSite}
-                  disabled={atLimit || !siteUrl.trim()}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent/15 px-3 py-2 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/22 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 disabled:opacity-40"
-                >
-                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                  Add
-                </button>
-              </div>
-              {siteError && <p className="text-[0.8125rem] font-medium text-rose-300/80">{siteError}</p>}
-            </div>
-
-            <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
-              {sites.length === 0 ? (
-                <p className="py-10 text-center text-xs text-moon/40">
-                  No websites yet — add one above to pin it to your launchpad.
-                </p>
-              ) : (
-                <div className="space-y-1.5">
-                  {sites.map((site) => (
-                    <div
-                      key={site.url}
-                      className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-2.5 py-2"
-                    >
-                      <span className="relative block h-8 w-8 shrink-0">
-                        <SiteIcon item={site} className="h-full w-full" />
-                        <BrowserBadge item={site} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium text-moon">
-                          {site.name || hostOf(site.url)}
-                        </span>
-                        <span className="block truncate text-[0.8125rem] text-moon/40">
-                          {hostOf(site.url)}
-                          {site.browser ? ` · ${site.browser}` : ''}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setEditing(site)}
-                        aria-label={`Set up ${site.name || hostOf(site.url)}`}
-                        className="shrink-0 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/50 transition hover:bg-white/10 hover:text-moon focus:outline-none"
-                      >
-                        Set up
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeSite(site.url)}
-                        aria-label={`Remove ${site.name || hostOf(site.url)}`}
-                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-moon/35 transition hover:bg-white/10 hover:text-rose-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <p className="mt-3 shrink-0 text-[0.75rem] text-moon/38">
-              Pick up to 10 items total. &ldquo;Set up&rdquo; chooses a site&rsquo;s icon and which browser opens it.
-            </p>
-          </>
-        ) : tab === 'home' ? (
-          <>
-            {/* Which of the launchpad the Home screen shows. These used to be
-                the same list, so the only way to change the home screen was to
-                reorder the launchpad. */}
-            <div className="glass-scroll min-h-0 flex-1 overflow-y-auto pr-1">
-              {selected.length === 0 ? (
-                <p className="py-10 text-center text-xs text-moon/40">
-                  Add some apps or websites first, then choose which of them Home shows.
-                </p>
-              ) : (
-                <div className="space-y-1.5">
-                  {selected.map((item) => {
-                    const on = onHome.has(itemKey(item));
-                    return (
-                      <button
-                        key={itemKey(item)}
-                        type="button"
-                        onClick={() => toggleHome(item)}
-                        className={[
-                          'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none',
-                          on ? 'bg-accent/12 ring-1 ring-accent/25' : 'bg-white/[0.04] hover:bg-white/[0.07]',
-                        ].join(' ')}
-                      >
-                        <span className="relative block h-8 w-8 shrink-0">
-                          <LaunchIcon item={item} className="h-full w-full" />
-                          <BrowserBadge item={item} />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-xs font-medium text-moon">
-                          {itemLabel(item)}
-                        </span>
-                        <span
-                          className={[
-                            'grid h-5 w-5 shrink-0 place-items-center rounded-full text-[0.625rem] font-bold',
-                            on ? 'bg-accent/80 text-[#0b1024]' : 'ring-1 ring-white/15',
-                          ].join(' ')}
-                          aria-hidden="true"
-                        >
-                          {on ? '✓' : ''}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="mt-3 flex shrink-0 items-center gap-2">
-              <p className="min-w-0 flex-1 text-[0.75rem] text-moon/38">
-                Home draws these, in this order. Twelve fit.
-              </p>
-              {Array.isArray(homeKeys) ? (
-                <button
-                  type="button"
-                  onClick={() => onHomeChange(null)}
-                  className="shrink-0 rounded-lg px-2 py-1 text-[0.75rem] font-semibold text-moon/50 transition hover:text-moon"
-                >
-                  Follow the launchpad
-                </button>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-      </div>
-
-      {editing ? <SiteEditor site={editing} onSave={saveSite} onClose={() => setEditing(null)} /> : null}
-    </div>,
-    document.body,
-  );
-}
