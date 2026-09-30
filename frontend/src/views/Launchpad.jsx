@@ -1,7 +1,8 @@
-import { Check, Globe, MoreVertical, Pin, Plus, Search, Settings2, Star, X } from 'lucide-react';
+import { MoreVertical, Pin, Plus, Search, Settings2, Star, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import LaunchIcon, { AppIcon, BrowserBadge, SiteIcon } from '../components/LaunchIcon.jsx';
+import LaunchpadSettings from '../components/LaunchpadSettings.jsx';
 import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { useDragSort } from '../hooks/useDragSort.js';
 import { useLaunchpadMeta } from '../hooks/useLaunchpadMeta.js';
@@ -16,7 +17,6 @@ import {
   itemLabel,
   launchItem,
   reorderWithin,
-  normalizeUrl,
 } from '../services/launchpad/items.js';
 import { searchResults } from '../services/launchpad/search.js';
 
@@ -140,179 +140,6 @@ function ResultIcon({ result }) {
 
 /* ── Add panel ───────────────────────────────────────────────────────────── */
 
-function AddPanel({ selected, installed, initialTab, onChange, onClose }) {
-  const [query, setQuery] = useState('');
-  const [tab, setTab] = useState(initialTab);
-  const [siteName, setSiteName] = useState('');
-  const [siteUrl, setSiteUrl] = useState('');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  const chosen = new Set(selected.filter((i) => !isSite(i)));
-  const sites = selected.filter(isSite);
-
-  const toggleApp = (name) =>
-    onChange(chosen.has(name) ? selected.filter((i) => isSite(i) || i !== name) : [...selected, name]);
-
-  const addSite = () => {
-    const url = normalizeUrl(siteUrl);
-    if (!url) return setError('Enter a valid web address, e.g. figma.com');
-    if (selected.some((i) => isSite(i) && i.url === url)) return setError('That site is already saved.');
-    onChange([...selected, { url, name: siteName.trim() || hostOf(url) }]);
-    setSiteName('');
-    setSiteUrl('');
-    return setError('');
-  };
-
-  const filtered = installed.filter((a) => a.name.toLowerCase().includes(query.trim().toLowerCase()));
-
-  return createPortal(
-    <div
-      data-settings=""
-      className="fixed inset-0 z-[70] grid place-items-center bg-black/55 p-6 backdrop-blur-sm"
-      onClick={onClose}
-      role="presentation"
-    >
-      <div
-        className="theme-card fade-in flex max-h-[80vh] w-full max-w-[38rem] flex-col overflow-hidden rounded-3xl p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Add to launchpad"
-      >
-        <div className="flex shrink-0 items-center justify-between">
-          <h2 className="display-type text-lg font-light text-moon/90">Add to your launchpad</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-lg p-1.5 text-moon/45 transition hover:bg-white/10 hover:text-moon/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="mt-3 flex shrink-0 gap-1.5 rounded-xl bg-white/5 p-1">
-          {[
-            ['apps', 'Applications'],
-            ['sites', 'Websites'],
-          ].map(([id, name]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                tab === id ? 'bg-white/12 text-moon/95' : 'text-moon/45 hover:text-moon/75'
-              }`}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'apps' ? (
-          <>
-            <label className="mt-3 flex shrink-0 items-center gap-2 rounded-xl bg-white/5 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/25">
-              <Search className="h-3.5 w-3.5 shrink-0 text-moon/35" aria-hidden="true" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search installed apps"
-                aria-label="Search installed apps"
-                className="w-full bg-transparent text-sm text-moon/90 placeholder:text-moon/30 focus:outline-none"
-              />
-            </label>
-            <div className="glass-scroll mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-              {installed.length === 0 ? (
-                <p className="py-8 text-center text-xs text-moon/40">Reading your Applications folders…</p>
-              ) : filtered.length === 0 ? (
-                <p className="py-8 text-center text-xs text-moon/40">No apps match “{query}”.</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-1.5">
-                  {filtered.map(({ name }) => {
-                    const on = chosen.has(name);
-                    return (
-                      <button
-                        key={name}
-                        type="button"
-                        onClick={() => toggleApp(name)}
-                        className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${
-                          on ? 'bg-accent/12 ring-1 ring-accent/25' : 'hover:bg-white/6'
-                        }`}
-                      >
-                        <AppIcon app={name} className="h-7 w-7" />
-                        <span className="min-w-0 flex-1 truncate text-xs text-moon/80">{name}</span>
-                        {on ? <Check className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" /> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pr-1">
-            <div className="flex gap-2">
-              <input
-                value={siteName}
-                onChange={(e) => setSiteName(e.target.value)}
-                placeholder="Name (optional)"
-                aria-label="Site name"
-                className="w-1/3 rounded-xl bg-white/5 px-3 py-2 text-sm text-moon/90 ring-1 ring-white/10 placeholder:text-moon/30 focus:outline-none focus:ring-white/25"
-              />
-              <input
-                value={siteUrl}
-                onChange={(e) => setSiteUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addSite()}
-                placeholder="figma.com"
-                aria-label="Web address"
-                className="min-w-0 flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-moon/90 ring-1 ring-white/10 placeholder:text-moon/30 focus:outline-none focus:ring-white/25"
-              />
-              <button
-                type="button"
-                onClick={addSite}
-                className="shrink-0 rounded-xl bg-accent/15 px-3.5 py-2 text-xs font-semibold text-accent ring-1 ring-accent/25 transition hover:bg-accent/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-              >
-                Add
-              </button>
-            </div>
-            {error ? <p className="mt-2 text-[0.8125rem] text-rose-200/85">{error}</p> : null}
-
-            <div className="mt-3 space-y-1.5">
-              {sites.length === 0 ? (
-                <p className="py-6 text-center text-xs text-moon/40">
-                  No sites yet — add one above and it gets a tile like any app.
-                </p>
-              ) : (
-                sites.map((site) => (
-                  <div key={site.url} className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-2.5 py-2">
-                    <Globe className="h-4 w-4 shrink-0 text-accent/60" aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate text-xs text-moon/80">{site.name}</span>
-                    <span className="hidden truncate text-[0.75rem] text-moon/35 sm:block">{hostOf(site.url)}</span>
-                    <button
-                      type="button"
-                      onClick={() => onChange(selected.filter((i) => !(isSite(i) && i.url === site.url)))}
-                      aria-label={`Remove ${site.name}`}
-                      className="rounded-lg p-1 text-moon/35 transition hover:bg-white/10 hover:text-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-                    >
-                      <X className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>,
-    document.body,
-  );
-}
 
 /* ── Cards ───────────────────────────────────────────────────────────────── */
 
@@ -807,10 +634,9 @@ export default function Launchpad() {
       ) : null}
 
       {adding ? (
-        <AddPanel
+        <LaunchpadSettings
           selected={items}
           installed={installed}
-          initialTab={adding}
           onChange={(next) => update({ launchpad: next })}
           onClose={() => setAdding('')}
         />

@@ -21,7 +21,7 @@ import { loadedUntil, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { calendarColor, dateKey, keyToDate, occursOn, useLifeData } from '../hooks/useLifeData.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { useWeather } from '../hooks/useWeather.js';
-import LaunchpadPanel from '../components/LaunchpadPanel.jsx';
+import HomeTilePicker from '../components/HomeTilePicker.jsx';
 import { homeItems, itemKey, itemLabel, launchItem } from '../services/launchpad/items.js';
 import { getGreeting } from '../utils/dateTime.js';
 
@@ -447,7 +447,7 @@ export default function Home({ onAskPulse }) {
             <button
               type="button"
               onClick={() => setShowLaunchpad(true)}
-              aria-label="Choose launchpad apps"
+              aria-label="Choose what Home shows"
               className="pill h-7 w-7 px-0 text-moon/70"
             >
               <Settings2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -495,11 +495,10 @@ export default function Home({ onAskPulse }) {
         />
       )}
       {showLaunchpad && (
-        <LaunchpadPanel
-          selected={launchpad}
+        <HomeTilePicker
+          launchpad={launchpad}
           homeKeys={settings.homeLaunchpad}
-          onChange={(apps) => update({ launchpad: apps })}
-          onHomeChange={(keys) => update({ homeLaunchpad: keys })}
+          onChange={(keys) => update({ homeLaunchpad: keys })}
           onClose={() => setShowLaunchpad(false)}
         />
       )}
