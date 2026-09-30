@@ -107,7 +107,39 @@ async function findApps() {
       }
     }
   }
+
+  for (const appPath of await findBrowserApps()) {
+    take(path.dirname(appPath), path.basename(appPath));
+  }
   return found;
+}
+
+/**
+ * Every web app a browser has installed, wherever it was put.
+ *
+ * Walking directories finds the ones still sitting in "Edge Apps.localized" and
+ * misses every one that has been moved — a third of this machine's live on the
+ * Desktop. They are not in a predictable place because a browser does not keep
+ * them anywhere: it writes a bundle and hands it over.
+ *
+ * Asking Spotlight for the bundle identifier finds them all. Chromium
+ * namespaces what it installs as `<browser>.app.<hash>`, which is a pattern no
+ * ordinary application matches, so this looks for exactly those and nothing
+ * else — it is not a search of the disk for applications at large.
+ */
+async function findBrowserApps() {
+  const query = BROWSERS.map(([id]) => `kMDItemCFBundleIdentifier == '${id}.app.*'`).join(' || ');
+  try {
+    const { stdout } = await run('mdfind', [query], { timeout: 10_000, maxBuffer: 2 * 1024 * 1024 });
+    return stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.endsWith('.app'));
+  } catch {
+    // Spotlight can be off or still indexing; the directory scan above is
+    // still the answer for anything left where its browser put it.
+    return [];
+  }
 }
 
 /**
