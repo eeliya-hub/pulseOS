@@ -169,7 +169,9 @@ function AddSomething({ installed, selected, onAdd }) {
   const matches = useMemo(() => {
     if (isLink) return [];
     const q = typed.toLowerCase();
-    return q ? installed.filter((a) => a.name.toLowerCase().includes(q)) : installed;
+    return q
+      ? installed.filter((a) => `${a.name} ${a.via ?? ''}`.toLowerCase().includes(q))
+      : installed;
   }, [installed, typed, isLink]);
 
   const addLink = () => {
@@ -236,9 +238,19 @@ function AddSomething({ installed, selected, onAdd }) {
                 disabled={already}
                 className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-white/[0.07] disabled:hover:bg-transparent focus:outline-none"
               >
-                <AppIcon app={a.name} className={`h-7 w-7 ${already ? 'opacity-30' : ''}`} />
-                <span className={`min-w-0 flex-1 truncate text-[0.8125rem] ${already ? 'text-moon/30' : 'text-moon/85'}`}>
-                  {a.name}
+                <AppIcon app={a.name} className={`h-7 w-7 shrink-0 ${already ? 'opacity-30' : ''}`} />
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-[0.8125rem] ${already ? 'text-moon/30' : 'text-moon/85'}`}>
+                    {a.name}
+                  </span>
+                  {/* Which browser a web app came from. An Instagram installed
+                      from Edge and one from the App Store are different things,
+                      and only the list can say which is which. */}
+                  {a.via ? (
+                    <span className={`block truncate text-[0.6875rem] ${already ? 'text-moon/20' : 'text-moon/35'}`}>
+                      {a.via} app
+                    </span>
+                  ) : null}
                 </span>
                 {already ? <Check className="h-3.5 w-3.5 shrink-0 text-moon/25" aria-hidden="true" /> : null}
               </button>

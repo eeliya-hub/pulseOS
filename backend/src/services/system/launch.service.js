@@ -68,22 +68,61 @@ async function bundleIds(paths) {
 }
 
 // name → full .app path for every installed application.
+//
+// One level deeper than the listed directories as well, because that is where
+// Chromium browsers put the web apps you install from them: Edge writes to
+// "~/Applications/Edge Apps.localized" and Brave to its own equivalent, so a
+// dozen things that behave exactly like applications — their own icon, their
+// own window, `open -a` by name — were invisible to this. It does not descend
+// into a bundle, only into plain folders, and only by one.
 async function findApps() {
   const found = new Map();
+  const take = (dir, entry) => {
+    const name = entry.slice(0, -4);
+    if (!found.has(name)) found.set(name, path.join(dir, entry));
+  };
+
   for (const dir of APP_DIRS) {
     let entries;
     try {
-      entries = await fs.readdir(dir);
+      entries = await fs.readdir(dir, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      if (!entry.endsWith('.app')) continue;
-      const name = entry.slice(0, -4);
-      if (!found.has(name)) found.set(name, path.join(dir, entry));
+      if (entry.name.endsWith('.app')) {
+        take(dir, entry.name);
+        continue;
+      }
+      if (!entry.isDirectory()) continue;
+      const nested = path.join(dir, entry.name);
+      let inner;
+      try {
+        inner = await fs.readdir(nested);
+      } catch {
+        continue;
+      }
+      for (const child of inner) {
+        if (child.endsWith('.app')) take(nested, child);
+      }
     }
   }
   return found;
+}
+
+/**
+ * Which browser installed a web app, from its bundle identifier.
+ *
+ * Chromium namespaces the ones it installs as `<browser>.app.<hash>`, so an
+ * Instagram installed from Edge is distinguishable from an Instagram that came
+ * from the App Store — which matters when both could be in the list and only
+ * one of them is the one you meant.
+ */
+function installedVia(bundleId) {
+  const match = /^([\w.]+?)\.app\.[a-z]{20,}$/.exec(bundleId ?? '');
+  if (!match) return null;
+  const browser = BROWSERS.find(([id]) => id === match[1]);
+  return browser ? browser[1] : null;
 }
 
 // Locate an app's .icns and render it to a PNG buffer (handles the two common
@@ -223,8 +262,14 @@ export const launchService = {
   // Installed applications the user can add to the launchpad.
   async listApps() {
     if (process.platform !== 'darwin') return { apps: [] };
-    const apps = await findApps();
-    return { apps: [...apps.keys()].sort((a, b) => a.localeCompare(b)).map((name) => ({ name })) };
+    const apps = [...(await findApps())].sort(([a], [b]) => a.localeCompare(b));
+    const ids = await bundleIds(apps.map(([, appPath]) => appPath));
+    return {
+      apps: apps.map(([name], n) => {
+        const via = installedVia(ids[n]);
+        return via ? { name, via } : { name };
+      }),
+    };
   },
 
   // The app's own icon as a PNG buffer (cached). Name is validated against the
