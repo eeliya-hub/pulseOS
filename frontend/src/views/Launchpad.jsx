@@ -5,6 +5,7 @@ import LaunchIcon, { AppIcon, BrowserBadge, SiteIcon } from '../components/Launc
 import LaunchpadSettings from '../components/LaunchpadSettings.jsx';
 import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { useDragSort } from '../hooks/useDragSort.js';
+import { useInstalledApps } from '../hooks/useInstalledApps.js';
 import { useLaunchpadMeta } from '../hooks/useLaunchpadMeta.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { api } from '../services/api/backendClient.js';
@@ -319,14 +320,10 @@ export default function Launchpad() {
   const items = useMemo(() => settings.launchpad ?? [], [settings.launchpad]);
 
   // Every app on the machine, not just the saved ones — this is what makes the
-  // search box a real launcher rather than a filter over eight tiles.
-  const [installed, setInstalled] = useState([]);
-  useEffect(() => {
-    api.launch
-      .apps()
-      .then((d) => setInstalled(d.apps ?? []))
-      .catch(() => setInstalled([]));
-  }, []);
+  // search box a real launcher rather than a filter over eight tiles. Kept
+  // current rather than read once, because installing something is exactly the
+  // sort of thing you do in the middle of using this.
+  const { apps: installed, refresh: refreshInstalled } = useInstalledApps();
 
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -590,7 +587,14 @@ export default function Launchpad() {
 
           <div ref={appSort.setScroller} className="glass-scroll mt-3 min-h-0 flex-1 overflow-y-auto pb-4 pr-1">
             {visibleApps.length === 0 ? (
-              <button type="button" onClick={() => setAdding('apps')} className="pill mt-3 h-10 px-4">
+              <button
+                type="button"
+                onClick={() => {
+                  refreshInstalled();
+                  setAdding('apps');
+                }}
+                className="pill mt-3 h-10 px-4"
+              >
                 {folder === ALL
                   ? 'No apps yet. Add some'
                   : `Nothing in “${folder}” yet. Arrange, then tap a tile's folder chip.`}
@@ -614,7 +618,10 @@ export default function Launchpad() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => setAdding('apps')}
+                  onClick={() => {
+                    refreshInstalled();
+                    setAdding('apps');
+                  }}
                   aria-label="Add apps"
                   className="flex min-h-[7.5rem] flex-col items-center justify-center gap-2.5 rounded-[1.25rem] text-moon/40 transition hover:bg-white/[0.05] hover:text-moon/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
                 >
