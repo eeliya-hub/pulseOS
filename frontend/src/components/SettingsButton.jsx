@@ -1,6 +1,7 @@
-import { Settings, X } from 'lucide-react';
-import { useState } from 'react';
+import { Download, Settings, Upload, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { describe, download, restore } from '../services/backup.js';
 import { useSettings } from '../hooks/useSettings.js';
 import SportsFollowPicker from './SportsFollowPicker.jsx';
 import StocksPicker from './StocksPicker.jsx';
@@ -12,7 +13,7 @@ export default function SettingsButton({
   className = '',
   label = false,
   title = 'Settings',
-  fields = ['name', 'location', 'sports', 'afk'],
+  fields = ['name', 'location', 'sports', 'afk', 'data'],
 }) {
   const [open, setOpen] = useState(false);
   const { settings, update } = useSettings();
@@ -95,6 +96,10 @@ export default function SettingsButton({
               </div>
             ) : null}
 
+            {fields.includes('data') ? (
+              <DataTransfer className={fields.length > 1 ? 'mt-5' : ''} />
+            ) : null}
+
             {fields.includes('afk') ? (
               <Toggle
                 className={fields.length > 1 ? 'mt-5' : ''}
@@ -148,6 +153,86 @@ function Toggle({ label, hint, checked, onChange, className = '' }) {
           ].join(' ')}
         />
       </button>
+    </div>
+  );
+}
+
+/**
+ * Carrying your setup between copies of Pulse.
+ *
+ * A browser keeps this per origin, and the desktop app serves itself on a
+ * different port to the dev server — so to a browser they are two unrelated
+ * sites. Nothing moves between them on its own, and none of it is on the
+ * server to fetch: your trips, your launchpad and your conversations live in
+ * the browser. Hence a file.
+ *
+ * Connected accounts are not in it, and are not meant to be. Spotify and the
+ * calendars hold tokens on the server against this machine, and a copy would be
+ * a copy of a credential — reconnecting takes a click and means the new copy
+ * owns its own access.
+ */
+function DataTransfer({ className = '' }) {
+  const [note, setNote] = useState(null);
+  const file = useRef(null);
+
+  const save = () => {
+    const payload = download();
+    const parts = describe(payload);
+    setNote({
+      tone: 'ok',
+      text: parts.length ? `Saved: ${parts.join(', ').toLowerCase()}.` : 'Saved, though there was little to save.',
+    });
+  };
+
+  const load = async (chosen) => {
+    if (!chosen) return;
+    try {
+      const restored = await restore(chosen);
+      setNote({
+        tone: 'ok',
+        text: `Restored ${restored.length ? restored.join(', ').toLowerCase() : 'your backup'}. Reloading…`,
+      });
+      // Every store reads its key once at startup, so the page has to come back
+      // for any of this to be visible.
+      setTimeout(() => window.location.reload(), 900);
+    } catch (e) {
+      setNote({ tone: 'bad', text: e.message });
+    }
+  };
+
+  return (
+    <div className={className}>
+      <span className="t-label mb-2 block">Your data</span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={save}
+          className="soft-button inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-moon/90 focus:outline-none"
+        >
+          <Download className="h-3.5 w-3.5" aria-hidden="true" /> Export
+        </button>
+        <button
+          type="button"
+          onClick={() => file.current?.click()}
+          className="soft-button inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-moon/90 focus:outline-none"
+        >
+          <Upload className="h-3.5 w-3.5" aria-hidden="true" /> Import
+        </button>
+      </div>
+      <input
+        ref={file}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={(e) => load(e.target.files?.[0])}
+      />
+      <span className="mt-1.5 block pl-1 text-[0.75rem] text-dim">
+        {note ? (
+          <span className={note.tone === 'bad' ? 'text-rose-300' : 'text-moon/70'}>{note.text}</span>
+        ) : (
+          'Trips, to-dos, launchpad, folders and conversations. Connected accounts stay behind — sign in again on the other copy.'
+        )}
+      </span>
     </div>
   );
 }
