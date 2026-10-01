@@ -60,10 +60,19 @@ export function createApp({ webRoot } = {}) {
    */
   if (webRoot && fs.existsSync(webRoot)) {
     app.use(express.static(webRoot, { index: false }));
+
     // Anything that isn't an API route or a real file is the single-page app,
-    // which does its own routing.
-    app.get(/^\/(?!api\/).*/, (_req, res, next) => {
-      res.sendFile(path.join(webRoot, 'index.html'), (error) => (error ? next() : undefined));
+    // which does its own routing — but only if it could be a route at all.
+    //
+    // A request with a file extension is asking for a file, and if it is not
+    // there the honest answer is that it is not there. Handing it index.html
+    // with a 200 is how a missing asset becomes invisible: MapLibre's worker
+    // was fetched, served the HTML shell, failed to parse as JavaScript, and
+    // took the whole map down without a single error in the console or a
+    // single 404 in the network log.
+    app.get(/^\/(?!api\/).*/, (req, res, next) => {
+      if (path.extname(req.path)) return next();
+      return res.sendFile(path.join(webRoot, 'index.html'), (error) => (error ? next() : undefined));
     });
   } else {
     app.get('/', (_req, res) => {
