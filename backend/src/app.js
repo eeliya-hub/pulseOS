@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
 import { isAllowedOrigin } from './config/env.js';
@@ -21,7 +23,13 @@ function corsOrigin(origin, callback) {
   callback(null, isAllowedOrigin(origin));
 }
 
-export function createApp() {
+/**
+ * Builds the app, and serves the built front end alongside it when there is one.
+ *
+ * @param {object} [opts]
+ * @param {string} [opts.webRoot] a directory of built frontend files to serve
+ */
+export function createApp({ webRoot } = {}) {
   const app = express();
 
   // Rate limiting keys off req.ip, so Express must read the real client IP from
@@ -32,13 +40,36 @@ export function createApp() {
   app.use(cors({ origin: corsOrigin }));
   app.use(express.json({ limit: '1mb' }));
 
-  app.get('/', (_req, res) => {
-    res.json({ name: 'Pulse OS API', status: 'ok' });
-  });
-
   // Global ceiling for every API route. Stricter per-area limits (AI, writes)
   // are layered on inside routes/index.js.
   app.use('/api', apiLimiter, apiRouter);
+
+  /*
+   * The desktop build serves the front end from here too, so the whole app is
+   * one origin on one port.
+   *
+   * That is not a convenience. Both OAuth redirects already point at this port,
+   * every cookie and CORS rule is written for it, and the alternative — a
+   * window loading file:// and talking across to localhost:4000 — turns every
+   * one of those into a special case. Served from here there is nothing to
+   * special-case: the window loads http://localhost:4000 and is same-origin
+   * with its own API.
+   *
+   * In development this is simply absent, and Vite keeps serving the front end
+   * with its hot reload.
+   */
+  if (webRoot && fs.existsSync(webRoot)) {
+    app.use(express.static(webRoot, { index: false }));
+    // Anything that isn't an API route or a real file is the single-page app,
+    // which does its own routing.
+    app.get(/^\/(?!api\/).*/, (_req, res, next) => {
+      res.sendFile(path.join(webRoot, 'index.html'), (error) => (error ? next() : undefined));
+    });
+  } else {
+    app.get('/', (_req, res) => {
+      res.json({ name: 'Pulse OS API', status: 'ok' });
+    });
+  }
 
   app.use(notFound);
   app.use(errorHandler);

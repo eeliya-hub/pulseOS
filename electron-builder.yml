@@ -1,0 +1,78 @@
+appId: com.eeliya.pulseos
+productName: Pulse OS
+copyright: Pulse OS
+
+directories:
+  output: desktop/out
+  buildResources: desktop/resources
+
+icon: desktop/resources/icon.icns
+
+# What goes inside the bundle.
+#
+# The app is three workspaces, and only parts of each are needed at runtime: the
+# shell, the built front end, and the backend's source. Everything else — the
+# frontend's source, every dev dependency, the iOS client — is build-time only
+# and would double the size of the thing for no reason.
+#
+# node_modules is deliberately not listed. electron-builder works out what to
+# bundle from `dependencies` in package.json and ignores a glob that says
+# otherwise — which is why the backend's six runtime dependencies are declared
+# at the root, where npm workspaces hoist them to anyway. Listing them is what
+# tells the packager they are needed after the build, not during it.
+files:
+  - desktop/**/*
+  - frontend/dist/**/*
+  - backend/src/**/*
+  - backend/package.json
+  # The keys, so a freshly built app works on first launch rather than opening
+  # to twelve unconfigured integrations. Worth being clear about what this
+  # means: anyone who can open the .app can read them. It is a personal build
+  # for one machine — do not hand the DMG to anybody. On first run the file is
+  # copied to Application Support and that copy is the one it reads from
+  # afterwards, so keys can be changed without rebuilding.
+  - backend/.env
+  - package.json
+  - '!**/*.map'
+  - '!**/test/**'
+  - '!**/tests/**'
+  - '!**/__tests__/**'
+
+# Archived, with everything the server touches left outside it.
+#
+# Node's ESM loader has no idea what an asar is — require() can see inside one,
+# import() cannot — and the backend is ESM reached with import(). express.static
+# and dotenv likewise want real paths. So the shell is archived and the three
+# things it loads at runtime are unpacked beside it, which is also what keeps
+# electron-builder from trying to copy the framework's symlinks by hand.
+asar: true
+asarUnpack:
+  - backend/**/*
+  - frontend/dist/**/*
+  - node_modules/**/*
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: dir
+      arch: [arm64]
+  darkModeSupport: true
+  # Unsigned. This is a personal application that never leaves the machine it
+  # was built on, and signing it needs a paid Developer ID. macOS will ask once,
+  # on first open, and then stop asking.
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
+dmg:
+  title: Pulse OS
+  contents:
+    - x: 140
+      y: 180
+      type: file
+    - x: 400
+      y: 180
+      type: link
+      path: /Applications

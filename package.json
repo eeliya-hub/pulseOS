@@ -2,10 +2,11 @@
   "name": "pulseos",
   "version": "0.1.0",
   "private": true,
-  "description": "Pulse OS — a personal command-center dashboard (React frontend + Express backend).",
+  "description": "Pulse OS \u2014 a personal command-center dashboard.",
   "workspaces": [
     "frontend",
-    "backend"
+    "backend",
+    "desktop"
   ],
   "scripts": {
     "dev": "concurrently -n frontend,backend -c cyan,magenta \"npm:dev:frontend\" \"npm:dev:backend\"",
@@ -13,12 +14,25 @@
     "dev:backend": "npm --workspace backend run dev",
     "build": "npm --workspace frontend run build",
     "start:backend": "npm --workspace backend run start",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "desktop": "npm run build && electron desktop/main.js",
+    "desktop:build": "npm run build && electron-builder --mac --config electron-builder.yml"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
   },
   "engines": {
     "node": ">=18"
+  },
+  "main": "desktop/main.js",
+  "dependencies": {
+    "@google/genai": "^2.13.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "tsdav": "^2.3.1",
+    "ws": "^8.21.1"
   }
 }

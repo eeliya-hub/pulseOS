@@ -1,0 +1,7 @@
+{
+  "name": "pulseos-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pulse OS as a desktop application.",
+  "main": "main.js"
+}
