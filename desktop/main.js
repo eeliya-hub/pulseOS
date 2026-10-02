@@ -2,7 +2,7 @@ const { createServer } = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, Menu, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, Menu, components, nativeTheme, shell } = require('electron');
 
 /**
  * Pulse OS as an application.
@@ -23,6 +23,18 @@ const { app, BrowserWindow, Menu, nativeTheme, shell } = require('electron');
 // not, which fails with the API simply missing.
 const here = __dirname;
 const packaged = app.isPackaged;
+
+/*
+ * Let the player start without waiting to be clicked.
+ *
+ * Chromium refuses to play audio that no gesture asked for, which is right for
+ * a web page you did not ask to make noise and wrong here: this is a dashboard
+ * whose whole job includes resuming what you were listening to, and asking it
+ * from the assistant, or from a phone over Spotify Connect, is a request with
+ * no click anywhere near it. Without this the track loads, sits at 0:00 and
+ * reports itself as not playing.
+ */
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 // In a packaged app the shell is inside the asar and everything it loads at
 // runtime is unpacked beside it — the backend because import() cannot read an
@@ -201,6 +213,28 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     nativeTheme.themeSource = 'dark';
+
+    /*
+     * Wait for Widevine before opening anything.
+     *
+     * Stock Electron ships no content decryption module at all — only ClearKey,
+     * which nothing commercial uses — so Spotify's Web Playback SDK could not
+     * create a player and the app could not be its own speaker. It failed with
+     * one line, "No supported keysystem was found", thrown from inside the SDK
+     * where nothing was listening, and the view quietly fell back to asking
+     * which other device to play on.
+     *
+     * This is the Castlabs build of Electron, which carries the module. It is
+     * fetched and verified on first launch, so the wait is real the first time
+     * and instant afterwards. A failure here is not fatal: without it the app
+     * still runs and still controls Spotify on another device, which is what it
+     * was doing before.
+     */
+    try {
+      await components.whenReady();
+    } catch (error) {
+      console.error('Widevine unavailable — playback in this window will not work:', error?.message ?? error);
+    }
     // On first run, start with the OS. It is a dashboard — the whole point is
     // that it is already there — and the menu item turns it off.
     if (!app.getLoginItemSettings().openAtLogin) {

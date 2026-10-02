@@ -2,7 +2,7 @@
   "name": "pulseos",
   "version": "0.1.0",
   "private": true,
-  "description": "Pulse OS \u2014 a personal command-center dashboard.",
+  "description": "Pulse OS — a personal command-center dashboard.",
   "workspaces": [
     "frontend",
     "backend",
@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
-    "electron": "^44.5.1",
+    "electron": "github:castlabs/electron-releases#v44.1.0+wvcus",
     "electron-builder": "^26.15.3"
   },
   "engines": {

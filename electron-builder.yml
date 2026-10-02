@@ -51,6 +51,14 @@ asarUnpack:
   - frontend/dist/**/*
   - node_modules/**/*
 
+# Build from the Electron already in node_modules rather than fetching one.
+#
+# That Electron is the Castlabs build, which carries the Widevine module Spotify
+# needs — stock Electron has no CDM at all. electron-builder would otherwise go
+# looking for `v44.1.0+wvcus` on electron/electron, where no such release exists,
+# and fail with a 404 that says nothing about why.
+electronDist: node_modules/electron/dist
+
 mac:
   category: public.app-category.productivity
   target:
