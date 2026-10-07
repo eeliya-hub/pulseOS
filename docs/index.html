@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pulse OS — the launch film</title>
+<meta name="description" content="Pulse OS brings your whole day into one place: your plans, the weather, the news, the markets, your music and your travel, on one calm screen. Watch the launch film and the 30-second ad.">
+<meta name="theme-color" content="#0a0d1c">
+<link rel="canonical" href="https://eeliya-hub.github.io/pulseOS/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Pulse OS">
+<meta property="og:title" content="Pulse OS — the launch film">
+<meta property="og:description" content="Every day has a pulse. Watch the launch film for Pulse OS, and the 30-second ad.">
+<meta property="og:url" content="https://eeliya-hub.github.io/pulseOS/">
+<meta property="og:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Pulse OS — Your day, in a heartbeat.">
+<meta property="og:video" content="https://eeliya-hub.github.io/pulseOS/launch/pulseos-launch-film.mp4">
+<meta property="og:video:type" content="video/mp4">
+<meta property="og:video:width" content="1920">
+<meta property="og:video:height" content="1080">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pulse OS — the launch film">
+<meta name="twitter:description" content="Every day has a pulse. Watch the launch film for Pulse OS, and the 30-second ad.">
+<meta name="twitter:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%230a0d1c'/%3E%3Cpath d='M5 25h9l2.6-5.5 4.2 11 3.8-14.5 3.2 9H39' fill='none' stroke='%23a9bbff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": "Pulse OS — the launch film",
+    "description": "Two and a half minutes on Pulse OS, a personal command centre for your whole day: Home, the Launchpad, the Life Hub, Ask Pulse, Markets & News, Music and Travel.",
+    "thumbnailUrl": "https://eeliya-hub.github.io/pulseOS/launch/launch-poster.jpg",
+    "uploadDate": "2026-10-07",
+    "duration": "PT2M29S",
+    "contentUrl": "https://eeliya-hub.github.io/pulseOS/launch/pulseos-launch-film.mp4"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": "Pulse OS — the ad",
+    "description": "Thirty seconds on Pulse OS, made for phones.",
+    "thumbnailUrl": "https://eeliya-hub.github.io/pulseOS/launch/ad-poster.jpg",
+    "uploadDate": "2026-10-07",
+    "duration": "PT30S",
+    "contentUrl": "https://eeliya-hub.github.io/pulseOS/launch/pulseos-ad.mp4"
+  }
+]
+</script>
+<style>
+  :root {
+    --ink: #0a0d1c;
+    --moon: #eef0fa;
+    --haze: rgba(226, 230, 248, 0.68);
+    --dim: rgba(226, 230, 248, 0.46);
+    --rule: rgba(255, 255, 255, 0.08);
+    --accent: #a9bbff;
+    --sky-a: #171b45;
+    --sky-b: #3b2758;
+    --sky-c: #0e3550;
+    --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+    --sans: 'Schibsted Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { background: var(--ink); -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--moon);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; }
+
+  img, video { display: block; max-width: 100%; }
+
+  ::selection { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+
+  :focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 75%, transparent); outline-offset: 3px; border-radius: 6px; }
+
+  /* The sky: the hour's light pooled behind the top of the page, as in the app at night. */
+  .sky {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 150vh;
+    min-height: 1100px;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    background:
+      radial-gradient(48% 40% at 12% 8%, color-mix(in srgb, var(--sky-b) 85%, transparent), transparent 72%),
+      radial-gradient(46% 44% at 90% 14%, color-mix(in srgb, var(--sky-c) 90%, transparent), transparent 74%),
+      linear-gradient(176deg, var(--sky-a) 0%, color-mix(in srgb, var(--sky-a) 40%, var(--ink)) 45%, var(--ink) 78%);
+  }
+
+  .sky::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    background-image:
+      radial-gradient(circle at 12% 18%, #fff 0 0.6px, transparent 1.4px),
+      radial-gradient(circle at 23% 31%, #fff 0 0.5px, transparent 1.2px),
+      radial-gradient(circle at 38% 9%, #fff 0 0.7px, transparent 1.5px),
+      radial-gradient(circle at 57% 21%, #fff 0 0.5px, transparent 1.2px),
+      radial-gradient(circle at 66% 7%, #fff 0 0.6px, transparent 1.4px),
+      radial-gradient(circle at 79% 25%, #fff 0 0.5px, transparent 1.2px),
+      radial-gradient(circle at 91% 6%, #fff 0 0.7px, transparent 1.5px),
+      radial-gradient(circle at 47% 34%, #fff 0 0.4px, transparent 1px),
+      radial-gradient(circle at 6% 40%, #fff 0 0.5px, transparent 1.2px);
+    animation: stars 11s ease-in-out infinite;
+  }
+
+  .sky::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.07;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.8'/%3E%3C/svg%3E");
+  }
+
+  @keyframes stars { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.6; } }
+
+  .wrap { width: min(1120px, 100% - 48px); margin-inline: auto; }
+
+  /* ── Top ── */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 26px; }
+
+  .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand svg { width: 44px; height: 18px; color: var(--accent); }
+  .brand span { font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: -0.01em; }
+
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    color: var(--moon);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+    transition: background 220ms ease, transform 220ms var(--ease);
+  }
+  .pill:hover { background: rgba(255, 255, 255, 0.13); }
+  .pill:active { transform: scale(0.96); }
+  .pill--lit { background: var(--moon); color: var(--ink); box-shadow: none; }
+  .pill--lit:hover { background: #fff; }
+  .pill svg { width: 15px; height: 15px; }
+
+  /* ── Hero ── */
+  .hero { padding-top: clamp(40px, 9vh, 96px); }
+
+  .eyebrow {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.005em;
+    color: color-mix(in srgb, var(--accent) 72%, var(--moon));
+  }
+
+  h1, h2, h3 { font-family: var(--serif); font-optical-sizing: auto; font-weight: 340; letter-spacing: -0.02em; margin: 0; }
+  em { font-style: italic; }
+
+  h1 { margin-top: 14px; font-size: clamp(48px, 8.2vw, 104px); line-height: 0.95; }
+
+  .lede { max-width: 40rem; margin: 22px 0 0; font-size: clamp(17px, 1.6vw, 19px); color: var(--haze); }
+
+  /* ── The film ── */
+  .film { margin: clamp(40px, 6vh, 64px) 0 0; }
+
+  .frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    background: #05070f;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 50px 120px -50px rgba(0, 0, 0, 0.95),
+      0 0 120px -40px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .frame video { width: 100%; height: 100%; object-fit: cover; background: #05070f; }
+  .frame--wide { aspect-ratio: 16 / 9; }
+  .frame--tall { aspect-ratio: 9 / 16; border-radius: 30px; }
+
+  .caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 18px; font-size: 15px; color: var(--dim); }
+  .caption strong { color: var(--moon); font-weight: 500; }
+  .caption .facts { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+
+  /* The horizon: one line of the hour's light, brightest in the middle. */
+  .horizon {
+    height: 1px;
+    margin: clamp(72px, 12vh, 120px) auto 0;
+    background: linear-gradient(90deg, transparent 4%, color-mix(in srgb, var(--accent) 55%, transparent) 30%, color-mix(in srgb, #fff 75%, var(--accent)) 50%, color-mix(in srgb, var(--accent) 55%, transparent) 70%, transparent 96%);
+    box-shadow: 0 0 28px 3px color-mix(in srgb, var(--accent) 32%, transparent);
+    animation: breathe 9s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+
+  section { scroll-margin-top: 24px; }
+
+  h2 { font-size: clamp(36px, 4.6vw, 56px); line-height: 1.02; margin-top: 12px; }
+
+  .body { color: var(--haze); max-width: 34rem; }
+
+  /* ── The ad ── */
+  .ad { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: clamp(36px, 7vw, 96px); align-items: center; padding-top: clamp(72px, 12vh, 120px); }
+  .ad .body { margin: 22px 0 0; }
+  .ad .pills { margin-top: 28px; }
+
+  /* ── In the film ── */
+  .tour { padding-top: clamp(96px, 14vh, 150px); }
+  .frames { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 22px; margin-top: 44px; }
+  .frames figure { margin: 0; }
+  .frames img { aspect-ratio: 16 / 9; width: 100%; height: auto; object-fit: cover; border-radius: 10px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 24px 50px -30px rgba(0, 0, 0, 0.9); transition: transform 460ms var(--ease); }
+  .frames figure:hover img { transform: translateY(-3px); }
+  .frames figcaption { margin-top: 14px; }
+  .frames h3 { font-size: 21px; line-height: 1.2; }
+  .frames p { margin: 6px 0 0; font-size: 15px; line-height: 1.45; color: var(--dim); }
+
+  /* ── How it was made ── */
+  .making { padding-top: clamp(96px, 14vh, 150px); }
+  .notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 44px; }
+  .notes > div { padding: 4px 32px 0 0; }
+  .notes > div + div { padding-left: 32px; box-shadow: inset 1px 0 0 var(--rule); }
+  .notes h3 { font-size: 24px; display: flex; align-items: center; gap: 10px; }
+  .notes h3::before { content: ''; width: 2px; height: 16px; border-radius: 1px; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 10%, transparent)); }
+  .notes p { margin: 12px 0 0; font-size: 16px; color: var(--haze); }
+
+  /* ── The sign-off ── */
+  .cta { position: relative; text-align: center; padding: clamp(120px, 18vh, 190px) 0 clamp(80px, 12vh, 120px); }
+  .cta::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 50vw);
+    right: calc(50% - 50vw);
+    z-index: -1;
+    background: radial-gradient(50% 60% at 50% 55%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+  }
+  .beat { width: min(560px, 90%); height: auto; margin: 0 auto; overflow: visible; }
+  .beat path { stroke: var(--accent); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent)); }
+  .beat .rule { stroke: rgba(238, 240, 250, 0.22); filter: none; }
+  .draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 2.6s var(--ease) 0.3s forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .cta h2 { font-size: clamp(56px, 8vw, 96px); margin-top: 18px; }
+  .cta .tag { margin: 14px 0 0; font-family: var(--serif); font-size: clamp(22px, 2.6vw, 30px); color: rgba(238, 240, 250, 0.86); }
+  .cta .soon { margin: 22px 0 0; font-size: 15px; color: var(--dim); }
+  .cta .pills { justify-content: center; margin-top: 36px; }
+
+  /* ── Credits ── */
+  footer { border-top: 1px solid var(--rule); padding: 44px 0 64px; font-size: 13px; line-height: 1.6; color: var(--dim); }
+  footer h3 { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: 0; color: rgba(238, 240, 250, 0.78); margin: 0 0 8px; }
+  .credits { display: grid; grid-template-columns: 2fr 1fr; gap: 28px 48px; }
+  .credits p { margin: 0 0 10px; }
+  .credits a { color: rgba(238, 240, 250, 0.72); text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+  .credits a:hover { color: var(--moon); }
+  .sign { margin-top: 32px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+  @media (max-width: 900px) {
+    .ad { grid-template-columns: 1fr; }
+    .ad figure { max-width: 380px; width: 100%; margin-inline: auto; }
+    .frames { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .notes { grid-template-columns: 1fr; gap: 32px; }
+    .notes > div, .notes > div + div { padding: 0; box-shadow: none; }
+    .credits { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 520px) {
+    .wrap { width: min(1120px, 100% - 32px); }
+    .top .pills .pill:not(.pill--lit) { display: none; }
+    .frames { grid-template-columns: 1fr; }
+    .frame { border-radius: 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .draw { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+
+<header class="wrap top">
+  <a class="brand" href="./" aria-label="Pulse OS">
+    <svg viewBox="0 0 44 18" fill="none" aria-hidden="true"><path d="M1.5 10.5h10l2.6-5.5 4.2 11 3.8-14.5 3.2 9h17.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Pulse OS</span>
+  </a>
+  <nav class="pills" aria-label="Links">
+    <a class="pill" href="https://github.com/eeliya-hub/pulseOS/blob/main/ANNOUNCEMENT.md">Announcement</a>
+    <a class="pill pill--lit" href="https://github.com/eeliya-hub/pulseOS">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </nav>
+</header>
+
+<main>
+  <section class="wrap hero" aria-labelledby="title">
+    <p class="eyebrow">The launch film</p>
+    <h1 id="title">Every day has a <em>pulse.</em></h1>
+    <p class="lede">Pulse OS brings your whole day into one place — your plans, the weather, the news, the markets, your music and your travel — on one calm screen, with an assistant that can read all of it and act on it.</p>
+
+    <figure class="film">
+      <div class="frame frame--wide">
+        <video controls playsinline preload="metadata" poster="launch/launch-poster.jpg" aria-label="The Pulse OS launch film">
+          <source src="launch/pulseos-launch-film.mp4" type="video/mp4">
+          <track kind="captions" src="launch/pulseos-launch-film.en.vtt" srclang="en" label="English">
+        </video>
+      </div>
+      <figcaption class="caption">
+        <span class="facts"><strong>The launch film</strong><span>2 min 29 s</span><span>Narrated, with captions</span><span>1920 × 1080</span></span>
+        <a class="pill" href="launch/pulseos-launch-film.mp4" download>Download the film, 70 MB</a>
+      </figcaption>
+    </figure>
+  </section>
+
+  <div class="wrap horizon" aria-hidden="true"></div>
+
+  <section class="wrap ad" aria-labelledby="ad-title">
+    <div>
+      <p class="eyebrow">The ad</p>
+      <h2 id="ad-title">Thirty seconds, <em>made for phones.</em></h2>
+      <p class="body">No narration. Every part of Pulse as one clear moment — Home, the Launchpad, every calendar in one, an assistant you can talk to, the world live, your Spotify built in, and wherever you’re headed — cut to “Rising Forest” by Diego Nava.</p>
+      <div class="pills">
+        <a class="pill" href="launch/pulseos-ad.mp4" download>Download the ad, 17 MB</a>
+      </div>
+    </div>
+    <figure class="frame frame--tall" style="margin:0">
+      <video controls playsinline preload="metadata" poster="launch/ad-poster.jpg" aria-label="The Pulse OS ad">
+        <source src="launch/pulseos-ad.mp4" type="video/mp4">
+      </video>
+    </figure>
+  </section>
+
+  <section class="wrap tour" aria-labelledby="tour-title">
+    <p class="eyebrow">In the film</p>
+    <h2 id="tour-title">One calm screen <em>for the whole day.</em></h2>
+    <div class="frames">
+      <figure><img src="launch/stills/home.jpg" alt="Home: a greeting, the day's plans, the forecast and favourite apps" loading="lazy" width="960" height="540"><figcaption><h3>Home</h3><p>Your plans, the weather and your apps, all at a glance.</p></figcaption></figure>
+      <figure><img src="launch/stills/launchpad.jpg" alt="The Launchpad: apps and saved sites in a grid with a highlighted app" loading="lazy" width="960" height="540"><figcaption><h3>Launchpad</h3><p>Every app and site you use, one click away.</p></figcaption></figure>
+      <figure><img src="launch/stills/life-hub.jpg" alt="The Life Hub: the day's schedule, to-dos, habits and projects" loading="lazy" width="960" height="540"><figcaption><h3>Life Hub</h3><p>Your calendar, your to-dos, your habits, all keeping time.</p></figcaption></figure>
+      <figure><img src="launch/stills/ask-pulse.jpg" alt="Pulse Voice: the assistant's orb listening, beside today's plans" loading="lazy" width="960" height="540"><figcaption><h3>Ask Pulse</h3><p>Tell it what you need, and it’s done. Or just talk to it.</p></figcaption></figure>
+      <figure><img src="launch/stills/markets.jpg" alt="Markets &amp; News: a live channel, the ticker tape and a watchlist" loading="lazy" width="960" height="540"><figcaption><h3>Markets &amp; News</h3><p>Markets as they move, and live news from your street to the other side of the world.</p></figcaption></figure>
+      <figure><img src="launch/stills/music.jpg" alt="The immersive player: lyrics in time, lit by the record's colours" loading="lazy" width="960" height="540"><figcaption><h3>Music</h3><p>Step inside the song, lit by its colours, with every word in time.</p></figcaption></figure>
+      <figure><img src="launch/stills/travel.jpg" alt="Travel: a trip to Tokyo with local time, weather, currency and the itinerary" loading="lazy" width="960" height="540"><figcaption><h3>Travel</h3><p>Your flight, the route, the local time, and everything you’ll need the moment you land.</p></figcaption></figure>
+      <figure><img src="launch/stills/finale.jpg" alt="Pulse OS: Your day, in a heartbeat" loading="lazy" width="960" height="540"><figcaption><h3>Pulse OS</h3><p>Everything your day needs, finally together.</p></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="wrap making" aria-labelledby="making-title">
+    <p class="eyebrow">How it was made</p>
+    <h2 id="making-title">Drawn, <em>not recorded.</em></h2>
+    <div class="notes">
+      <div>
+        <h3>Every frame is code</h3>
+        <p>Both films are built in Remotion from Pulse’s own views, rebuilt from its components rather than recorded off a screen — so every frame is sharp at any size, and every number on screen is the one the story needs.</p>
+      </div>
+      <div>
+        <h3>Cut to the word</h3>
+        <p>Two voices — a narrator, and Pulse itself — generated with Google’s Gemini, each line read three times and the best take chosen blind. whisper.cpp timed every word, and the picture moves on the words, on a ninety-beat-a-minute grid with a score composed in code.</p>
+      </div>
+      <div>
+        <h3>Cut to the bar</h3>
+        <p>The ad has no voice at all. It runs at 124 beats a minute, edited on the bars of “Rising Forest” by Diego Nava, with forty-five sound effects set on the beats.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap cta" aria-labelledby="end-title">
+    <svg class="beat" viewBox="0 0 560 90" fill="none" aria-hidden="true">
+      <path class="rule" d="M0 60 H200 M360 60 H560" stroke-width="1.2" stroke-linecap="round"/>
+      <path class="draw" pathLength="1" d="M200 60 L226 36 L246 84 L276 6 L304 72 L322 60 L360 60" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h2 id="end-title">Pulse OS</h2>
+    <p class="tag">Your day, in a <em>heartbeat.</em></p>
+    <p class="soon">Coming soon</p>
+    <div class="pills">
+      <a class="pill pill--lit" href="https://github.com/eeliya-hub/pulseOS">Follow along on GitHub</a>
+      <a class="pill" href="https://github.com/eeliya-hub/pulseOS/blob/main/ANNOUNCEMENT.md">Read the announcement</a>
+      <a class="pill" href="https://github.com/eeliya-hub/pulseOS/blob/main/docs/launch/PRESS.md">Press kit</a>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div class="credits">
+    <div>
+      <h3>Photographs</h3>
+      <p>From Wikimedia Commons, under the licences shown.
+        <a href="https://commons.wikimedia.org/wiki/File:Emirates_Stadium_-_East_stand_Club_Level.jpg">Emirates Stadium</a>, Ed g2s, CC BY-SA 3.0;
+        <a href="https://commons.wikimedia.org/wiki/File:Everbank_Stadium_2024.jpg">Everbank Stadium 2024</a>, Excel23, CC BY 4.0;
+        <a href="https://commons.wikimedia.org/wiki/File:(GBR-London)_Japan_Airlines_Airbus_A350-1041_JA08WJ_@_EGLL_2025-06-17.jpg">Japan Airlines A350-1041</a>, S5A-0043, CC BY 4.0;
+        <a href="https://commons.wikimedia.org/wiki/File:Tokyo_Tower_At_Dusk_(223572511).jpeg">Tokyo Tower at dusk</a>, Foooomio, CC BY 3.0;
+        <a href="https://commons.wikimedia.org/wiki/File:London_Thames_Sunset_panorama_-_Feb_2008.jpg">London Thames sunset panorama</a>, Diliff, CC BY 3.0;
+        <a href="https://commons.wikimedia.org/wiki/File:Shibuya_crossing_seen_from_Shibuya_Stream,_2024.jpg">Shibuya crossing</a>, Syced, CC0;
+        <a href="https://commons.wikimedia.org/wiki/File:%27Owing_to_a_signal_failure_at_...%27_Rush_hour_delays_at_London%27s_Liverpool_Street_terminus_station._-_panoramio.jpg">Liverpool Street at rush hour</a>, Roger Carvell, CC BY 3.0;
+        <a href="https://commons.wikimedia.org/wiki/File:First_Capital_Connect%27s_bicycle_commuters,_2012_-_panoramio.jpg">Bicycle commuters</a>, Roger Carvell, CC BY 3.0;
+        <a href="https://commons.wikimedia.org/wiki/File:Eiffel_Tower_sunset_skyline_(Unsplash).jpg">Eiffel Tower at sunset</a>, Pedro Kümmel, CC0;
+        <a href="https://commons.wikimedia.org/wiki/File:Photovoltaic_Panels_at_the_Travers_Solar_Farm.jpg">Travers Solar Farm</a>, Kkiefuik, CC BY 4.0;
+        <a href="https://commons.wikimedia.org/wiki/File:Sydney_Harbour_Bridge_at_night.jpg">Sydney Harbour Bridge at night</a>, sander88, CC BY 2.0;
+        <a href="https://commons.wikimedia.org/wiki/File:New_York_skyline_at_night.jpg">New York skyline at night</a>, Azeusss, CC BY 4.0;
+        <a href="https://commons.wikimedia.org/wiki/File:Trams_in_Lisbon_(front%26back).jpg">Trams in Lisbon</a>, Heather Cowper, CC BY 2.0.
+      </p>
+    </div>
+    <div>
+      <h3>Sound and voice</h3>
+      <p>The launch film’s score was composed for it in code. The ad’s music is “Rising Forest” by Diego Nava, and its sound effects are from Mixkit, under the Mixkit free licences.</p>
+      <p>The narration is AI-generated with Google Gemini (voices Charon and Puck) and carries Google’s SynthID watermark.</p>
+      <h3 style="margin-top:18px">Trademarks</h3>
+      <p>Spotify, Google Calendar and Apple Calendar marks, and the club and league crests, belong to their owners and appear to show what Pulse connects to. No endorsement is implied.</p>
+    </div>
+  </div>
+  <div class="sign">
+    <span>Pulse OS, made by Eeliya. 2026.</span>
+    <a href="https://github.com/eeliya-hub/pulseOS/blob/main/docs/launch/CREDITS.md" style="color:inherit">Full credits</a>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,3 +1,104 @@
+# Pulse OS — the launch film
+
+**Released 7 October 2026.**
+
+<p align="center">
+  <a href="https://eeliya-hub.github.io/pulseOS/"><img src="docs/launch/launch-preview.gif" width="100%" alt="Scenes from the Pulse OS launch film: the opening line, Home, the immersive player, a trip to Tokyo and the sign-off"></a>
+</p>
+
+Pulse OS has a film.
+
+Two and a half minutes, narrated, covering every part of the app — and every
+frame of it is code: Pulse's own views, rebuilt from its components and cut to
+a score composed for them. With it comes a thirty-second ad, made for phones.
+Both are out today.
+
+**[Watch them on the launch page](https://eeliya-hub.github.io/pulseOS/)**, or
+take the files from the **[release](https://github.com/eeliya-hub/pulseOS/releases/tag/launch-film)**.
+
+| | | |
+|---|---|---|
+| **The launch film** | 2 min 29 s. 1920 × 1080, narrated, with English captions | [Watch](https://eeliya-hub.github.io/pulseOS/) · [Download, 70 MB](docs/launch/pulseos-launch-film.mp4) |
+| **The ad** | 30 s. 1080 × 1920, music only | [Watch](https://eeliya-hub.github.io/pulseOS/#ad-title) · [Download, 17 MB](docs/launch/pulseos-ad.mp4) |
+
+---
+
+## The launch film
+
+The film follows the tab bar from left to right. Each section opens with a
+click on its tab and a title card that irises out of the click, holds, and hands
+back to the app.
+
+| | What you see |
+|---|---|
+| **Opening** | A single line draws itself across the dark and beats on the words: *“Every day has a pulse.”* Then nine apps scatter across the screen — *“But yours is scattered, across nine different apps”* — before all of them fall into the line. |
+| **Home** | A window opens out of the line onto the day: the plans, the weather and the apps, each pulled into focus as it is named. |
+| **Launchpad** | *One click away.* Every app and saved site on one shelf, with Notes opening on the word “click”. |
+| **Life Hub** | *Every plan, in step.* iCal and Google Calendar connect, a to-do is ticked and a habit lit. |
+| **Ask Pulse** | *Just ask.* A request typed and done — music on, and a call put in the diary. Then the microphone: voice mode listens, works and answers out loud, each plan lighting up as it is said. |
+| **Markets & News** | *The world, live.* The ticker tape and the watchlist, news from your street to the other side of the world, and the fixtures for Arsenal and the Jacksonville Jaguars. |
+| **Music** | *A room of its own.* Spotify connects, the playlists arrive, and the song opens into the immersive player — lit by the record’s colours, with every word in time. |
+| **Travel** | *Wherever you’re headed.* The trip to Tokyo: the flight on the route map with the plane flying it, local time, the plug, the dialling code, the currency converter and the packing list. |
+| **The close** | *“Remember how scattered it all felt?”* The nine apps fly back in and merge into one: *“From nine apps… to one. Everything your day needs, finally together.”* The line rises into the mark — *“Pulse OS. Your day, in a heartbeat.”* |
+
+## The ad
+
+<img src="docs/launch/ad-preview.gif" width="230" align="right" alt="A loop from the ad: the world live, Spotify built in, and a flight to Tokyo">
+
+Thirty seconds, made for phones and for the sound off as much as on. There is
+no narration: every part of Pulse is one clear moment, each held long enough to
+read, cut to “Rising Forest” by Diego Nava.
+
+- *Nine apps. One day.* — the notifications pile up and are pulled into the line.
+- *Pulse OS.* — *Your whole day, one screen.*
+- *Good morning, Eeliya.* — the weather and the day’s plans arrive.
+- *Every app, one click.*
+- *Every calendar, in one.* — iCal and Google Calendar pour into one month.
+- *Just ask. Or just talk.* — the message turns into the voice orb.
+- *The world, live.* — markets, the live news and the match.
+- *Your Spotify, built in.*
+- *Wherever you’re headed.* — London to Tokyo, and the stamp on arrival.
+- The day passes along the line, dawn to midnight: *Your day, in a heartbeat.*
+
+<br clear="right">
+
+## How they were made
+
+**Drawn, not recorded.** Both films are built in [Remotion](https://www.remotion.dev)
+from Pulse’s own views, rebuilt from its components rather than recorded off a
+screen — so every frame is sharp at any size, and every number on screen is the
+one the story needs.
+
+**Cut to the word.** The narration is two voices — a narrator, and Pulse
+itself — generated with Google’s Gemini. Every line was read three times and the
+best take chosen blind; whisper.cpp then timed every word, and the picture moves
+on the words, on a ninety-beat-a-minute grid with a score composed in code. The
+captions on the launch page are timed from the finished film the same way.
+
+**Cut to the bar.** The ad has no voice at all. It runs at 124 beats a minute,
+edited on the bars of its track, with forty-five sound effects set on the beats.
+
+## Share it
+
+- **[The launch page](https://eeliya-hub.github.io/pulseOS/)** — both films, in the browser.
+- **[The release](https://github.com/eeliya-hub/pulseOS/releases/tag/launch-film)** — both films to download.
+- **[The press kit](docs/launch/PRESS.md)** — ready-to-post words for LinkedIn, X, Instagram, TikTok and YouTube, the posters, the preview loops and a still from every section.
+
+## Credits
+
+Photographs from Wikimedia Commons, under CC BY, CC BY-SA and CC0 licences —
+every author and licence is in **[docs/launch/CREDITS.md](docs/launch/CREDITS.md)**,
+and needs to travel with the films wherever they are posted. The narration is
+AI-generated with Google Gemini. The ad’s music is “Rising Forest” by Diego Nava
+(Mixkit). Spotify, Google Calendar, Apple Calendar and the club crests are
+trademarks of their owners, shown to say what Pulse connects to.
+
+Pulse OS. Your day, in a heartbeat. *Coming soon.*
+
+---
+
+<sub>Earlier announcements follow, unchanged.</sub>
+
 # Pulse OS v2 — "Afterglow"
 
 **Released 21 September 2026.** Supersedes v1 (July 2026).

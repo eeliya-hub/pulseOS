@@ -4,10 +4,19 @@ A personal command-centre dashboard — one screen that never scrolls, carrying
 weather, calendar, news, markets, sport, music and travel, with an AI assistant
 that can read all of it and act on it. React + Vite frontend, Express backend.
 
-> **v2 "Afterglow" is out.** The whole frontend was rebuilt around a shared
-> spatial system and a background that follows the time of day, Travel became
-> live, and the assistant learned to speak. See **[ANNOUNCEMENT.md](ANNOUNCEMENT.md)**
-> for the full before/after.
+> **The launch film is out.** Two and a half minutes on every part of Pulse OS,
+> and a thirty-second ad made for phones. Watch both on the
+> **[launch page](https://eeliya-hub.github.io/pulseOS/)**, or read the
+> **[announcement](ANNOUNCEMENT.md)**.
+
+<p align="center">
+  <a href="https://eeliya-hub.github.io/pulseOS/"><img src="docs/launch/launch-preview.gif" width="100%" alt="Scenes from the Pulse OS launch film — watch it on the launch page"></a>
+</p>
+
+> **v2 "Afterglow"** (21 September) rebuilt the whole frontend around a shared
+> spatial system and a background that follows the time of day, made Travel
+> live, and taught the assistant to speak. The full before/after is further down
+> **[ANNOUNCEMENT.md](ANNOUNCEMENT.md#pulse-os-v2--afterglow)**.
 
 ![Pulse OS home](docs/release/gallery/home.jpg)
 
@@ -100,6 +109,9 @@ call-site changes.
 
 ## Documentation
 
-- [ANNOUNCEMENT.md](ANNOUNCEMENT.md) — v2 release notes, with before/after imagery
+- [The launch page](https://eeliya-hub.github.io/pulseOS/) — the launch film and the ad, in the browser
+- [ANNOUNCEMENT.md](ANNOUNCEMENT.md) — the launch film, and the v2 release notes with before/after imagery
+- [docs/launch/PRESS.md](docs/launch/PRESS.md) — the press kit: words to post, posters, previews and stills
+- [docs/launch/CREDITS.md](docs/launch/CREDITS.md) — credits and licences for the films
 - [docs/PulseOS-Doc.html](docs/PulseOS-Doc.html) — the full project document (source for the PDF)
 - [backend/README.md](backend/README.md) — API surface and provider pattern
