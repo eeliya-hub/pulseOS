@@ -52,7 +52,7 @@
 
   /* Every view's sky is exactly this tall, so the horizon lands on the same
      line from tab to tab and the ground below it is always the same depth. */
-  --sky-h: 19.5rem;
+  --sky-h: 18rem;
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
@@ -81,11 +81,16 @@
    frame (1.1111vw = 16px at 1440 wide, 1.7021vh = 16px at 940 tall), so a short
    window shrinks the layout instead of crushing the cards into each other. The
    clamp keeps it readable in a tiny window and stops it ballooning on a big
-   display. */
+   display.
+
+   The ceiling is 24px, not 20. At 20 a 2560 x 1440 screen drew the layout at
+   1.25x while the screen itself was 1.5x the design frame, so everything sat
+   small in the middle of it with the space going spare. 24px is exactly 1.5x,
+   which is that screen's own ratio; anything larger still stops here. */
 html {
   background: var(--ink);
   font-family: var(--pulse-ui-font);
-  font-size: clamp(8.5px, min(1.1111vw, 1.7021vh), 20px);
+  font-size: clamp(8.5px, min(1.1111vw, 1.7021vh), 24px);
 }
 
 body {
@@ -324,7 +329,7 @@ h3,
 
 @media (max-height: 800px) {
   :root {
-    --sky-h: 17.5rem;
+    --sky-h: 16.5rem;
   }
 }
 
@@ -710,6 +715,17 @@ h3,
 .ground-rule {
   box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.065);
 }
+
+/* A column head set opposite something louder than a rule — Markets' live
+   channel faces the panel's row of tabs — holds its own at a size up. At the
+   standard 13px it read as a caption for the tabs rather than a heading of
+   equal standing. */
+.col-head--lg .t-label {
+  font-size: 0.9375rem;
+  color: color-mix(in srgb, var(--moon) 84%, transparent);
+}
+
+.col-head--lg .col-head-label::before { height: 0.9375rem; }
 
 /* Markets: the live channel's column is exactly as wide as a 16:9 picture as
    tall as the ground allows, so the video fills its frame with no bars. The

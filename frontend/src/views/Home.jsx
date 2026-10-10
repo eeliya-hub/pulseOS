@@ -96,7 +96,6 @@ export default function Home({ onAskPulse, onOpenSettings }) {
     setAskText('');
   };
 
-  const todayCount = upcoming.filter((e) => e.offset === 0).length;
 
   return (
     <div className="flex h-full flex-col">
@@ -110,13 +109,6 @@ export default function Home({ onAskPulse, onOpenSettings }) {
           <h1 className="t-hero truncate">
             {greetingFor(now)}, <span className="name-mark">{settings.name}</span>
           </h1>
-          <p className="t-lede mt-3">
-            {todayCount === 0
-              ? 'Nothing else on today'
-              : todayCount === 1
-                ? 'One thing on today'
-                : `${todayCount} things on today`}
-          </p>
 
           <div className="mt-8 flex items-center gap-2">
             {onAskPulse && (

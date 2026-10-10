@@ -1366,7 +1366,7 @@ export default function Markets() {
       {/* ── Ground: the live channel and the desk ─────────────────────────── */}
       <Ground className="markets-ground">
         <div className="flex min-h-0 min-w-0 flex-col pb-3 pr-8 pt-7">
-          <ColumnHead label="Live channel" />
+          <ColumnHead label="Live channel" className="col-head--lg" />
           <div className="markets-stage mt-2">
             <div className="lift relative aspect-video max-h-full w-full overflow-hidden rounded-[1.5rem] bg-black shadow-[0_40px_80px_-40px_rgba(0,0,0,0.95)] ring-1 ring-white/10">
               <LiveNewsPlayer />
