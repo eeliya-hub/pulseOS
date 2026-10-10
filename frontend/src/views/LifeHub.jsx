@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import MailSummary from '../components/MailSummary.jsx';
 import { Column, ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { ensureCalendarRange, SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { api } from '../services/api/backendClient.js';
@@ -31,6 +32,7 @@ import {
   occursOn,
   useLifeData,
 } from '../hooks/useLifeData.js';
+import { useMinute } from '../hooks/useMinute.js';
 import { useSettings } from '../hooks/useSettings.js';
 
 const inputClass =
@@ -74,9 +76,16 @@ const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
  * calendar itself is the picker, so any day is one tap away. The ground carries
  * that day's schedule, its to-dos and habits, and the projects they belong to.
  */
-export default function LifeHub() {
+export default function LifeHub({ onOpenMail }) {
   const life = useLifeData();
   const calendar = useCalendarEvents();
+  /*
+   * Not read directly — it is what keeps this view on the right day. Several
+   * things below work out "today" during render (the habit log, the highlighted
+   * date in the picker), and without a tick they would still be on yesterday
+   * for a Pulse left open overnight.
+   */
+  useMinute();
 
   const [selectedKey, setSelectedKey] = useState(() => dateKey(new Date()));
   const [showCalendar, setShowCalendar] = useState(false);
@@ -117,7 +126,7 @@ export default function LifeHub() {
   return (
     <div className="flex h-full flex-col">
       {/* ── Sky: the day you're looking at, and the month it sits in ─────── */}
-      <SkyZone className="flex items-end justify-between gap-10">
+      <SkyZone className="grid grid-cols-[minmax(0,1fr)_minmax(0,clamp(14rem,24%,21rem))] items-end gap-6 xl:gap-10">
         <div className="min-w-0">
           <p className="t-eyebrow">{relativeDayLabel(selectedKey)}</p>
           <h1 className="t-hero mt-3 truncate">
@@ -164,6 +173,8 @@ export default function LifeHub() {
           </div>
         </div>
 
+        {/* Mail: the figure, what Pulse noticed in it, and the way in. */}
+        <MailSummary onOpen={(message) => onOpenMail?.(message)} />
       </SkyZone>
 
       {/* ── Ground: the day's plan, what to do, habits, projects ─────────── */}

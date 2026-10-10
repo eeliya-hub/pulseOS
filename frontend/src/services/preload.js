@@ -1,4 +1,5 @@
 import { warmCalendar } from '../hooks/useCalendarEvents.js';
+import { warmMail } from '../hooks/useMail.js';
 import { getTravelState } from '../hooks/useTravelStore.js';
 import { flightKey } from '../hooks/useTripLive.js';
 import { fetchNews, newsKey } from '../hooks/useNews.js';
@@ -65,6 +66,9 @@ export async function runPreload(onProgress = () => {}) {
 
   const tasks = [
     ['Calendar', () => warmCalendar()],
+    // The Life Hub's mail card, so it opens on real figures rather than a
+    // skeleton. Headers only — no bodies are fetched before they are asked for.
+    ['Mail', () => warmMail()],
     ['Weather', () => getWeatherSummary(location)],
     [
       'News',
@@ -133,7 +137,11 @@ export async function runPreload(onProgress = () => {}) {
           // the backend's own cache, which is what the view reads through.
           trip?.destination?.lat != null
             ? warm(`travel:weather:${trip.destination.lat},${trip.destination.lon}`, () =>
-                api.weather.summary({ lat: trip.destination.lat, lon: trip.destination.lon }),
+                api.weather.summary({
+                  lat: trip.destination.lat,
+                  lon: trip.destination.lon,
+                  units: getSettings().units || 'metric',
+                }),
               )
             : null,
           // Hotel and itinerary pictures, fetched as images so they are in the

@@ -47,6 +47,13 @@ export const TOOL_LABELS = {
   get_trip: 'Reading your trip',
   add_packing_item: 'Adding to your packing list',
   check_packing_item: 'Updating your packing list',
+  // Email
+  get_mail_summary: 'Checking your inbox',
+  list_unread_mail: 'Looking through your unread mail',
+  search_mail: 'Searching your mail',
+  read_mail: 'Reading that email',
+  draft_email: 'Drafting that for you',
+  open_mail: 'Opening your mail',
   // Music
   play_music: 'Starting the music',
   pause_music: 'Pausing the music',

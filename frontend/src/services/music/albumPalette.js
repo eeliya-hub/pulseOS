@@ -5,7 +5,17 @@
 // artwork can be drawn to a canvas and read back. If that ever stops being true
 // the canvas taints, getImageData throws, and we fall back to the house palette.
 
-const FALLBACK = { base: [96, 124, 214], accent: [150, 110, 214], glow: [116, 242, 255] };
+const FALLBACK = {
+  base: [96, 124, 214],
+  accent: [150, 110, 214],
+  glow: [116, 242, 255],
+  swatches: [
+    [96, 124, 214],
+    [150, 110, 214],
+    [116, 242, 255],
+    [74, 96, 196],
+  ],
+};
 
 const SIZE = 24; // downscale before sampling — plenty for a dominant-colour read
 
@@ -22,14 +32,10 @@ function rgbToHsl([r, g, b]) {
   return [(h * 60 + 360) % 360, s, l];
 }
 
-// Lift a washed-out or near-black swatch into a range that reads on a dark page.
-function vivify([r, g, b]) {
-  const [h, s, l] = rgbToHsl([r, g, b]);
-  const S = Math.min(1, Math.max(s, 0.55));
-  const L = Math.min(0.68, Math.max(l, 0.45));
-  const c = (1 - Math.abs(2 * L - 1)) * S;
+function hslToRgb([h, s, l]) {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = L - c / 2;
+  const m = l - c / 2;
   const seg = [
     [c, x, 0],
     [x, c, 0],
@@ -37,15 +43,64 @@ function vivify([r, g, b]) {
     [0, x, c],
     [x, 0, c],
     [c, 0, x],
-  ][Math.floor(h / 60) % 6];
+  ][Math.floor((((h % 360) + 360) % 360) / 60) % 6];
   return seg.map((v) => Math.round((v + m) * 255));
+}
+
+// Lift a washed-out or near-black swatch into a range that reads on a dark page.
+function vivify([r, g, b]) {
+  const [h, s, l] = rgbToHsl([r, g, b]);
+  return hslToRgb([h, Math.min(1, Math.max(s, 0.55)), Math.min(0.68, Math.max(l, 0.45))]);
+}
+
+// Brighter again than vivify: these are lights in a dark room, not swatches on a
+// page, and a colour at half lightness reads as a stain rather than a glow.
+function glowing(rgb) {
+  const [h, s, l] = rgbToHsl(rgb);
+  return hslToRgb([h, Math.min(1, Math.max(s, 0.62)), Math.min(0.7, Math.max(l, 0.56))]);
+}
+
+const hueGap = (a, b) => {
+  const d = Math.abs(a - b);
+  return Math.min(d, 360 - d);
+};
+
+/** The same colour turned round the wheel, for artwork with only one or two. */
+function turn(rgb, degrees, lighten = 0) {
+  const [h, s, l] = rgbToHsl(rgb);
+  return hslToRgb([(h + degrees + 360) % 360, s, Math.min(0.72, Math.max(0.38, l + lighten))]);
+}
+
+/**
+ * Four colours for the immersive player's light, each its own hue where the
+ * artwork has one, so the room has more than a single wash to move about. A
+ * sleeve with fewer colours than that lends its first one, turned a little
+ * either way round the wheel — still recognisably the record, never a stranger.
+ */
+function swatchesOf(ranked) {
+  // A grey has no hue to speak of — lifted, it would come out as an arbitrary red.
+  const coloured = ranked.filter(({ rgb }) => rgbToHsl(rgb)[1] > 0.14);
+  const picked = [];
+  for (const { rgb } of coloured.length ? coloured : ranked) {
+    const hue = rgbToHsl(rgb)[0];
+    if (picked.every((p) => hueGap(p.hue, hue) > 28)) picked.push({ rgb: glowing(rgb), hue });
+    if (picked.length === 4) break;
+  }
+  const first = picked[0]?.rgb ?? glowing(FALLBACK.base);
+  const turns = [
+    [34, 0.06],
+    [-30, -0.04],
+    [64, 0.1],
+  ];
+  for (let i = 0; picked.length < 4; i += 1) picked.push({ rgb: turn(first, ...turns[i]) });
+  return picked.map((p) => p.rgb);
 }
 
 /**
  * Read the artwork's dominant colours.
  *
  * @param {string} src album art URL
- * @returns {Promise<{base:number[], accent:number[], glow:number[]}>} rgb triples
+ * @returns {Promise<{base:number[], accent:number[], glow:number[], swatches:number[][]}>} rgb triples
  */
 export function albumPalette(src) {
   return new Promise((resolve) => {
@@ -89,7 +144,12 @@ export function albumPalette(src) {
             return Math.min(d, 360 - d) > 40;
           })?.rgb ?? ranked[Math.min(1, ranked.length - 1)].rgb;
 
-        resolve({ base: vivify(base), accent: vivify(contrast), glow: vivify(ranked[0].rgb) });
+        resolve({
+          base: vivify(base),
+          accent: vivify(contrast),
+          glow: vivify(ranked[0].rgb),
+          swatches: swatchesOf(ranked),
+        });
       } catch {
         resolve(FALLBACK); // tainted canvas — palette isn't worth breaking playback over
       }

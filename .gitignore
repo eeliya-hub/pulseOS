@@ -45,3 +45,4 @@ ios/DerivedData/
 # The packaged desktop app: hundreds of megabytes of Electron and a DMG, all of
 # it reproducible from `npm run desktop:build`.
 desktop/out/
+promo/out/

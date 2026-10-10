@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
  * @param {object} p
  * @param {()=>void} p.onChat
  * @param {()=>void} p.onVoice
- * @param {()=>void} p.onSettings  open the full-page AI settings
+ * @param {()=>void} p.onSettings  open Settings on its Pulse section
  * @param {()=>void} p.onClose
  */
 export default function PulseLauncher({ onChat, onVoice, onSettings, onClose }) {

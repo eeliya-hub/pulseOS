@@ -48,6 +48,41 @@ const DEFAULTS = {
   // When the screen goes idle while music is playing, show the immersive player
   // instead of the plain screensaver. Off means the usual idle screen.
   afkImmersive: true,
+  // The immersive player's light: the sleeve's colours drifting round the room.
+  // Off holds them still.
+  immersiveMotion: true,
+  // Seconds on Home without a touch before the clock takes over; 0 = never.
+  idleAfter: 20,
+  // Quiets every ambient movement in the app — the sky's drift, the horizon's
+  // breathing, the light running the baseline — for anyone who'd rather it sat still.
+  reduceMotion: false,
+  // 'auto' follows the hour; 'dawn' | 'day' | 'dusk' | 'night' holds the sky there.
+  skyPhase: 'auto',
+  // The highlight colour everywhere — 'sky' takes the hour's, or a colour of your own.
+  accent: 'sky',
+  // What's behind everything: the living sky, or a photo of yours (kept under its
+  // own key — see useWallpaper — so a settings write never carries the picture).
+  // `tint` lends the photo's colours to the sky and, unless you chose one, the accent.
+  background: { kind: 'sky', dim: 0.7, blur: 0, tint: true },
+  // 'MM-DD'. Pulse wishes you a happy birthday on the day, and the assistant knows.
+  birthday: '',
+  // Weather in 'metric' (°C) or 'imperial' (°F).
+  units: 'metric',
+  // The big clocks — top bar, resting screen, immersive player — in 24 or 12 hours.
+  clock24: true,
+  // The tab bar, left to right with Ask Pulse in the middle, and the ones you've put away.
+  tabs: ['home', 'launchpad', 'life', 'markets', 'music', 'travel'],
+  hiddenTabs: [],
+  // What the resting clock shows besides the time.
+  restShows: { greeting: true, date: true, weather: false, next: false },
+  // The immersive player: how strong its light is, and the words.
+  immersiveLight: 'rich', // 'soft' | 'rich' | 'vivid'
+  showLyrics: true,
+  lyricsSize: 'medium', // 'small' | 'medium' | 'large'
+  // Double-tap Space anywhere to talk to Pulse.
+  voiceShortcut: true,
+  // How fast the Markets tape runs: 'slow' | 'steady' | 'quick'.
+  tickerSpeed: 'steady',
   // Long-term memory: durable facts Pulse has learned about the user, recalled in
   // every future conversation. Each is { id, text, at }.
   memories: [],
@@ -126,6 +161,10 @@ function migrate(saved) {
         ...(saved.launchpad ?? []),
         ...STARTER_SITES.filter((site) => !(saved.launchpad ?? []).some((item) => item?.url === site.url)),
       ];
+  // Every tab exactly once, in the saved order, with any tab added since the
+  // order was saved put back at the end rather than lost.
+  const known = DEFAULTS.tabs;
+  const tabs = [...new Set([...(saved.tabs ?? []).filter((t) => known.includes(t)), ...known])];
   return {
     ...saved,
     follows,
@@ -134,6 +173,10 @@ function migrate(saved) {
     pinned: { ...DEFAULTS.pinned, ...pinned },
     customPrompts,
     memories,
+    tabs,
+    hiddenTabs: (saved.hiddenTabs ?? []).filter((t) => known.includes(t) && t !== 'home'),
+    background: { ...DEFAULTS.background, ...saved.background },
+    restShows: { ...DEFAULTS.restShows, ...saved.restShows },
   };
 }
 

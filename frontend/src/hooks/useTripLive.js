@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../services/api/backendClient.js';
 import { peek, put } from '../services/warmCache.js';
+import { useSettings } from './useSettings.js';
 
 /**
  * The live half of a trip: destination weather, the exchange rate, and the route
@@ -22,6 +23,7 @@ const TYPING_MS = 650;
 export const flightKey = (code, date) => `travel:flight:${code}@${date || ''}`;
 
 export function useTripLive(trip) {
+  const units = useSettings().settings.units || 'metric';
   const [weather, setWeather] = useState(null);
   const [fx, setFx] = useState(null);
   const [flights, setFlights] = useState({});
@@ -55,7 +57,7 @@ export function useTripLive(trip) {
     let alive = true;
     const load = () =>
       api.weather
-        .summary(lat != null ? { lat, lon } : { city })
+        .summary(lat != null ? { lat, lon, units } : { city, units })
         .then((data) => alive && setWeather(data))
         .catch(() => alive && setWeather(null));
 
@@ -65,7 +67,7 @@ export function useTripLive(trip) {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [city, lat, lon]);
+  }, [city, lat, lon, units]);
 
   /* Exchange rate home → destination. */
   useEffect(() => {

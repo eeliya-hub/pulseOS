@@ -16,6 +16,7 @@ import {
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import LiveNewsPlayer from '../components/LiveNewsPlayer.jsx';
 import SettingsButton from '../components/SettingsButton.jsx';
+import { NEWS_SCOPE_KEY, NEWS_SCOPES } from '../data/newsScopes.js';
 import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { localConstructorLogo } from '../data/f1Logos.js';
 import { useMarketData } from '../hooks/useMarketData.js';
@@ -143,7 +144,7 @@ function Ticker({ fallback }) {
         className="ticker-track"
         style={{
           '--ticker-shift': `${(100 / copies).toFixed(6)}%`,
-          ...(unit ? { '--ticker-duration': `${(unit / TAPE_PX_PER_SECOND).toFixed(1)}s` } : null),
+          ...(unit ? { '--ticker-duration': `${(unit / (TAPE_SPEED[settings.tickerSpeed] ?? TAPE_SPEED.steady)).toFixed(1)}s` } : null),
         }}
       >
         {copy(copyRef)}
@@ -155,18 +156,14 @@ function Ticker({ fallback }) {
   );
 }
 
-/** How fast the tape reads, in pixels a second. Slow enough to be read at a glance. */
-const TAPE_PX_PER_SECOND = 14.6;
+/**
+ * How fast the tape reads, in pixels a second, as Settings has it. Steady is
+ * slow enough to read at a glance; the others are for those who'd rather it
+ * drifted, or kept up.
+ */
+const TAPE_SPEED = { slow: 9, steady: 14.6, quick: 24 };
 
 // Scopes: worldwide topics + "Local" (national news for the chosen country).
-const NEWS_SCOPES = [
-  { id: 'top', label: 'Top' },
-  { id: 'local', label: 'Local' },
-  { id: 'world', label: 'World' },
-  { id: 'business', label: 'Business' },
-  { id: 'technology', label: 'Tech' },
-  { id: 'sports', label: 'Sport' },
-];
 
 function relTime(iso) {
   if (!iso) return '';
@@ -1053,12 +1050,12 @@ function SportsF1Standings({ drivers = [], constructors = [] }) {
 
 function NewsSportsCard() {
   const [tab, setTab] = useState('news');
-  const [scope, setScope] = useState(() => localStorage.getItem('pulse.news.scope') || 'top');
+  const [scope, setScope] = useState(() => localStorage.getItem(NEWS_SCOPE_KEY) || 'top');
   const [place, setPlace] = useState(null);
   const { settings } = useSettings();
   const follows = useMemo(() => settings.follows ?? [], [settings.follows]);
   const [activeId, setActiveId] = useState(follows[0]?.id ?? '');
-  useEffect(() => localStorage.setItem('pulse.news.scope', scope), [scope]);
+  useEffect(() => localStorage.setItem(NEWS_SCOPE_KEY, scope), [scope]);
   useEffect(() => {
     if (follows.length && !follows.some((f) => f.id === activeId)) setActiveId(follows[0].id);
   }, [follows, activeId, setActiveId]);
@@ -1370,8 +1367,10 @@ export default function Markets() {
       <Ground className="markets-ground">
         <div className="flex min-h-0 min-w-0 flex-col pb-3 pr-8 pt-7">
           <ColumnHead label="Live channel" />
-          <div className="lift relative mt-2 aspect-video max-h-full w-full overflow-hidden rounded-[1.5rem] bg-black shadow-[0_40px_80px_-40px_rgba(0,0,0,0.95)] ring-1 ring-white/10">
-            <LiveNewsPlayer />
+          <div className="markets-stage mt-2">
+            <div className="lift relative aspect-video max-h-full w-full overflow-hidden rounded-[1.5rem] bg-black shadow-[0_40px_80px_-40px_rgba(0,0,0,0.95)] ring-1 ring-white/10">
+              <LiveNewsPlayer />
+            </div>
           </div>
         </div>
 

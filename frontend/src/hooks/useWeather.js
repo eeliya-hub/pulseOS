@@ -5,6 +5,7 @@ import { useSettings } from './useSettings.js';
 export function useWeather() {
   const { settings } = useSettings();
   const location = settings.location;
+  const units = settings.units || 'metric';
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,7 +14,7 @@ export function useWeather() {
     let isMounted = true;
     setLoading(true);
 
-    getWeatherSummary(location)
+    getWeatherSummary(location, units)
       .then((data) => {
         if (isMounted) setWeather(data);
       })
@@ -27,7 +28,7 @@ export function useWeather() {
     return () => {
       isMounted = false;
     };
-  }, [location]);
+  }, [location, units]);
 
   return { weather, loading, error };
 }

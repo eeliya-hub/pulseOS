@@ -24,7 +24,20 @@ const VERSION = 1;
  * travels, including keys added after this was written — a list of what to take
  * would be a list to forget to update.
  */
-const DERIVED = new Set(['pulse.calendar.cache.v2']);
+const DERIVED = new Set([
+  'pulse.calendar.cache.v2',
+  /*
+   * The mail cache, for the same reason as the calendar's and one more.
+   *
+   * It belongs to a mailbox the new copy has not connected, so it could only
+   * show mail it cannot refresh. And it holds senders, subjects and preview
+   * lines — a backup is a file someone may email to themselves or leave on a
+   * drive, and the contents of an inbox have no business travelling in it.
+   * Bodies were never in there to begin with (see useMail), but headers alone
+   * say plenty.
+   */
+  'pulse.mail.cache.v1',
+]);
 
 const readable = () => {
   try {
@@ -61,7 +74,41 @@ const LABELS = {
   'pulse.travel.packing': 'Packing lists',
   'pulse.life.v1': 'To-dos, habits and projects',
   'pulse.conversations.v1': 'Pulse conversations',
+  'pulse.wallpaper.v1': 'Your background photo',
 };
+
+/**
+ * What this copy of Pulse is keeping, store by store, and how much room each
+ * takes — the derived caches included, since they take room too.
+ *
+ * @returns {{ key: string, label: string, bytes: number, carried: boolean }[]}
+ */
+export function storedSummary() {
+  let keys = [];
+  try {
+    keys = Object.keys(window.localStorage).filter((k) => k.startsWith(PREFIX));
+  } catch {
+    return [];
+  }
+  const EXTRA = {
+    'pulse.calendar.cache.v2': 'Calendar cache',
+    'pulse.miniplayer.pos.v1': 'Where the mini player sits',
+    'pulse.news.scope': 'Which news Markets opens on',
+    'pulse.newsChannel': 'The live channel last watched',
+  };
+  return keys
+    .map((key) => {
+      const value = window.localStorage.getItem(key) ?? '';
+      return {
+        key,
+        label: LABELS[key] ?? EXTRA[key] ?? key.replace(PREFIX, ''),
+        // UTF-16 in storage: two bytes a character is what it really costs.
+        bytes: (key.length + value.length) * 2,
+        carried: !DERIVED.has(key),
+      };
+    })
+    .sort((a, b) => b.bytes - a.bytes);
+}
 
 export const describe = (payload) =>
   Object.keys(payload?.data ?? {})

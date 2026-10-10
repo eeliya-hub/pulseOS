@@ -366,6 +366,33 @@ h3,
   opacity: 0.6;
 }
 
+/* A photo of your own, in place of the light. Oversized so a blur never pulls
+   its edge into the frame. */
+.sky-photo {
+  position: absolute;
+  inset: -3rem;
+  background-position: center;
+  background-size: cover;
+  transition: filter 400ms ease;
+}
+
+/* The veil over it, in the ground's own ink: how far it's dimmed is yours. */
+.sky-photo-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 82%, transparent), var(--ink));
+  transition: opacity 400ms ease;
+}
+
+/* With a photo behind, the type that sits straight on the sky — the top bar,
+   every view's hero — carries a shadow, so it reads over any picture. */
+:root[data-background='photo'] .sky-zone,
+:root[data-background='photo'] .top-bar {
+  text-shadow:
+    0 1px 2px rgb(4 8 22 / 75%),
+    0 2px 14px rgb(4 8 22 / 60%);
+}
+
 /* Only at night, and only faintly. */
 .sky-stars {
   position: absolute;
@@ -635,6 +662,13 @@ h3,
   -webkit-backdrop-filter: blur(30px) saturate(1.15);
 }
 
+/* Where nothing stands at the foot of the screen — Settings, with the baseline
+   stepped away — the ground stops at the screen's edge. Run on beneath, it
+   would be 7.5rem of page below the window for a stray focus to scroll to. */
+.ground--flush::before {
+  bottom: 0;
+}
+
 /* The horizon: one line of the hour's light, brightest in the middle, gone at
    the edges — the afterglow the whole design is named for. */
 .ground::after {
@@ -682,7 +716,14 @@ h3,
    ground is the view less the sky and tape (together 0.5rem short of --sky-h);
    the picture is that less the column's top padding, head, gap and bottom
    padding (5.25rem). The desk takes the rest, but always keeps enough for its
-   tabs and controls. */
+   tabs and controls.
+
+   The desk's share is proportional now, not a flat 30rem. A fixed reserve is
+   what left a band of empty column under the picture: on anything but a very
+   wide window the second branch of the min() won, the picture became as wide
+   as the leftover room rather than as tall as the column, and the difference
+   went nowhere. Letting the desk give ground on narrower windows keeps the
+   picture height-bound — filling its column — far more of the time. */
 .markets-view {
   container-type: size;
 }
@@ -690,8 +731,22 @@ h3,
 .markets-ground {
   display: grid;
   grid-template-columns:
-    min(calc((100cqh - var(--sky-h) + 0.5rem - 5.25rem) * 16 / 9 + 2rem), calc(100% - 30rem))
+    min(
+      calc((100cqh - var(--sky-h) + 0.5rem - 5.25rem) * 16 / 9 + 2rem),
+      calc(100% - clamp(21rem, 30%, 30rem))
+    )
     minmax(0, 1fr);
+}
+
+/* Whatever room is still left over is split above and below the picture rather
+   than all falling beneath it — an aspect-locked object in a box of another
+   shape always has some, and a gap on one side reads as a mistake where the
+   same gap on both reads as margin. */
+.markets-stage {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  align-items: center;
 }
 
 /* A list cut to whole rows (see useWholeRows): scrolling stops on a row too. A
@@ -1054,6 +1109,24 @@ h3,
   .baseline-tab--on::after {
     transform: scaleX(1);
   }
+}
+
+/* Settings is somewhere you go, not a tab: the baseline steps down out of the
+   way while it is open and comes back up when you leave. */
+.baseline {
+  transition:
+    transform 560ms var(--ease-out),
+    opacity 420ms ease;
+}
+
+.baseline--away {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.baseline--away .baseline-half,
+.baseline--away .baseline-beat {
+  pointer-events: none;
 }
 
 /* The Pulse chooser rising out of the dock. */
@@ -1441,6 +1514,16 @@ h3,
   }
 }
 
+/* The same, asked for from Settings rather than the system. */
+:root[data-motion='reduced'] *,
+:root[data-motion='reduced'] *::before,
+:root[data-motion='reduced'] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
 
 /* ---------------------------------- */
 /* Motion                              */
@@ -1654,16 +1737,200 @@ h3,
   --horizon-h: 2.75rem;
 }
 
-.immersive-field {
+/* ── The light ─────────────────────────────────────────────────────────────
+   The sleeve's colours as five pools, each on its own slow orbit, breathing on
+   its own count. Registered, so a new record's colours crossfade in. */
+
+@property --blob-1 { syntax: '<color>'; inherits: true; initial-value: #607cd6; }
+@property --blob-2 { syntax: '<color>'; inherits: true; initial-value: #966ed6; }
+@property --blob-3 { syntax: '<color>'; inherits: true; initial-value: #74f2ff; }
+@property --blob-4 { syntax: '<color>'; inherits: true; initial-value: #4a60c4; }
+
+.immersive-light {
   position: absolute;
-  /* Oversized, because it drifts: at the extremes of the lean an inset:0 layer
-     would pull its own edge into frame. */
-  inset: -6%;
-  will-change: transform;
+  inset: 0;
+  overflow: hidden;
   pointer-events: none;
+  transition:
+    --blob-1 2.4s ease,
+    --blob-2 2.4s ease,
+    --blob-3 2.4s ease,
+    --blob-4 2.4s ease;
+}
+
+/* Where a pool's orbit is centred. Squashed, so the orbit is an ellipse that
+   suits a wide room — and the pool with it, which reads as light lying on a
+   surface rather than a ball hanging in front of one. */
+.immersive-pool {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 0;
+  height: 0;
+  transform: scaleY(var(--squash, 0.72));
+}
+
+.immersive-orbit {
+  position: absolute;
+  inset: 0;
+  animation: pool-orbit var(--period) linear infinite;
+  animation-direction: var(--turn, normal);
+  animation-delay: var(--phase, 0s);
+  will-change: transform;
+}
+
+.immersive-blob {
+  position: absolute;
+  left: calc(var(--size) / -2);
+  top: calc(var(--size) / -2);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  opacity: calc(var(--a) * var(--light, 1));
+  background: radial-gradient(
+    closest-side,
+    var(--c) 0%,
+    color-mix(in srgb, var(--c) 82%, transparent) 22%,
+    color-mix(in srgb, var(--c) 40%, transparent) 54%,
+    color-mix(in srgb, var(--c) 10%, transparent) 80%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  animation: pool-breathe var(--breath) ease-in-out infinite alternate;
+  animation-delay: var(--phase, 0s);
+  will-change: transform;
+}
+
+.immersive-light--held .immersive-orbit,
+.immersive-light--held .immersive-blob {
+  animation-play-state: paused;
+}
+
+/* The sleeve's main colour, the big pool to the right, opposite the words. */
+.immersive-pool--1 {
+  --c: var(--blob-1); --x: 74%; --y: 30%; --size: 70vmax; --a: 0.82;
+  --period: 38s; --r: 12vmax; --breath: 12s; --phase: -14s; --squash: 0.74;
+}
+
+/* Its contrast, low on the right, turning the other way. */
+.immersive-pool--2 {
+  --c: var(--blob-2); --x: 88%; --y: 66%; --size: 58vmax; --a: 0.72;
+  --period: 31s; --r: 15vmax; --breath: 10s; --phase: -23s; --turn: reverse; --squash: 0.68;
+}
+
+/* A faint third high on the words' side, so that half of the room is lit too. */
+.immersive-pool--3 {
+  --c: var(--blob-3); --x: 22%; --y: 6%; --size: 50vmax; --a: 0.5;
+  --period: 44s; --r: 11vmax; --breath: 14s; --phase: -31s; --squash: 0.8;
+}
+
+/* The fourth under the horizon, warming the ground from below. */
+.immersive-pool--4 {
+  --c: var(--blob-4); --x: 48%; --y: 94%; --size: 50vmax; --a: 0.55;
+  --period: 27s; --r: 17vmax; --breath: 9s; --phase: -8s; --turn: reverse; --squash: 0.6;
+}
+
+/* And a small bright one that travels furthest — the one you notice moving. */
+.immersive-pool--5 {
+  --c: var(--blob-1); --x: 62%; --y: 46%; --size: 30vmax; --a: 0.62;
+  --period: 23s; --r: 20vmax; --breath: 7s; --phase: -19s; --squash: 0.86;
+}
+
+/* The same room, drawn small for its preview in Settings. */
+.mini-pool--1 {
+  --c: var(--blob-1); --x: 72%; --y: 30%; --size: 15rem; --a: 0.82;
+  --period: 38s; --r: 2.5rem; --breath: 12s; --phase: -14s; --squash: 0.74;
+}
+
+.mini-pool--2 {
+  --c: var(--blob-2); --x: 92%; --y: 72%; --size: 12rem; --a: 0.72;
+  --period: 31s; --r: 3rem; --breath: 10s; --phase: -23s; --turn: reverse; --squash: 0.68;
+}
+
+.mini-pool--3 {
+  --c: var(--blob-3); --x: 20%; --y: 5%; --size: 11rem; --a: 0.5;
+  --period: 44s; --r: 2rem; --breath: 14s; --phase: -31s; --squash: 0.8;
+}
+
+.mini-pool--4 {
+  --c: var(--blob-4); --x: 46%; --y: 95%; --size: 10rem; --a: 0.55;
+  --period: 27s; --r: 3.5rem; --breath: 9s; --phase: -8s; --turn: reverse; --squash: 0.6;
+}
+
+@keyframes pool-orbit {
+  from {
+    transform: rotate(0turn) translateX(var(--r));
+  }
+
+  to {
+    transform: rotate(1turn) translateX(var(--r));
+  }
+}
+
+@keyframes pool-breathe {
+  from {
+    transform: scale(0.86);
+  }
+
+  to {
+    transform: scale(1.16);
+  }
+}
+
+/* The words sit on the shadow side of the room whatever the light is doing. */
+.immersive-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(4, 6, 13, 0.5) 0%, rgba(4, 6, 13, 0.24) 36%, transparent 62%),
+    radial-gradient(120% 90% at 50% 0%, transparent 60%, rgba(4, 6, 13, 0.4));
+}
+
+/* The light's own switch: lit in the sleeve's colour while the room moves. */
+.immersive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--moon) 70%, transparent);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition:
+    background 260ms ease,
+    color 260ms ease,
+    box-shadow 260ms ease,
+    transform 220ms var(--ease-spring);
+}
+
+.immersive-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--moon);
+}
+
+.immersive-toggle:active {
+  transform: scale(0.955);
+}
+
+.immersive-toggle[aria-pressed='true'] {
+  color: color-mix(in srgb, var(--lit) 55%, var(--moon));
+  background: color-mix(in srgb, var(--lit) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lit) 42%, transparent);
 }
 
 /* ── The words ─────────────────────────────────────────────────────────── */
+
+/* Their size, from Settings. Medium is the size they were drawn at. */
+.immersive--words-small {
+  --lyric-size: clamp(1.4rem, 2.2vw, 2.15rem);
+}
+
+.immersive--words-large {
+  --lyric-size: clamp(2rem, 3.6vw, 3.6rem);
+}
 
 .immersive-words {
   position: absolute;
@@ -1697,7 +1964,7 @@ h3,
   font-family: var(--pulse-display-font);
   font-optical-sizing: auto;
   font-weight: 340;
-  font-size: clamp(1.7rem, 2.85vw, 2.85rem);
+  font-size: var(--lyric-size, clamp(1.7rem, 2.85vw, 2.85rem));
   line-height: 1.3;
   letter-spacing: -0.014em;
   padding: 0.18rem 0 0.18rem 1.5rem;
@@ -1895,8 +2162,9 @@ h3,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .immersive-field {
-    transform: none !important;
+  .immersive-orbit,
+  .immersive-blob {
+    animation-play-state: paused !important;
   }
 
   .immersive-blip {
@@ -1908,5 +2176,1067 @@ h3,
   .immersive-line--on::before {
     transition: none;
     animation: none;
+  }
+}
+
+/* ── Settings ──────────────────────────────────────────────────────────────
+   Somewhere you go rather than a tab: the baseline steps away and the page
+   keeps the house shape — sky, horizon, ground — split once, down the whole
+   height: the sections on the left, the one you're in on the right.
+
+   Each section has a colour of its own (--tint), worn by its tile in the rail,
+   the tile by its name and the glow behind its header, so you can tell where
+   you are from across the room. Controls keep the app's own accent. A section
+   reads as one column of groups, each group a well of rows: what it is on the
+   left, the control on the right. */
+
+:root {
+  --settings-sky-h: 15.5rem;
+}
+
+@media (max-height: 800px) {
+  :root {
+    --settings-sky-h: 14rem;
+  }
+}
+
+.settings-sky {
+  height: var(--settings-sky-h);
+  padding-top: 0.25rem;
+  padding-bottom: 2rem;
+}
+
+/* The section's own light, low behind its header. */
+.settings-glow {
+  position: absolute;
+  left: 8rem;
+  right: -10%;
+  bottom: -6rem;
+  height: 22rem;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 55% at 26% 72%, color-mix(in srgb, var(--tint) 26%, transparent), transparent 70%),
+    radial-gradient(30% 40% at 80% 60%, color-mix(in srgb, var(--tint) 12%, transparent), transparent 70%);
+  /*
+   * The first lamp is centred at 26% with a 42% radius, so a third of it falls
+   * outside this box's left edge — and a gradient that runs off its own box is
+   * not faded, it is CUT. That showed as a hard vertical seam down the page,
+   * brightest where the glow was brightest. The mask ends the box in light
+   * instead of in a line; the lamp's centre at 26% is well clear of it.
+   */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 20%);
+  transition: background 700ms ease;
+}
+
+/* A section's mark: its icon on a tile of its own colour. */
+.section-tile {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.55rem;
+  color: var(--tint);
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 20%, transparent);
+  transition:
+    background 260ms ease,
+    box-shadow 260ms ease,
+    color 260ms ease;
+}
+
+.section-tile svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.section-tile--lg {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.7rem;
+}
+
+.section-tile--lg svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+/* ── The rail ── */
+
+.settings-rail-group {
+  padding: 0 0.625rem;
+  margin: 0.875rem 0 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--dim);
+}
+
+.settings-rail-group:first-child {
+  margin-top: 0;
+}
+
+.settings-rail-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border-radius: 0.8rem;
+  text-align: left;
+  font-size: 0.9375rem;
+  font-weight: 450;
+  color: color-mix(in srgb, var(--moon) 64%, transparent);
+  transition:
+    background 220ms ease,
+    color 220ms ease;
+}
+
+.settings-rail-row:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: color-mix(in srgb, var(--moon) 90%, transparent);
+}
+
+.settings-rail-row[aria-current='page'] {
+  background: color-mix(in srgb, var(--tint) 10%, rgba(255, 255, 255, 0.04));
+  color: var(--moon);
+}
+
+.settings-rail-row[aria-current='page'] .section-tile {
+  background: color-mix(in srgb, var(--tint) 26%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent),
+    0 0 16px -4px color-mix(in srgb, var(--tint) 60%, transparent);
+}
+
+/* ── The page ── */
+
+/* The section's column, scrolling under the horizon. Its top and foot fade
+   rather than cut, so a row slides out of view instead of being sliced. */
+.settings-scroll {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 1.75rem, #000 calc(100% - 3rem), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 1.75rem, #000 calc(100% - 3rem), transparent 100%);
+}
+
+.settings-page {
+  padding: 2rem 0 6rem;
+  animation: settings-pane-in 560ms var(--ease-out) both;
+}
+
+.settings-swap {
+  animation: hero-settle 620ms var(--ease-out) both;
+}
+
+@keyframes settings-pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.settings-group + .settings-group {
+  margin-top: 2.75rem;
+}
+
+.settings-group-title {
+  font-family: var(--pulse-display-font);
+  font-optical-sizing: auto;
+  font-size: 1.4375rem;
+  font-weight: 370;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--moon);
+}
+
+/* A well of rows, each told from the next by a hairline. */
+.settings-well {
+  margin-top: 0.875rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.065);
+}
+
+.settings-well > * + * {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.settings-well--pad {
+  padding: 1.125rem 1.25rem;
+}
+
+/* A setting: what it is on the left, its control on the right. */
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.75rem;
+  padding: 0.875rem 1.25rem;
+  transition: background 200ms ease;
+}
+
+.settings-row--act {
+  cursor: pointer;
+}
+
+.settings-row--act:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.settings-row-label {
+  display: block;
+  font-size: 0.9688rem;
+  line-height: 1.35;
+  color: var(--moon);
+}
+
+.settings-row-hint {
+  display: block;
+  margin-top: 0.2rem;
+  max-width: 36rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--dim);
+}
+
+/* A row you pick from a list: the tick at its end says it's the one. */
+.settings-choice {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3.75rem;
+  padding: 0.75rem 1.25rem;
+  text-align: left;
+  transition: background 200ms ease;
+}
+
+.settings-choice:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.settings-choice[aria-checked='true'],
+.settings-choice[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.settings-choice:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.settings-tick {
+  display: grid;
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.16);
+  color: transparent;
+  transition:
+    background 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease,
+    transform 300ms var(--ease-spring);
+}
+
+[aria-pressed='true'] > .settings-tick,
+[aria-checked='true'] > .settings-tick {
+  background: var(--moon);
+  color: var(--ink);
+  box-shadow: none;
+  transform: scale(1.04);
+}
+
+/* On and off, as the app has always drawn it: lit moon with an ink knob. */
+.switch {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  transition:
+    background 260ms ease,
+    box-shadow 260ms ease;
+}
+
+.switch[aria-checked='true'] {
+  background: var(--moon);
+  box-shadow: 0 0 18px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.switch:disabled {
+  opacity: 0.35;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--moon);
+  transition:
+    transform 340ms var(--ease-spring),
+    background 260ms ease;
+}
+
+.switch[aria-checked='true'] .switch-knob {
+  transform: translateX(1.25rem);
+  background: var(--ink);
+}
+
+/* Fields: the same pill the Ask Pulse box on Home is drawn in. */
+.field {
+  width: 100%;
+  height: 2.625rem;
+  padding: 0 1.125rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  font-size: 0.9375rem;
+  color: var(--moon);
+  outline: none;
+  transition:
+    background 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.field::placeholder {
+  color: color-mix(in srgb, var(--moon) 34%, transparent);
+}
+
+.field:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.field:focus {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.field--area {
+  height: auto;
+  padding: 0.875rem 1.125rem;
+  border-radius: 1.1rem;
+  line-height: 1.6;
+  resize: none;
+}
+
+select.field {
+  appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+/* A slider in the house style: a hairline that fills with the accent. */
+.settings-slider {
+  width: 12rem;
+  height: 1.5rem;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.settings-slider::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0 var(--fill, 50%),
+    rgba(255, 255, 255, 0.12) var(--fill, 50%) 100%
+  );
+}
+
+.settings-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: -0.4375rem;
+  border-radius: 999px;
+  background: var(--moon);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 220ms var(--ease-spring);
+}
+
+.settings-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* A colour a setting stands for — a calendar, a map layer. */
+.settings-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+.settings-sky-swatch {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 10px 22px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* The accent picker: a row of colours, the chosen one ringed. */
+.accent-chip {
+  position: relative;
+  width: 2.375rem;
+  height: 2.375rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  transition: transform 300ms var(--ease-spring);
+}
+
+.accent-chip:hover {
+  transform: scale(1.08);
+}
+
+.accent-chip[aria-checked='true'] {
+  box-shadow:
+    0 0 0 2px var(--ink),
+    0 0 0 4px var(--chip),
+    0 0 22px -2px var(--chip);
+}
+
+/* A meter that fills — today's AI allowance. */
+.settings-meter {
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.settings-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 45%, transparent), var(--accent));
+}
+
+.settings-meter > span.is-high {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--fall) 40%, transparent), var(--fall));
+}
+
+/* ── The preview ──────────────────────────────────────────────────────────
+   Each section's header carries a window onto what it shapes — your greeting,
+   the app in your colours, your tabs, the resting clock — drawn small and live,
+   so a change shows here the moment it's made. */
+
+.settings-preview {
+  position: relative;
+  width: 24rem;
+  height: 11.25rem;
+  overflow: hidden;
+  border-radius: 1.125rem;
+  isolation: isolate;
+  background:
+    radial-gradient(70% 90% at 85% 0%, color-mix(in srgb, var(--sky-c) 70%, transparent), transparent 70%),
+    radial-gradient(60% 80% at 10% 10%, color-mix(in srgb, var(--sky-b) 60%, transparent), transparent 70%),
+    linear-gradient(170deg, var(--sky-a), var(--ink) 92%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 30px 60px -30px rgba(0, 0, 0, 0.85);
+}
+
+/* The miniature's own ground: the dark under a horizon, as in the real thing. */
+.preview-ground {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 70%, transparent), var(--ink));
+}
+
+.preview-ground::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 6%;
+  right: 6%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent) 30%, #fff 50%, var(--accent) 70%, transparent);
+  box-shadow: 0 0 14px 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+
+/* ── Mail ──────────────────────────────────────────────────────────────────
+   The workspace's own pieces. Everything here is built from the same tokens as
+   the rest of the app — the hour's accent, the ground's rules, the one pill —
+   so Mail reads as part of Pulse rather than a client dropped into it. */
+
+/* A row in the left column: a mailbox, a category, an account. */
+.mail-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.4375rem 0.625rem;
+  border-radius: 0.625rem;
+  font-family: var(--pulse-ui-font);
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--moon) 72%, transparent);
+  transition:
+    background-color 0.18s var(--ease-out),
+    color 0.18s var(--ease-out);
+}
+
+.mail-nav-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--moon);
+}
+
+.mail-nav-row:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.mail-nav-row--on {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--moon);
+}
+
+.mail-nav-row--on svg {
+  color: var(--accent);
+}
+
+/* An unread count. Only ever rendered where a provider actually keeps one. */
+.mail-count {
+  flex-shrink: 0;
+  min-width: 1.375rem;
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: color-mix(in srgb, var(--accent) 60%, var(--moon));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.375rem;
+  text-align: center;
+}
+
+/* ── A message in the list ───────────────────────────────────────────────── */
+.mail-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: 0.875rem;
+}
+
+.mail-row + .mail-row {
+  margin-top: 1px;
+}
+
+.mail-row-open {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.5625rem 0.6875rem;
+  border-radius: 0.875rem;
+  text-align: left;
+  transition: background-color 0.18s var(--ease-out);
+}
+
+.mail-row:hover .mail-row-open {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mail-row-open:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.mail-row--on .mail-row-open,
+.mail-row--on:hover .mail-row-open {
+  background: rgba(255, 255, 255, 0.085);
+}
+
+/* Unread is carried by weight AND a mark, never by colour alone — so it still
+   reads at a glance, and still reads for anyone who cannot separate the hues. */
+.mail-row-mark {
+  flex-shrink: 0;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  margin-top: 0.4375rem;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  transition:
+    background-color 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
+}
+
+.mail-row--unread .mail-row-mark {
+  background: var(--accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.mail-row-from {
+  font-family: var(--pulse-ui-font);
+  font-size: 0.875rem;
+  font-weight: 450;
+  color: color-mix(in srgb, var(--moon) 76%, transparent);
+  min-width: 0;
+}
+
+.mail-row--unread .mail-row-from {
+  font-weight: 620;
+  color: var(--moon);
+}
+
+.mail-row-subject {
+  display: block;
+  font-family: var(--pulse-display-font);
+  font-size: 0.9375rem;
+  font-weight: 380;
+  line-height: 1.3;
+  letter-spacing: -0.006em;
+  color: color-mix(in srgb, var(--moon) 82%, transparent);
+}
+
+.mail-row--unread .mail-row-subject {
+  font-weight: 500;
+  color: var(--moon);
+}
+
+/* The per-row controls. Shown on hover, and on keyboard focus — hover alone
+   would put archiving and binning out of reach without a pointer. */
+.mail-row-acts {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding-right: 0.375rem;
+  opacity: 0;
+  transform: translateX(0.25rem);
+  transition:
+    opacity 0.18s var(--ease-out),
+    transform 0.18s var(--ease-out);
+}
+
+.mail-row:hover .mail-row-acts,
+.mail-row:focus-within .mail-row-acts {
+  opacity: 1;
+  transform: none;
+}
+
+.mail-row-act {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  color: color-mix(in srgb, var(--moon) 50%, transparent);
+  transition:
+    background-color 0.16s var(--ease-out),
+    color 0.16s var(--ease-out);
+}
+
+.mail-row-act:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--moon);
+}
+
+.mail-row-act:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.mail-row-act--on {
+  color: #ffd60a;
+}
+
+/* ── Waiting ─────────────────────────────────────────────────────────────── */
+.mail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+  padding: 0.5625rem 0.6875rem;
+}
+
+.mail-skeleton-line {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.045) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.045) 100%
+  );
+  background-size: 200% 100%;
+  animation: mail-shimmer 1.5s var(--delay, 0ms) ease-in-out infinite;
+}
+
+@keyframes mail-shimmer {
+  0% {
+    background-position: 140% 0;
+  }
+  100% {
+    background-position: -40% 0;
+  }
+}
+
+/* ── Ask Pulse, on a highlight ───────────────────────────────────────────── */
+.mail-ask-menu {
+  position: fixed;
+  z-index: 90;
+  width: max-content;
+  max-width: min(24rem, calc(100vw - 2rem));
+  padding: 0.5rem;
+  border-radius: 1rem;
+  background: rgba(11, 16, 32, 0.92);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(22px);
+  transition:
+    top 0.14s var(--ease-out),
+    left 0.14s var(--ease-out);
+}
+
+.mail-ask-quote {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0 0.3125rem 0.4375rem;
+  font-family: var(--pulse-ui-font);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--dim);
+  max-width: 20rem;
+}
+
+.mail-ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1875rem;
+  max-width: 22rem;
+}
+
+.mail-ask-action {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.625rem;
+  font-family: var(--pulse-ui-font);
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--moon) 80%, transparent);
+  transition:
+    background-color 0.16s var(--ease-out),
+    color 0.16s var(--ease-out);
+}
+
+.mail-ask-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--moon);
+}
+
+.mail-ask-action:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.mail-ask-action svg {
+  color: var(--accent);
+}
+
+.mail-ask-action--more {
+  color: var(--dim);
+}
+
+/* ── The Life Hub's mail card ───────────────────────────────────────────────
+   The only card in the upper band, and the reason it needs an edge: the left
+   half of that band is the date set straight on the sky with nothing round it,
+   so an unboxed block on the right reads as text that has drifted there. It
+   fills the band's height so the horizon has something that meets it. */
+.mail-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* As tall as what is in it, sitting on the band's baseline beside the date.
+     Stretched to the full height of the sky it was mostly air, which is the
+     thing a card makes most obvious. */
+  align-self: end;
+  padding: 0.9375rem 1.125rem 1.0625rem;
+  border-radius: 1.125rem;
+  overflow: hidden;
+  background:
+    radial-gradient(90% 70% at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 28px 60px -44px rgba(2, 3, 10, 0.9);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+
+/* A hairline of the hour's own light along the top edge, the way the horizon
+   carries it — so the card belongs to the sky it sits on rather than to the
+   ground. Masked at both ends so it fades out instead of stopping. */
+.mail-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, #fff) 45%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+}
+
+/* Big enough to be the thing you read first, and it has to survive five
+   digits — an inbox with 28,437 unread in it is not a hypothetical. */
+.mail-card-figure {
+  font-size: clamp(1.875rem, 2.1vw + 0.9rem, 2.4rem);
+  line-height: 0.95;
+  color: var(--moon);
+}
+
+/* ── What Pulse found in a message ──────────────────────────────────────────
+   Inside the reader, above the message, so the email it was read out of stays
+   in view — the date it worked out and the words it came from can be checked
+   against each other only if both are on screen. */
+.mail-findings {
+  margin-bottom: 0.875rem;
+  padding: 0.75rem 0.875rem 0.875rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--accent) 7%, rgba(255, 255, 255, 0.035));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.mail-findings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mail-finding {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.4375rem 0.5rem;
+  border-radius: 0.75rem;
+  transition: background-color 140ms ease;
+}
+
+.mail-finding:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mail-finding-icon {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-top: 0.1875rem;
+  color: var(--accent);
+}
+
+/* The button that acts on one finding. Quiet until the row is pointed at:
+   seven of these all lit at once would read as a form to fill in. */
+.mail-finding-add {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  /* Visible at rest. It sat at 0.65 and read as disabled — which a screenshot
+     made obvious, and which was just as true for anyone looking at it. */
+  opacity: 0.92;
+  transition: opacity 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+.mail-finding:hover .mail-finding-add,
+.mail-finding-add:focus-visible {
+  opacity: 1;
+  color: var(--moon);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ── Writing, as against reading ────────────────────────────────────────────
+   The composer takes the reading column, so it has to be unmistakable at a
+   glance which of the two you are in: a lit rule down the edge and a tinted
+   head, against the reader's plain black. */
+/*
+ * There is deliberately no wash across the whole panel.
+ *
+ * It had one, and it made the same mistake as the settings glow above: a
+ * gradient painted onto a flex child ends where that child ends, so it cut a
+ * hard edge down the left of the column and another straight across the bottom
+ * where the panel stopped and the ground carried on. The mode is said by the
+ * column's own rule and the lit head instead — both real edges, both meant.
+ *
+ * The head's own tint is masked out before it reaches its edges, so it ends in
+ * light rather than in a line.
+ */
+.mail-compose-head::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -0.75rem -1rem 0 -1.5rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 11%, transparent), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent);
+  mask-image: linear-gradient(90deg, #000 40%, transparent);
+}
+
+/* The column's own rule lights up rather than the panel drawing a second line
+   beside it — one edge, one colour, and it is the divider you already know. */
+.mail-ground--writing > :last-child.ground-rule {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.mail-compose-head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  flex-shrink: 0;
+  isolation: isolate;
+  padding-bottom: 0.625rem;
+  margin-bottom: 0.125rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.mail-compose-badge {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: 0.0625rem;
+  border-radius: 0.6rem;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* Fills the room left between the addresses and the ask-Pulse box, and scrolls
+   inside itself — so the fields above stay put however long the message gets. */
+.mail-compose-body {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 4.5rem;
+  margin-top: 0.25rem;
+  padding: 0.625rem 0;
+  resize: none;
+  overflow-y: auto;
+  background: transparent;
+  outline: none;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--moon);
+}
+
+.mail-compose-body::placeholder {
+  color: color-mix(in srgb, var(--moon) 32%, transparent);
+}
+
+.mail-compose-body:disabled {
+  opacity: 0.5;
+}
+
+.mail-compose-foot {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ── Asking Pulse for the words ─────────────────────────────────────────── */
+.mail-write {
+  flex-shrink: 0;
+  padding: 0.625rem 0.75rem 0.75rem;
+  margin-top: 0.625rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--accent) 7%, rgba(255, 255, 255, 0.035));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.mail-write-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.mail-write-prompt {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  resize: none;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--moon);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  outline: none;
+  transition: box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.mail-write-prompt::placeholder {
+  color: color-mix(in srgb, var(--moon) 30%, transparent);
+}
+
+.mail-write-prompt:focus {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Wrapping, not scrolling: a row that ran off the edge left "Fix gramm…"
+   clipped against the column, which reads as broken rather than as more. */
+.mail-write-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+/* Narrow windows: one of the three columns stands down. Reading, that is the
+   reader — the list keeps the room. Writing, it has to be the list instead, or
+   there would be nowhere to write. The workspace is three columns by intent,
+   not by requirement. */
+@media (max-width: 1100px) {
+  .mail-ground {
+    grid-template-columns: 11rem minmax(0, 1fr);
+  }
+
+  .mail-ground > :last-child {
+    display: none;
+  }
+
+  .mail-ground--writing > :nth-child(2) {
+    display: none;
+  }
+
+  .mail-ground--writing > :last-child {
+    display: flex;
   }
 }

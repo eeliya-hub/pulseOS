@@ -2,7 +2,7 @@ const { createServer } = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, Menu, components, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, Menu, components, dialog, nativeTheme, shell } = require('electron');
 
 /**
  * Pulse OS as an application.
@@ -104,19 +104,61 @@ async function startServer() {
   const { attachVoiceGateway } = await load('realtime', 'voiceGateway.js');
   const { config } = await load('config', 'env.js');
 
-  const server = createServer(createApp({ webRoot }));
-  attachVoiceGateway(server);
+  const api = createApp({ webRoot });
 
   // One broken integration should not take the window down with it; the same
   // reasoning as the standalone server, and the same handlers.
   process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:', reason));
   process.on('uncaughtException', (error) => console.error('Uncaught exception:', error));
 
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(config.port, '127.0.0.1', resolve);
-  });
-  return `http://localhost:${config.port}`;
+  /*
+   * Listen on both loopback addresses, and only those.
+   *
+   * `localhost` is not one address. On this machine it resolves to ::1 before
+   * 127.0.0.1, and the two OAuth callbacks are registered against different
+   * ones — Google's against localhost, Spotify's against 127.0.0.1 — so
+   * answering on one of them means the other's sign-in lands on a closed door.
+   *
+   * Both, and no further: a dashboard with the house keys in it has no business
+   * being reachable from the rest of the network, which is what listening
+   * without naming a host would do.
+   */
+  const bind = (host) =>
+    new Promise((resolve, reject) => {
+      const server = createServer(api);
+      attachVoiceGateway(server);
+      server.once('error', reject);
+      server.listen(config.port, host, () => resolve(server));
+    });
+
+  for (const host of ['127.0.0.1', '::1']) {
+    try {
+      await bind(host);
+    } catch (error) {
+      if (error?.code !== 'EADDRINUSE') throw error;
+      /*
+       * Something else already has the port.
+       *
+       * Worth saying out loud rather than carrying on, because carrying on is
+       * what made this confusing: the dev server binds every interface, this
+       * one took 127.0.0.1, both appeared to start, and the window asked
+       * `localhost` — which went to the other server, which has no front end to
+       * serve and politely answered with its API's status line. An app showing
+       * you a line of JSON gives no hint that the cause is a terminal tab.
+       */
+      dialog.showErrorBox(
+        'Port 4000 is already in use',
+        'Something else on this machine is using port 4000 — most likely a `npm run dev` server ' +
+          'from a terminal. Pulse needs that exact port, because the Spotify and Google sign-ins ' +
+          'are registered against it.\n\nQuit the other server, then open Pulse again.',
+      );
+      app.exit(1);
+      return null;
+    }
+  }
+
+  // The address the window opens, named the same way it was bound.
+  return `http://127.0.0.1:${config.port}`;
 }
 
 function createWindow(url) {
@@ -242,6 +284,7 @@ if (!app.requestSingleInstanceLock()) {
     }
 
     const url = await startServer();
+    if (!url) return; // the port was taken; the dialog has already said so
     buildMenu(url);
     createWindow(url);
 

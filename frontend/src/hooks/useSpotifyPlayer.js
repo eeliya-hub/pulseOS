@@ -189,6 +189,32 @@ async function authorize() {
   }, 1500);
 }
 
+/**
+ * Sign this Pulse out of Spotify: the music stops here, the tokens are dropped
+ * on the server, and the player goes back to asking to be connected.
+ */
+async function disconnect() {
+  try {
+    await player?.pause?.();
+  } catch {
+    /* already quiet */
+  }
+  await api.music.disconnect();
+  watchRemote(false);
+  disposePlayer();
+  setStore({
+    status: 'needs-auth',
+    deviceId: null,
+    state: null,
+    position: 0,
+    playbackError: '',
+    devices: [],
+    activeDeviceId: null,
+    remoteName: null,
+    transferringTo: null,
+  });
+}
+
 const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 async function playContext({ contextUri, uris }) {
@@ -507,6 +533,7 @@ export function useSpotifyPlayer() {
     transferringTo: snap.transferringTo,
     controls,
     authorize,
+    disconnect,
   };
 }
 

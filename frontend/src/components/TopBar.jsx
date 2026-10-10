@@ -1,4 +1,4 @@
-import { formatClock, formatShortDate } from '../utils/dateTime.js';
+import { formatClock, formatShortDate, meridiem } from '../utils/dateTime.js';
 import PulseMark from './PulseMark.jsx';
 
 /**
@@ -7,7 +7,7 @@ import PulseMark from './PulseMark.jsx';
  */
 export default function TopBar({ now }) {
   return (
-    <header className="relative z-20 shrink-0 px-5 pb-1 pt-4 md:px-8">
+    <header className="top-bar relative z-20 shrink-0 px-5 pb-1 pt-4 md:px-8">
       {/* Same column as the views, so the mark, the titles and the panes share one left edge. */}
       <div className="mx-auto flex max-w-[80rem] items-center justify-between">
       <div className="flex items-center gap-2">
@@ -20,7 +20,10 @@ export default function TopBar({ now }) {
       <div className="flex items-center gap-4">
         <p className="t-label text-right leading-tight text-haze">{formatShortDate(now)}</p>
         <span className="h-7 w-px shrink-0 bg-white/15" aria-hidden="true" />
-        <p className="display-figures text-[2rem] leading-none text-moon">{formatClock(now).replace(' : ', ':')}</p>
+        <p className="display-figures text-[2rem] leading-none text-moon">
+          {formatClock(now).replace(' : ', ':')}
+          {meridiem(now) ? <span className="ml-1 text-[1rem] text-moon/60">{meridiem(now)}</span> : null}
+        </p>
       </div>
       </div>
     </header>

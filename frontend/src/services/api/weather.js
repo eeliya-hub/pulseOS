@@ -1,3 +1,4 @@
+import { getSettings } from '../../hooks/useSettings.js';
 import { api } from './backendClient.js';
 
 // Short module cache so weather is instant across tab switches (and reused from
@@ -8,12 +9,12 @@ const TTL = 15 * 60 * 1000;
 // Live OpenWeather data via the backend. Pass the user's location (city) if set;
 // falls back to London. If the backend has no OPENWEATHER_API_KEY (or the call
 // fails), we return the sample payload below so the dashboard still looks alive.
-export async function getWeatherSummary(city) {
-  const key = (city?.trim() || 'London').toLowerCase();
+export async function getWeatherSummary(city, units = getSettings().units || 'metric') {
+  const key = `${(city?.trim() || 'London').toLowerCase()}:${units}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.data;
   try {
-    const data = await api.weather.summary({ city: city?.trim() || 'London' });
+    const data = await api.weather.summary({ city: city?.trim() || 'London', units });
     if (data && data.temperature != null) {
       cache.set(key, { at: Date.now(), data });
       return data;
@@ -21,7 +22,21 @@ export async function getWeatherSummary(city) {
   } catch {
     /* fall through to sample data */
   }
-  return sampleWeather();
+  return units === 'imperial' ? inFahrenheit(sampleWeather()) : sampleWeather();
+}
+
+// The sample day, read in Fahrenheit — so a missing key doesn't also mean the
+// wrong unit.
+const toF = (c) => Math.round((c * 9) / 5 + 32);
+function inFahrenheit(w) {
+  return {
+    ...w,
+    temperature: toF(w.temperature),
+    high: toF(w.high),
+    low: toF(w.low),
+    feelsLike: toF(w.feelsLike),
+    hourly: w.hourly.map((h) => ({ ...h, temp: toF(h.temp) })),
+  };
 }
 
 function sampleWeather() {

@@ -5,6 +5,7 @@ import {
   Droplets,
   ImagePlus,
   Leaf,
+  Settings,
   Settings2,
   Sparkles,
   Sun,
@@ -16,134 +17,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import LaunchIcon, { BrowserBadge } from '../components/LaunchIcon.jsx';
 import { Column, Ground, SkyZone } from '../components/Stage.jsx';
-import SettingsButton from '../components/SettingsButton.jsx';
-import { loadedUntil, useCalendarEvents } from '../hooks/useCalendarEvents.js';
-import { calendarColor, dateKey, keyToDate, occursOn, useLifeData } from '../hooks/useLifeData.js';
+import { useCalendarEvents } from '../hooks/useCalendarEvents.js';
+import { useLifeData } from '../hooks/useLifeData.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { useWeather } from '../hooks/useWeather.js';
 import HomeTilePicker from '../components/HomeTilePicker.jsx';
 import { homeItems, itemKey, itemLabel, launchItem } from '../services/launchpad/items.js';
-import { getGreeting } from '../utils/dateTime.js';
-
-// Start-of-event helpers for the "Upcoming" list.
-const timesOf = (t) => (t || '').match(/\d{1,2}:\d{2}/g) ?? [];
-const firstTime = (t) => timesOf(t)[0] || '';
-const toMinutes = (t) => {
-  const m = firstTime(t);
-  if (!m) return 0;
-  const [h, mm] = m.split(':').map(Number);
-  return h * 60 + mm;
-};
-const endMinutes = (t) => {
-  const times = timesOf(t);
-  if (times.length < 2) return null;
-  const [h, mm] = times[times.length - 1].split(':').map(Number);
-  return h * 60 + mm;
-};
-const normTitle = (title) => (title || '').trim().toLowerCase();
-
-const relDay = (offset, key) =>
-  offset === 0
-    ? 'Today'
-    : keyToDate(key).toLocaleDateString('en-GB', offset < 7 ? { weekday: 'short' } : { day: 'numeric', month: 'short' });
-
-// Full date, e.g. "Tue 7 Jun".
-const dateLabel = (key) =>
-  keyToDate(key).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-
-// Human countdown to an occurrence ("in 40m", "in 3h", "in 5d").
-function startsIn(offset, time, now) {
-  const [h, m] = (time || '00:00').split(':').map(Number);
-  const when = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, h || 0, m || 0);
-  const diff = when - now;
-  if (diff <= 0) return 'now';
-  const mins = Math.round(diff / 60000);
-  if (mins < 60) return `in ${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `in ${hrs}h${mins % 60 ? ` ${mins % 60}m` : ''}`;
-  const dys = Math.round(hrs / 24);
-  return `in ${dys} day${dys === 1 ? '' : 's'}`;
-}
-
-// Read an uploaded image, downscale it, and return a small JPEG data URL so it
-// stays well within localStorage limits.
-function fileToDataUrl(file, maxSize = 256) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const img = new window.Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * scale));
-        const h = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-// Flatten local + connected events into a single time-ordered list of upcoming
-// occurrences (recurring events expand to each date, so shifts show individually).
-//
-// It looks as far ahead as the calendar is loaded. A fixed 75 days hid anything
-// further out — an appointment in December, seen from September — even though the
-// events were sitting right there.
-// A subscribed public-holiday calendar (Google's "Holidays in United Kingdom" and
-// the like). Its days are reference, not plans: left in, Halloween and Remembrance
-// Sunday took the few Upcoming slots ahead of the user's actual appointments.
-const isHolidayCalendar = (calendarId) => /#holiday@group\.v\.calendar\.google\.com$/.test(calendarId || '');
-
-function buildUpcoming(events, now, until = loadedUntil()) {
-  const days = Math.ceil((until - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000);
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const todayKey = dateKey(now);
-  const out = [];
-  for (let i = 0; i < days; i += 1) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-    const key = dateKey(d);
-    for (const e of events) {
-      if (!occursOn(e, key)) continue;
-      // Holidays still show on the day itself, and always on the Life Hub calendar.
-      if (i > 0 && isHolidayCalendar(e.calendarId)) continue;
-      const t = firstTime(e.time);
-      const allDay = !t;
-      const mins = toMinutes(e.time);
-      if (key === todayKey && !allDay && (endMinutes(e.time) ?? mins) < nowMin) continue;
-      out.push({
-        id: `${e.id}:${key}`,
-        sourceId: e.id,
-        key,
-        offset: i,
-        time: t,
-        timeLabel: (e.time || '').trim(), // full "HH:MM – HH:MM" (start–finish) when present
-        allDay,
-        sortVal: i * 10000 + mins,
-        title: e.title,
-        meta: e.place || e.calendarName || '',
-        color: e.color || calendarColor(e.calendar),
-      });
-    }
-  }
-  return out.sort((a, b) => a.sortVal - b.sortVal);
-}
-
-function uniqueEventChoices(upcoming) {
-  const seen = new Set();
-  return upcoming.filter((event) => {
-    const key = normTitle(event.title);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
+import { greetingFor } from '../utils/dateTime.js';
+import { fileToDataUrl } from '../utils/images.js';
+import { buildUpcoming, dateLabel, normTitle, relDay, startsIn, uniqueEventChoices } from '../utils/upcoming.js';
 
 // Fallback day-by-day outlook (used until live weather arrives / when there's no
 // API key). Real data comes from weather.daily with per-day high + low.
@@ -158,7 +40,7 @@ const DEFAULT_DAILY = [
 
 const dailyIcon = { rain: CloudRain, sun: Sun, cloud: Cloud };
 
-export default function Home({ onAskPulse }) {
+export default function Home({ onAskPulse, onOpenSettings }) {
   const { weather } = useWeather();
   const { settings, update } = useSettings();
   const [now, setNow] = useState(() => new Date());
@@ -226,7 +108,7 @@ export default function Home({ onAskPulse }) {
             column's. Change one and change the other. */}
         <div className="min-w-0">
           <h1 className="t-hero truncate">
-            {getGreeting(now)}, <span className="name-mark">{settings.name}</span>
+            {greetingFor(now)}, <span className="name-mark">{settings.name}</span>
           </h1>
           <p className="t-lede mt-3">
             {todayCount === 0
@@ -262,7 +144,18 @@ export default function Home({ onAskPulse }) {
                 />
               </form>
             )}
-            <SettingsButton />
+            {/* The way into Settings — only from here, never from the baseline. */}
+            {onOpenSettings ? (
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                aria-label="Settings"
+                title="Settings"
+                className="pill h-11 w-11 px-0 text-moon/70"
+              >
+                <Settings className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
         </div>
 

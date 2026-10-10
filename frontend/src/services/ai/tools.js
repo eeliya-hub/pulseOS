@@ -16,6 +16,7 @@ import { goToView } from '../ui/navigation.js';
 import { afterSpeech, endSessionAfterSpeech } from '../ui/afterSpeech.js';
 import { spotifyPlayer } from '../../hooks/useSpotifyPlayer.js';
 import { api } from '../api/backendClient.js';
+import { mailTools } from '../mail/tools.js';
 import { getWeatherSummary } from '../api/weather.js';
 
 const firstTime = (t) => (t || '').match(/\d{1,2}:\d{2}/)?.[0] || '';
@@ -318,6 +319,9 @@ const VIEW_IDS = {
   launchpad: 'launchpad',
   apps: 'launchpad',
   life: 'life',
+  mail: 'mail',
+  email: 'mail',
+  inbox: 'mail',
   'life hub': 'life',
   lifehub: 'life',
   calendar: 'life',
@@ -449,6 +453,14 @@ export function createToolExecutor(readHooks) {
   const recentCreates = new Map();
 
   const tools = {
+    /*
+     * Email. Read-only, plus one that fills the composer — see services/mail/tools.js.
+     * Spread in rather than written out here because none of them touch the
+     * stores this file is built around; they go through /api/mail, which caps
+     * what any one call can return.
+     */
+    ...mailTools,
+
     async get_upcoming_events({ days, from, to } = {}) {
       const { life, settings, calendar } = getData();
       const hiddenIds = new Set(calendar.hiddenCalendars ?? []);
@@ -521,6 +533,8 @@ export function createToolExecutor(readHooks) {
       const w = await getWeatherSummary(place);
       return {
         location: w.location,
+        // Whichever the user reads temperatures in — say it in the same.
+        unit: settings.units === 'imperial' ? 'Fahrenheit' : 'Celsius',
         temperature: w.temperature,
         condition: w.condition,
         high: w.high,

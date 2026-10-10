@@ -155,6 +155,36 @@ export const api = {
       return res.blob();
     },
   }),
+  mail: {
+    status: () => request('/mail/status'),
+    // The Life Hub card, in one request.
+    summary: (accountId, refresh) => request('/mail/summary', { params: { accountId, refresh: refresh ? '1' : '' } }),
+    mailboxes: (accountId) => request('/mail/mailboxes', { params: { accountId } }),
+    // `pageToken` carries one cursor per connected account, so paging works the
+    // same whether you are reading one mailbox or several at once.
+    messages: (params) => request('/mail/messages', { params }),
+    // Bodies are fetched one at a time, on open, and are never cached to disk.
+    // `images` lets the remote pictures through for this message only.
+    message: (id, params) => request(`/mail/messages/${encodeURIComponent(id)}`, { params }),
+    thread: (threadId, params) => request(`/mail/threads/${encodeURIComponent(threadId)}`, { params }),
+    // Read/unread, starred, important.
+    patch: (id, body) => request(`/mail/messages/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+    // Inbox, archive, spam or bin — there is no permanent delete, by design.
+    move: (id, body) => request(`/mail/messages/${encodeURIComponent(id)}/move`, { method: 'POST', body }),
+    send: (body) => request('/mail/send', { method: 'POST', body }),
+    saveDraft: (body) => request('/mail/drafts', { method: 'POST', body }),
+    deleteDraft: (draftId, accountId) =>
+      request(`/mail/drafts/${encodeURIComponent(draftId)}`, { method: 'DELETE', body: { accountId } }),
+    // What the assistant may read. Bounded scopes only — see the backend's
+    // mail.service: there is no request shape here that returns a mailbox.
+    context: (params) => request('/mail/context', { params }),
+    connectUrl: (provider) => request(`/mail/${provider}/auth`),
+    disconnect: (id) => request(`/mail/accounts/${encodeURIComponent(id)}/disconnect`, { method: 'POST' }),
+    // An attachment comes down as bytes through the backend, which holds the
+    // token — the browser never sees provider credentials.
+    attachmentUrl: (messageId, attachmentId, accountId) =>
+      `${BASE_URL}/mail/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}?accountId=${encodeURIComponent(accountId ?? '')}`,
+  },
   calendar: {
     status: () => request('/calendar/status'),
     calendars: () => request('/calendar/calendars'),
@@ -196,6 +226,7 @@ export const api = {
   },
   music: {
     authUrl: () => request('/music/auth'),
+    disconnect: () => request('/music/disconnect', { method: 'POST' }),
     token: () => request('/music/token'),
     transfer: (deviceId, play = true) =>
       request('/music/transfer', { method: 'PUT', body: { deviceId, play } }),

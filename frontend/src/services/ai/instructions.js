@@ -24,6 +24,18 @@ export function buildAiInstructions(settings) {
   }
 
 
+  // The few plain facts Settings knows about them that change how an answer
+  // should be put.
+  const facts = [];
+  if (/^\d{2}-\d{2}$/.test(settings?.birthday || '')) {
+    const [m, d] = settings.birthday.split('-').map(Number);
+    const day = new Date(2000, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+    facts.push(`Their birthday is ${day}.`);
+  }
+  if (settings?.units === 'imperial') facts.push('They read temperatures in Fahrenheit — give them in Fahrenheit.');
+  if (settings?.clock24 === false) facts.push('They use the 12-hour clock — say times as am and pm.');
+  if (facts.length) parts.push(`ABOUT THEM: ${facts.join(' ')}`);
+
   const persona = (settings?.aiInstructions || '').trim();
   if (persona) parts.push(persona);
 

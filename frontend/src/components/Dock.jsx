@@ -1,4 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import { useSettings } from '../hooks/useSettings.js';
+import { prefersLessMotion } from '../services/ui/motion.js';
 
 /**
  * The navigation baseline: one hairline across the foot of the screen, read like
@@ -64,7 +66,9 @@ function useTrace(navRef, beatRef) {
   return trace;
 }
 
-export default function Dock({ items, activeView, onChange }) {
+export default function Dock({ items, activeView, onChange, away = false }) {
+  const { settings } = useSettings();
+  const still = Boolean(settings.reduceMotion);
   const navRef = useRef(null);
   const beatRef = useRef(null);
   const spikeRef = useRef(null);
@@ -83,7 +87,7 @@ export default function Dock({ items, activeView, onChange }) {
   useLayoutEffect(() => {
     const paths = BLIP_LAYERS.map((_, i) => blipRefs.current[i]);
     if (!trace || paths.some((path) => !path) || !spikeRef.current) return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (away || still || prefersLessMotion()) return undefined;
 
     const length = paths[0].getTotalLength();
     const enter = trace.spikeStart;
@@ -107,7 +111,7 @@ export default function Dock({ items, activeView, onChange }) {
       return path.animate(keyframes, { duration: cycle * 1000, iterations: Infinity });
     });
     return () => animations.forEach((animation) => animation.cancel());
-  }, [trace, pulseOpen]);
+  }, [trace, pulseOpen, away, still]);
 
   const renderTab = ({ id, label, Icon }) => {
     const isActive = activeView === id;
@@ -132,9 +136,11 @@ export default function Dock({ items, activeView, onChange }) {
   return (
     <nav
       ref={navRef}
-      className={`baseline ${pulseOpen ? 'baseline--open' : ''}`}
+      className={`baseline ${pulseOpen ? 'baseline--open' : ''} ${away ? 'baseline--away' : ''}`}
       style={trace ? { '--line': `${trace.lineY - 0.5}px` } : undefined}
       aria-label="Primary"
+      aria-hidden={away || undefined}
+      inert={away ? '' : undefined}
     >
       {trace ? (
         <svg

@@ -32,6 +32,7 @@ import { placePhotoUrl } from '../utils/places.js';
 import { useTripLive } from '../hooks/useTripLive.js';
 import { categoryOf, emptyTrip, useTravelStore } from '../hooks/useTravelStore.js';
 import { useSettings } from '../hooks/useSettings.js';
+import { MAP_LAYERS } from '../data/travelMapLayers.js';
 
 const DAY_MS = 86400000;
 
@@ -514,13 +515,6 @@ function Fact({ label, value }) {
 }
 
 /* ── Map filters ──────────────────────────────────────────────────────────── */
-
-const MAP_LAYERS = [
-  { key: 'places', label: 'Places', color: '#a78bfa' },
-  { key: 'stay', label: 'Stay', color: '#f472b6' },
-  { key: 'flight', label: 'Route', color: '#60a5fa' },
-  { key: 'airports', label: 'Airports', color: '#94a3b8' },
-];
 
 /**
  * Which layers the map draws. Deliberately low-contrast — it sits on top of the

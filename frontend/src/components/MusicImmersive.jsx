@@ -1,16 +1,20 @@
-import { Minimize2, Music2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
+import { Blend, Minimize2, Music2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { activeLineIndex, useLyrics } from '../hooks/useLyrics.js';
+import { useSettings } from '../hooks/useSettings.js';
 import { useSpotifyPlayer } from '../hooks/useSpotifyPlayer.js';
 import { albumPalette, DEFAULT_PALETTE, rgba } from '../services/music/albumPalette.js';
-import { formatClock, formatLongDate } from '../utils/dateTime.js';
+import { formatClock, formatLongDate, meridiem } from '../utils/dateTime.js';
 
 const fmt = (ms) => {
   if (ms == null) return '0:00';
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
+
+// How strong the room's light is, as Settings has it: a multiplier on every pool.
+const LIGHT = { soft: 0.6, rich: 1, vivid: 1.32 };
 
 // Lyrics are timed to when a line STARTS being sung; highlighting it a beat
 // early reads as "on time" rather than a step behind. LRCLIB timings sit right
@@ -34,9 +38,10 @@ const LYRIC_LEAD_MS = 400;
  *
  * Above the line are the words, set in the display face because they are the
  * thing read from across the room. Below it is the record itself and the
- * controls. The light in the room is the sleeve's own colour and nothing else;
- * it does not listen to the audio, because this is somewhere to leave running,
- * not a meter to watch.
+ * controls. The light in the room is the sleeve's own colour and nothing else:
+ * pools of it drifting round the room while the record plays, holding still
+ * when it stops. It does not listen to the audio, because this is somewhere to
+ * leave running, not a meter to watch — and it can be told to keep still.
  */
 /**
  * @param {object} props
@@ -47,10 +52,15 @@ const LYRIC_LEAD_MS = 400;
  */
 export default function MusicImmersive({ onClose, afk = false, now }) {
   const { state, position, controls } = useSpotifyPlayer();
+  const { settings, update } = useSettings();
+  const motion = settings.immersiveMotion !== false;
+  const words = settings.showLyrics !== false;
+  const toggleMotion = useCallback(() => update((s) => ({ immersiveMotion: s.immersiveMotion === false })), [update]);
   const paused = state?.paused ?? true;
   const durationMs = state?.durationMs ?? 0;
 
   const palette = usePalette(state?.image);
+  const hasTrack = Boolean(state?.track);
   const lyrics = useLyrics(state?.track, state?.artists, durationMs);
 
   // The player reports position once a second. Interpolating that in React state
@@ -68,26 +78,28 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
   const horizonRef = useRef(null);
   const headRef = useRef(null);
   const elapsedRef = useRef(null);
-  const fieldRef = useRef(null);
   const [lineIndex, setLineIndex] = useState(-1);
   const lineIndexRef = useRef(-1);
 
-  // Escape closes, space plays/pauses — expected of anything full-screen.
+  // Escape closes, space plays/pauses — expected of anything full-screen. M
+  // starts or stops the light moving.
   useEffect(() => {
     const onKey = (e) => {
+      const typing = /^(INPUT|TEXTAREA)$/.test(e.target?.tagName);
       if (e.key === 'Escape') onClose();
-      if (e.code === 'Space' && !/^(INPUT|TEXTAREA)$/.test(e.target?.tagName)) {
+      if (e.code === 'Space' && !typing) {
         e.preventDefault();
         controls.toggle();
       }
+      if (e.code === 'KeyM' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey && !afk) toggleMotion();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [controls, onClose]);
+  }, [afk, controls, onClose, toggleMotion]);
 
   const seekTo = useCallback((ms) => controls.seek(Math.max(0, Math.round(ms))), [controls]);
 
-  useFrame((t) => {
+  useFrame(() => {
     // Where we actually are in the track, interpolated between the player's
     // once-a-second updates.
     const { at, pos } = anchor.current;
@@ -115,70 +127,59 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
       lineIndexRef.current = idx;
       setLineIndex(idx);
     }
-
-    // The one ambient motion in the room: the album's light leans, very slowly,
-    // so a screen left on for an hour is never quite the same picture twice.
-    // Transform only — a gradient that re-renders every frame is a repaint of
-    // the whole screen.
-    if (fieldRef.current) {
-      fieldRef.current.style.transform =
-        `translate3d(${(Math.sin(t * 0.021) * 2.2).toFixed(2)}%, ${(Math.cos(t * 0.016) * 1.4).toFixed(2)}%, 0)`;
-    }
   });
-
-  const hasTrack = Boolean(state?.track);
 
   return createPortal(
     // onScroll: focusing a lyric line can also scroll this container; snapping
     // it back keeps the overlay from drifting off the bottom of the screen.
     <div
       data-settings=""
-      className="immersive fixed inset-0 z-[80] overflow-hidden text-moon"
-      style={{ '--lit': rgba(palette.glow, 1) }}
+      className={`immersive immersive--words-${settings.lyricsSize || 'medium'} fixed inset-0 z-[80] overflow-hidden text-moon`}
+      style={{ '--lit': rgba(palette.glow, 1), '--light': LIGHT[settings.immersiveLight] ?? 1 }}
       onScroll={(e) => {
         e.currentTarget.scrollTop = 0;
         e.currentTarget.scrollLeft = 0;
       }}
     >
       {/* The room: the sleeve's colours as light, not as a photograph. */}
-      <div
-        ref={fieldRef}
-        aria-hidden="true"
-        className="immersive-field"
-        style={{
-          // The light pools to the right, opposite the words. The lyric sits in
-          // the shadow side of the room and the sleeve's colour fills the space
-          // beside it — which is what stops the right-hand half reading as
-          // simply empty.
-          background:
-            `radial-gradient(62% 68% at 84% 26%, ${rgba(palette.base, 0.78)}, transparent 68%),` +
-            `radial-gradient(52% 46% at 96% 78%, ${rgba(palette.accent, 0.5)}, transparent 70%),` +
-            `radial-gradient(70% 36% at 18% 6%, ${rgba(palette.glow, 0.22)}, transparent 72%)`,
-        }}
-      />
+      <Light palette={palette} moving={motion && hasTrack && !paused} />
 
       <div className="relative grid h-full" style={{ gridTemplateRows: 'minmax(0,1fr) auto' }}>
         {/* ── Sky: the words ─────────────────────────────────────────── */}
         <div className="relative min-h-0">
           {!afk ? (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Exit immersive mode"
-              title="Exit (Esc)"
-              className="pill absolute right-7 top-6 z-20 grid h-10 w-10 place-items-center px-0 text-moon/70 md:right-10"
-            >
-              <Minimize2 className="h-4 w-4" aria-hidden="true" />
-            </button>
+            <div className="absolute right-7 top-6 z-20 flex items-center gap-2 md:right-10">
+              <button
+                type="button"
+                onClick={toggleMotion}
+                aria-pressed={motion}
+                title={motion ? 'Hold the light still (M)' : 'Let the light move (M)'}
+                className="immersive-toggle"
+              >
+                <Blend className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+                Motion
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Exit immersive mode"
+                title="Exit (Esc)"
+                className="pill grid h-10 w-10 place-items-center px-0 text-moon/70"
+              >
+                <Minimize2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
           ) : null}
 
-          <Lyrics
-            lyrics={lyrics}
-            index={lineIndex}
-            onSeek={seekTo}
-            activeRef={activeLineRef}
-            hasTrack={hasTrack}
-          />
+          {words ? (
+            <Lyrics
+              lyrics={lyrics}
+              index={lineIndex}
+              onSeek={seekTo}
+              activeRef={activeLineRef}
+              hasTrack={hasTrack}
+            />
+          ) : null}
         </div>
 
         {/* ── The horizon, and the ground under it ───────────────────────
@@ -207,6 +208,7 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
             <div className="text-right">
               <p className="display-figures text-[clamp(2.25rem,4.4vw,3.5rem)] leading-none text-moon">
                 {formatClock(now)}
+                {meridiem(now) ? <span className="ml-1.5 text-[0.4em] text-moon/55">{meridiem(now)}</span> : null}
               </p>
               <p className="t-meta mt-1.5">{formatLongDate(now)}</p>
             </div>
@@ -267,6 +269,44 @@ export default function MusicImmersive({ onClose, afk = false, now }) {
       ) : null}
     </div>,
     document.body,
+  );
+}
+
+/* ── The light ───────────────────────────────────────────────────────────── */
+
+const rgb = ([r, g, b]) => `rgb(${r} ${g} ${b})`;
+
+/**
+ * The sleeve's colours as pools of light, each on its own slow orbit and
+ * breathing in and out on its own count. The periods share no common beat, so
+ * the room never settles back into a picture it has already shown — leave it
+ * on for an hour and it is still moving somewhere new.
+ *
+ * Every pool is a soft radial gradient that is only ever moved, never redrawn:
+ * the orbits and the breathing are transforms the compositor runs on its own,
+ * so a screen left playing costs nothing per frame. Changing records hands the
+ * new colours to registered properties, and the room crossfades instead of
+ * cutting. `moving` false holds every pool where it is — mid-orbit, no jump.
+ */
+function Light({ palette, moving }) {
+  const [one, two, three, four] = palette.swatches ?? DEFAULT_PALETTE.swatches;
+  return (
+    <div
+      aria-hidden="true"
+      className={`immersive-light ${moving ? '' : 'immersive-light--held'}`}
+      style={{ '--blob-1': rgb(one), '--blob-2': rgb(two), '--blob-3': rgb(three), '--blob-4': rgb(four) }}
+    >
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span key={n} className={`immersive-pool immersive-pool--${n}`}>
+          <span className="immersive-orbit">
+            <span className="immersive-blob" />
+          </span>
+        </span>
+      ))}
+      {/* The words' side of the room stays in shade, wherever the light wanders. */}
+      <span className="immersive-shade" />
+      <span className="sky-grain" />
+    </div>
   );
 }
 

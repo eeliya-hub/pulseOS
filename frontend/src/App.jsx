@@ -1,12 +1,3 @@
-import {
-  Calendar,
-  Home,
-  LayoutGrid,
-  MapPin,
-  Music as MusicIcon,
-  Newspaper,
-  Sparkles,
-} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sky from './components/Sky.jsx';
 import { useSky } from './hooks/useSky.js';
@@ -23,7 +14,6 @@ import { onNavigate } from './services/ui/navigation.js';
 import { useConversations } from './hooks/useConversations.js';
 import { runPreload } from './services/preload.js';
 import AIAssistant from './views/AIAssistant.jsx';
-import AISettings from './views/AISettings.jsx';
 import HomeView from './views/Home.jsx';
 import IdleScreen from './views/IdleScreen.jsx';
 import Launchpad from './views/Launchpad.jsx';
@@ -31,54 +21,25 @@ import MusicImmersive from './components/MusicImmersive.jsx';
 import { useSettings } from './hooks/useSettings.js';
 import { useSpotifyPlayer } from './hooks/useSpotifyPlayer.js';
 import LifeHub from './views/LifeHub.jsx';
+import Mail from './views/Mail.jsx';
 import Markets from './views/Markets.jsx';
 import Music from './views/Music.jsx';
+import Settings from './views/Settings.jsx';
 import Travel from './views/Travel.jsx';
+import { applyMotion } from './services/ui/motion.js';
+import { tabBar } from './data/tabs.js';
 
-const navItems = [
-  {
-    id: 'home',
-    label: 'Home',
-    Icon: Home,
-    color: 'from-accent/85 to-blue-500/85',
-  },
-  {
-    id: 'launchpad',
-    label: 'Launchpad',
-    Icon: LayoutGrid,
-    color: 'from-purple-300/85 to-pink-500/85',
-  },
-  {
-    id: 'life',
-    label: 'Life Hub',
-    Icon: Calendar,
-    color: 'from-emerald-300/85 to-accent/85',
-  },
-  {
-    id: 'ai',
-    label: 'AI Assistant',
-    Icon: Sparkles,
-    color: 'from-emerald-300/85 to-purple-500/85',
-  },
-  {
-    id: 'markets',
-    label: 'Markets & News',
-    Icon: Newspaper,
-    color: 'from-accent/85 to-purple-500/85',
-  },
-  {
-    id: 'music',
-    label: 'Music',
-    Icon: MusicIcon,
-    color: 'from-pink-300/85 to-rose-500/85',
-  },
-  {
-    id: 'travel',
-    label: 'Travel',
-    Icon: MapPin,
-    color: 'from-amber-300/85 to-pink-500/85',
-  },
-];
+// What the way back out of Settings says, by where you came from.
+const BACK_LABEL = {
+  home: 'Home',
+  launchpad: 'Launchpad',
+  life: 'Life Hub',
+  mail: 'Mail',
+  ai: 'Ask Pulse',
+  markets: 'Markets & News',
+  music: 'Music',
+  travel: 'Travel',
+};
 
 export default function App() {
   useSky();
@@ -99,8 +60,13 @@ export default function App() {
   // 'chat' (compact popover) | 'voice'. Expanding the popover routes to the
   // full 'ai' page with the same conversation.
   const [pulseMode, setPulseMode] = useState('closed');
-  const [showAiSettings, setShowAiSettings] = useState(false);
+  // Settings is a place, not a tab: which section it opens on, and the view to
+  // go back to when you leave.
+  const [settingsAt, setSettingsAt] = useState({ section: 'you', tab: undefined, from: 'home' });
   const [pendingPrompt, setPendingPrompt] = useState('');
+  // A message the Life Hub's mail card asked to open, so arriving in Mail lands
+  // on the one you clicked rather than on the top of the inbox.
+  const [pendingMessage, setPendingMessage] = useState(null);
   const [now, setNow] = useState(() => new Date());
 
   // Idle + music playing + opted in = the immersive player stands in for the
@@ -108,6 +74,13 @@ export default function App() {
   const { settings } = useSettings();
   const { state: playerState, controls: playerControls } = useSpotifyPlayer();
   const afkImmersive = settings.afkImmersive !== false && Boolean(playerState?.track) && !playerState.paused;
+  // Seconds on Home before the clock takes over; 0 means it never does.
+  const idleAfter = Number.isFinite(settings.idleAfter) ? settings.idleAfter : 20;
+  // The tab bar as arranged in Settings.
+  const navItems = useMemo(() => tabBar(settings.tabs, settings.hiddenTabs), [settings.tabs, settings.hiddenTabs]);
+  const voiceShortcut = settings.voiceShortcut !== false;
+
+  useEffect(() => applyMotion(Boolean(settings.reduceMotion)), [settings.reduceMotion]);
 
   // Ask Spotify what is already playing, once, at launch. Nothing else did:
   // devices were only polled from the Music view, so opening Pulse with a record
@@ -144,10 +117,11 @@ export default function App() {
     deleteConversation,
   } = useConversations();
 
-  const activeItem = useMemo(
-    () => navItems.find((item) => item.id === activeView) ?? navItems[0],
-    [activeView],
-  );
+  const activeItem = useMemo(() => {
+    // Views that live inside another one keep that one lit in the bar.
+    const inBar = activeView === 'mail' ? 'life' : activeView;
+    return navItems.find((item) => item.id === inBar) ?? navItems[0];
+  }, [activeView, navItems]);
 
   // A text conversation that's sat idle for over an hour is stale — the next time
   // it's opened, start fresh instead of resuming a cold thread. A ref keeps the
@@ -187,11 +161,20 @@ export default function App() {
     rotateIfStale();
     setPulseMode('chat');
   }, [rotateIfStale]);
-  const openAiSettings = useCallback(() => {
+  const viewRef = useRef(activeView);
+  viewRef.current = activeView;
+  const openSettings = useCallback((section = 'you', tab) => {
+    const from = viewRef.current;
+    setSettingsAt((prev) => ({ section, tab, from: from === 'settings' ? prev.from : from }));
     setPulseMode('closed');
     setIsIdleScreen(false);
-    setShowAiSettings(true);
+    setActiveView('settings');
   }, []);
+  const closeSettings = useCallback(() => {
+    setActiveView(settingsAt.from ?? 'home');
+  }, [settingsAt.from]);
+  // The assistant's own settings live in Settings now, under Pulse.
+  const openAiSettings = useCallback(() => openSettings('pulse'), [openSettings]);
   const expandPulse = useCallback(() => {
     setPulseMode('closed');
     setActiveView('ai');
@@ -208,11 +191,12 @@ export default function App() {
 
   const resetIdleTimer = useCallback(() => {
     window.clearTimeout(idleTimerRef.current);
+    if (!idleAfter) return;
     idleTimerRef.current = window.setTimeout(() => {
       setIsIdleScreen(true);
       setActiveView('home');
-    }, 20000);
-  }, []);
+    }, idleAfter * 1000);
+  }, [idleAfter]);
 
   const activate = useCallback((view = 'home') => {
     // Just wake / navigate; the effect below owns the idle timer (Home only).
@@ -267,8 +251,10 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleWake);
   }, [activate, isIdleScreen]);
 
-  // Double-tap Space anywhere (outside a text field / control) to open Pulse Voice.
+  // Double-tap Space anywhere (outside a text field / control) to open Pulse Voice
+  // — unless it's been switched off in Settings.
   useEffect(() => {
+    if (!voiceShortcut) return undefined;
     let lastSpace = 0;
     const isTyping = (el) => {
       if (!el) return false;
@@ -298,11 +284,27 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [voiceShortcut]);
+
+  const openMail = useCallback(
+    (message) => {
+      setPendingMessage(message?.id ? message : null);
+      setActiveView('mail');
+      setIsIdleScreen(false);
+    },
+    [],
+  );
 
   const views = {
-    home: <HomeView {...viewProps} />,
-    life: <LifeHub />,
+    home: <HomeView {...viewProps} onOpenSettings={() => openSettings('you')} />,
+    life: <LifeHub onOpenMail={openMail} />,
+    mail: (
+      <Mail
+        initialMessage={pendingMessage}
+        onOpenSettings={() => openSettings('mail')}
+        onBack={() => setActiveView('life')}
+      />
+    ),
     launchpad: <Launchpad />,
     markets: <Markets />,
     music: <Music />,
@@ -321,7 +323,16 @@ export default function App() {
         onOpenAiSettings={openAiSettings}
       />
     ),
+    settings: (
+      <Settings
+        initialSection={settingsAt.section}
+        initialTab={settingsAt.tab}
+        backLabel={BACK_LABEL[settingsAt.from] ?? 'Home'}
+        onClose={closeSettings}
+      />
+    ),
   };
+  const inSettings = activeView === 'settings';
 
   return (
     <div
@@ -333,6 +344,12 @@ export default function App() {
       onKeyDownCapture={(event) => {
         if (event.target?.closest?.('[data-settings]')) return;
         if (isIdleScreen) activate('home');
+      }}
+      // The shell is one screen and never scrolls. Overflow-hidden still lets
+      // script scroll it — a focus or a scrollIntoView reaching for something
+      // past the edge — and that shifts every view up off the top; put it back.
+      onScroll={(event) => {
+        if (event.target === event.currentTarget && event.currentTarget.scrollTop) event.currentTarget.scrollTop = 0;
       }}
       role="presentation"
     >
@@ -350,7 +367,7 @@ export default function App() {
 
           <main
             id="main-content"
-            className="min-h-0 flex-1 px-5 pb-[6.5rem] pt-2 md:px-8"
+            className={`min-h-0 flex-1 px-5 pt-2 md:px-8 ${inSettings ? 'pb-0' : 'pb-[6.5rem]'}`}
           >
             <div key={activeView} className="view-enter mx-auto h-full max-w-[80rem]">
               <ErrorBoundary resetKey={activeView}>{views[activeView]}</ErrorBoundary>
@@ -363,6 +380,7 @@ export default function App() {
         items={navItems}
         activeView={activeItem.id}
         onChange={(view) => (view === 'ai' ? togglePulseMenu() : activate(view))}
+        away={inSettings && !isIdleScreen}
       />
 
       {pulseMode === 'menu' && (
@@ -374,7 +392,6 @@ export default function App() {
         />
       )}
 
-      {showAiSettings && <AISettings onClose={() => setShowAiSettings(false)} />}
       {pulseMode === 'chat' && (
         <ChatPopover
           messages={active.messages}
@@ -390,8 +407,8 @@ export default function App() {
       {/* A live channel given the whole screen — above everything, including voice */}
       <LiveNewsImmersive />
 
-      {/* Floating controller — on every view except the full Music player + idle. */}
-      {!isIdleScreen && activeView !== 'music' && <MiniPlayer />}
+      {/* Floating controller — on every view except the full Music player, Settings and idle. */}
+      {!isIdleScreen && activeView !== 'music' && !inSettings && <MiniPlayer />}
 
       {!boot.done && <LoadingScreen progress={boot.progress} label={boot.label} exiting={boot.exiting} />}
     </div>
