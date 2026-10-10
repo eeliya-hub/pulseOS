@@ -1,0 +1,872 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Pulse OS — the site
+
+   The same design system as the app: Newsreader over Schibsted Grotesk, pills
+   rather than buttons, one accent that the whole page borrows its light from,
+   and a sky that follows the hour. Shared across every page here so an
+   announcement looks like the thing it is announcing.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --ink: #0a0d1c;
+  --moon: #eef0fa;
+  --haze: rgba(226, 230, 248, 0.68);
+  --dim: rgba(226, 230, 248, 0.46);
+  --rule: rgba(255, 255, 255, 0.08);
+  --accent: #a9bbff;
+
+  /* The hour's own light. Set on <html data-sky> by site.js, so the page a
+     visitor opens at dusk is lit the way the app would be at dusk. */
+  --sky-a: #171b45;
+  --sky-b: #3b2758;
+  --sky-c: #0e3550;
+
+  --gmail: #ea4335;
+  --outlook: #0f6cbd;
+
+  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Schibsted Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: dark;
+}
+
+html[data-sky='dawn'] { --sky-a: #1d1b3a; --sky-b: #5c3550; --sky-c: #2a4a63; }
+html[data-sky='day'] { --sky-a: #15254d; --sky-b: #2c4677; --sky-c: #16506b; }
+html[data-sky='dusk'] { --sky-a: #241a3d; --sky-b: #6b3348; --sky-c: #1e3f66; }
+html[data-sky='night'] { --sky-a: #171b45; --sky-b: #3b2758; --sky-c: #0e3550; }
+
+* { box-sizing: border-box; }
+
+html { background: var(--ink); -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  /*
+   * Transparent on purpose, with the ink on <html> above. A background here
+   * would paint OVER .sky: a negative z-index element is drawn right after the
+   * ROOT's background and before any in-flow background, so the sky would be
+   * hidden under body and the page would be a flat slab. Letting the root hold
+   * the colour keeps the canvas the same and the order unambiguous.
+   */
+  background: transparent;
+  color: var(--moon);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+a { color: inherit; }
+img, video { display: block; max-width: 100%; }
+::selection { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 75%, transparent); outline-offset: 3px; border-radius: 6px; }
+
+/* ── The sky ────────────────────────────────────────────────────────────────
+   The hour's light pooled behind the top of the page, as in the app. The
+   gradient reads the --sky-* tokens, so changing the hour crossfades it. */
+.sky {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 150vh;
+  min-height: 1100px;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(48% 40% at 12% 8%, color-mix(in srgb, var(--sky-b) 85%, transparent), transparent 72%),
+    radial-gradient(46% 44% at 90% 14%, color-mix(in srgb, var(--sky-c) 90%, transparent), transparent 74%),
+    linear-gradient(176deg, var(--sky-a) 0%, color-mix(in srgb, var(--sky-a) 40%, var(--ink)) 45%, var(--ink) 78%);
+  transition: background 1200ms ease;
+}
+
+.sky::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(circle at 12% 18%, #fff 0 0.6px, transparent 1.4px),
+    radial-gradient(circle at 23% 31%, #fff 0 0.5px, transparent 1.2px),
+    radial-gradient(circle at 38% 9%, #fff 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 57% 24%, #fff 0 0.5px, transparent 1.2px),
+    radial-gradient(circle at 71% 12%, #fff 0 0.6px, transparent 1.4px),
+    radial-gradient(circle at 84% 29%, #fff 0 0.5px, transparent 1.3px),
+    radial-gradient(circle at 92% 7%, #fff 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 46% 38%, #fff 0 0.4px, transparent 1.1px);
+  /* Stars fade out as the sun comes up. */
+  transition: opacity 1200ms ease;
+}
+
+html[data-sky='day'] .sky::before { opacity: 0.08; }
+html[data-sky='dawn'] .sky::before { opacity: 0.22; }
+html[data-sky='dusk'] .sky::before { opacity: 0.32; }
+
+.wrap { width: min(1440px, 100% - 72px); margin-inline: auto; }
+
+/* ── The bar ────────────────────────────────────────────────────────────────
+   Sticky, because this is a site to move around now rather than one page to
+   read top to bottom. It only grows a background once you have left the top,
+   so the hero meets the sky with nothing across it. */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 20px;
+  transition: padding 300ms var(--ease);
+}
+
+.top::before {
+  content: '';
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  opacity: 0;
+  background: color-mix(in srgb, var(--ink) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: inset 0 -1px 0 var(--rule);
+  transition: opacity 300ms ease;
+}
+
+body.is-scrolled .top::before { opacity: 1; }
+body.is-scrolled .top { padding-block: 13px; }
+
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand svg { width: 44px; height: 18px; color: var(--accent); }
+.brand span { font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: -0.01em; }
+
+.nav { display: flex; align-items: center; gap: 4px; }
+
+.nav a {
+  padding: 8px 13px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--haze);
+  text-decoration: none;
+  transition: color 200ms ease, background 200ms ease;
+}
+
+.nav a:hover { color: var(--moon); background: rgba(255, 255, 255, 0.06); }
+.nav a[aria-current='page'] { color: var(--moon); }
+
+.pills { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--moon);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  transition: background 220ms ease, transform 220ms var(--ease);
+}
+
+.pill:hover { background: rgba(255, 255, 255, 0.13); }
+.pill:active { transform: scale(0.96); }
+.pill--lit { background: var(--moon); color: var(--ink); box-shadow: none; }
+.pill--lit:hover { background: #fff; }
+.pill--tall { height: 46px; padding: 0 22px; font-size: 15px; }
+.pill svg { width: 15px; height: 15px; flex: none; }
+
+/* ── Type ──────────────────────────────────────────────────────────────── */
+h1, h2, h3 { font-family: var(--serif); font-optical-sizing: auto; font-weight: 340; letter-spacing: -0.02em; margin: 0; }
+em { font-style: italic; }
+h1 { margin-top: 14px; font-size: clamp(44px, 7.6vw, 96px); line-height: 0.95; }
+
+/* The hero's headline sits well clear of the what's-new pill above it. */
+.ribbon + h1 { margin-top: clamp(22px, 2.8vh, 36px); }
+h2 { font-size: clamp(34px, 4.4vw, 54px); line-height: 1.04; margin-top: 12px; }
+
+.eyebrow {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  color: color-mix(in srgb, var(--accent) 72%, var(--moon));
+}
+
+.lede { max-width: 46rem; margin: 22px 0 0; font-size: clamp(17px, 1.6vw, 19px); color: var(--haze); }
+.body { color: var(--haze); max-width: 42rem; }
+
+section { scroll-margin-top: 86px; }
+
+/* The horizon: one line of the hour's light, brightest in the middle. */
+.horizon {
+  height: 1px;
+  margin: clamp(72px, 12vh, 120px) auto 0;
+  background: linear-gradient(90deg, transparent 4%, color-mix(in srgb, var(--accent) 55%, transparent) 30%, color-mix(in srgb, #fff 75%, var(--accent)) 50%, color-mix(in srgb, var(--accent) 55%, transparent) 70%, transparent 96%);
+  box-shadow: 0 0 28px 3px color-mix(in srgb, var(--accent) 32%, transparent);
+  animation: breathe 9s ease-in-out infinite;
+}
+
+@keyframes breathe { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+
+/* ── Arriving ───────────────────────────────────────────────────────────────
+   Everything below the fold settles in as it is reached, rather than all of it
+   being in place before anyone has scrolled to it. */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 760ms var(--ease), transform 760ms var(--ease); }
+.reveal.is-in { opacity: 1; transform: none; }
+.reveal[data-delay='1'] { transition-delay: 90ms; }
+.reveal[data-delay='2'] { transition-delay: 180ms; }
+.reveal[data-delay='3'] { transition-delay: 270ms; }
+
+/* ── The hero ───────────────────────────────────────────────────────────── */
+.hero { padding-top: clamp(20px, 3vh, 44px); }
+.hero .lede { font-size: clamp(18px, 1.8vw, 21px); }
+.hero .pills { margin-top: 34px; }
+
+/* A line saying what is new, straight above the headline — the one thing a
+   marketing page has to answer for someone coming back. */
+.ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 7px 6px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--haze);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent);
+  transition: background 220ms ease;
+}
+
+.ribbon:hover { background: color-mix(in srgb, var(--accent) 17%, transparent); }
+.ribbon strong { color: var(--moon); font-weight: 600; }
+
+.ribbon .tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--accent);
+}
+
+.ribbon .go { font-size: 17px; line-height: 1; opacity: 0.6; padding-right: 8px; }
+
+/* The clock in the corner of the hero: what hour the page is lit for. */
+.hour {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 26px;
+  font-size: 13.5px;
+  color: var(--dim);
+}
+
+.hour .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  animation: breathe 4s ease-in-out infinite;
+}
+
+/* ── Frames ─────────────────────────────────────────────────────────────── */
+.frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #05070f;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 50px 120px -50px rgba(0, 0, 0, 0.95),
+    0 0 120px -40px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.frame video, .frame img { width: 100%; height: 100%; object-fit: cover; background: #05070f; }
+.frame--wide { aspect-ratio: 16 / 9; }
+.frame--tall { aspect-ratio: 9 / 16; border-radius: 30px; }
+
+.caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 18px; font-size: 15px; color: var(--dim); }
+.caption strong { color: var(--moon); font-weight: 500; }
+.caption .facts { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+
+/* ── Section heads ──────────────────────────────────────────────────────── */
+.band { padding-top: clamp(84px, 13vh, 140px); }
+.band > .eyebrow + h2 { margin-top: 12px; }
+.head-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px; }
+
+/* ── The tab bar ────────────────────────────────────────────────────────────
+   Three places, the way the app has a dock: where you are is lit, and the
+   others are one press away. */
+.tabbar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.tabbar a {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--haze);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 200ms ease, background 200ms ease;
+}
+
+.tabbar a:hover { color: var(--moon); background: rgba(255, 255, 255, 0.07); }
+.tabbar a[aria-current='page'] { color: var(--ink); background: var(--moon); }
+
+/* ── What it connects to ─────────────────────────────────────────────────── */
+.logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 12px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  color: var(--haze);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.logo svg { width: 19px; height: 19px; flex: none; }
+.logo.is-new { color: var(--moon); background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.logos-note { margin: 16px 0 0; font-size: 14.5px; color: var(--dim); max-width: 46rem; }
+
+/* ── A feature, folded ──────────────────────────────────────────────────────
+   Eight views as eight full sections meant scrolling past seven to reach the
+   one you wanted. They fold now: the list is the contents page, and you open
+   what you came for. */
+.features { margin-top: 38px; border-top: 1px solid var(--rule); }
+
+.feature { border-bottom: 1px solid var(--rule); }
+
+.feature > summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 4px 18px;
+  align-items: center;
+  padding: 22px 6px;
+  cursor: pointer;
+  list-style: none;
+  transition: background 200ms ease, padding 200ms var(--ease);
+}
+
+.feature > summary::-webkit-details-marker { display: none; }
+.feature > summary:hover { background: rgba(255, 255, 255, 0.035); padding-inline: 14px; }
+.feature[open] > summary { background: rgba(255, 255, 255, 0.03); }
+
+.feature > summary h2 {
+  font-size: clamp(24px, 2.8vw, 32px);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.feature .teaser {
+  grid-column: 2;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.feature .chev { width: 16px; height: 16px; color: var(--dim); transition: transform 260ms var(--ease); }
+.feature[open] > summary .chev { transform: rotate(180deg); }
+
+/* The mark beside a view's name, in the accent. */
+.feature .mark {
+  display: grid;
+  place-items: center;
+  grid-row: 1 / 3;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.feature .mark svg { width: 19px; height: 19px; }
+
+.feature-body { padding: 6px 6px 40px; animation: fade-up 420ms var(--ease) both; }
+.feature-body .body { max-width: 50rem; margin: 0; font-size: 17px; }
+
+/* What a feature plugs into. */
+.plugs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+
+.plug {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.plug svg { width: 15px; height: 15px; flex: none; }
+
+/* ── The two films, together ────────────────────────────────────────────────
+   The wide one and the phone-shaped one beside each other, so the page opens
+   on the product moving rather than on a still of it. The tall one is given a
+   fixed share rather than half, because a 9:16 video half a page wide is
+   taller than the screen. */
+.films {
+  display: grid;
+  /*
+   * The second column is 81/256 of the first, which is not a guess: for a 16:9
+   * frame of width W and a 9:16 frame beside it to come out the SAME height,
+   * the tall one must be W x 9/16 x 9/16 wide. `fr` shares out what is left
+   * after the gap, so the ratio holds at every width. It was 0.34, which made
+   * the ad 7% taller than the film and left it hanging below.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.31640625fr);
+  gap: clamp(16px, 2vw, 26px);
+  align-items: start;
+  margin: clamp(36px, 5vh, 56px) 0 0;
+}
+
+.films figure { margin: 0; }
+
+/* Two columns down to a phone. The breakpoint was 860px, which a laptop at
+   150% zoom is already under — so a screen with plenty of room for both was
+   being given the stacked layout meant for a handset. */
+@media (max-width: 620px) {
+  .films { grid-template-columns: 1fr; }
+  .films .frame--tall { max-width: 300px; margin-inline: auto; }
+}
+
+/* ── Pictures of a feature ──────────────────────────────────────────────────
+   Stacked at full width, never cropped. They were a grid of thumbnails, and a
+   whole desktop screenshot shrunk into a 250px box is a smudge — you could not
+   read a single thing in one. A screenshot is only worth showing at a size
+   where its text can be read. */
+.shots { display: grid; gap: 26px; margin-top: 28px; }
+.shots figure { margin: 0; }
+
+.shots img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  background: #05070f;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 40px 90px -50px rgba(0, 0, 0, 0.95);
+}
+
+.shots figcaption { margin-top: 12px; font-size: 15px; color: var(--dim); max-width: 44rem; }
+.shots strong { color: var(--moon); font-weight: 500; }
+
+/* Two across only where there is genuinely room for both to stay legible. */
+@media (min-width: 1000px) {
+  .shots--pair { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Updates, as an accordion ───────────────────────────────────────────────
+   Grouped by month, so a run of entries from the same week stops repeating
+   the same date down the page, and held to a measure rather than stretched
+   across the full width — at 1440px the date, the title and the tag ended up
+   so far apart that nothing read as one row. */
+.updates { margin-top: 36px; max-width: 70rem; }
+
+.update-month {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 46px 0 2px;
+  font-family: var(--serif);
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: color-mix(in srgb, var(--accent) 62%, var(--moon));
+}
+
+.update-month::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--rule), transparent);
+}
+
+.update-month:first-child { margin-top: 0; }
+
+.update + .update { border-top: 1px solid var(--rule); }
+
+.update > summary {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto auto;
+  gap: 0 22px;
+  align-items: center;
+  padding: 19px 14px;
+  margin-inline: -14px;
+  border-radius: 14px;
+  cursor: pointer;
+  list-style: none;
+  transition: background 200ms ease;
+}
+
+.update > summary::-webkit-details-marker { display: none; }
+.update > summary:hover { background: rgba(255, 255, 255, 0.04); }
+.update[open] > summary { background: rgba(255, 255, 255, 0.035); }
+
+.update > summary h3 {
+  font-size: clamp(17px, 1.6vw, 20px);
+  line-height: 1.3;
+  font-weight: 400;
+}
+
+/* Just the day; the month is the heading above. */
+.update .day {
+  font-size: 15px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.update .chev { width: 15px; height: 15px; color: var(--dim); transition: transform 260ms var(--ease); }
+.update[open] > summary .chev { transform: rotate(180deg); }
+
+/* Indented to the title above it, so an opened entry hangs off its own row
+   rather than starting again at the left margin under the date. */
+.update-body {
+  padding: 4px 14px 30px calc(2.25rem + 22px);
+  max-width: 50rem;
+  animation: fade-up 380ms var(--ease) both;
+}
+
+.update-body p { margin: 0 0 14px; color: var(--haze); font-size: 16px; line-height: 1.6; }
+.update-body p:last-child { margin-bottom: 0; }
+.update-body ul { margin: 0; padding-left: 0; list-style: none; }
+.update-body li { position: relative; margin-top: 12px; padding-left: 20px; color: var(--haze); font-size: 16px; line-height: 1.6; }
+.update-body li::before { content: ''; position: absolute; left: 2px; top: 11px; width: 5px; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 65%, transparent); }
+.update-body strong { color: var(--moon); font-weight: 500; }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* The kind of change it was. */
+.kind {
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.kind--feature { color: color-mix(in srgb, var(--accent) 85%, var(--moon)); background: color-mix(in srgb, var(--accent) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent); }
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 40px; }
+
+.card {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 24px 26px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: transform 420ms var(--ease), box-shadow 420ms var(--ease);
+}
+
+a.card { text-decoration: none; display: block; }
+a.card:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 30px 60px -40px rgba(0, 0, 0, 0.9); }
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, #fff) 45%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+}
+
+.card h3 { font-size: 22px; line-height: 1.2; margin-top: 14px; }
+.card p { margin: 10px 0 0; font-size: 15.5px; color: var(--haze); }
+
+.card .mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.card .mark svg { width: 18px; height: 18px; }
+
+/* ── The sign-off ───────────────────────────────────────────────────────── */
+.cta { position: relative; text-align: center; padding: clamp(110px, 17vh, 180px) 0 clamp(80px, 12vh, 120px); }
+
+.cta::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  z-index: -1;
+  background: radial-gradient(50% 60% at 50% 55%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+}
+
+.beat { width: min(560px, 90%); height: auto; margin: 0 auto; overflow: visible; }
+.beat path { stroke: var(--accent); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent)); }
+.beat .rule { stroke: rgba(238, 240, 250, 0.22); filter: none; }
+.draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 2.6s var(--ease) 0.3s forwards; }
+
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.cta h2 { font-size: clamp(52px, 7.4vw, 92px); margin-top: 18px; }
+.cta .tag { margin: 14px 0 0; font-family: var(--serif); font-size: clamp(22px, 2.6vw, 30px); color: rgba(238, 240, 250, 0.86); }
+.cta .soon { margin: 22px 0 0; font-size: 15px; color: var(--dim); }
+.cta .pills { justify-content: center; margin-top: 36px; }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+footer { border-top: 1px solid var(--rule); padding: 44px 0 64px; font-size: 13px; line-height: 1.6; color: var(--dim); margin-top: clamp(60px, 10vh, 110px); }
+footer h3 { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: 0; color: rgba(238, 240, 250, 0.78); margin: 0 0 8px; }
+.credits { display: grid; grid-template-columns: 2fr 1fr; gap: 28px 48px; }
+.credits p { margin: 0 0 10px; }
+.credits a { color: rgba(238, 240, 250, 0.72); text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+.credits a:hover { color: var(--moon); }
+.sign { margin-top: 32px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .cards { grid-template-columns: 1fr; }
+  .update > summary { grid-template-columns: 2rem minmax(0, 1fr) auto; }
+  .update > summary .chev { display: none; }
+  .update-body { padding-left: calc(2rem + 22px); }
+  .feature > summary { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .feature .teaser { grid-column: 2 / -1; }
+  .panel { grid-template-columns: 1fr; }
+  .entry { grid-template-columns: 1fr; gap: 6px; }
+  .entry .badge { justify-self: start; }
+  .credits { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .top { flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .tabbar { order: 3; width: 100%; justify-content: center; }
+  .tabbar a { padding: 8px 14px; font-size: 14px; }
+}
+
+@media (max-width: 520px) {
+  .wrap { width: min(1120px, 100% - 32px); }
+  .top .pills .pill:not(.pill--lit) { display: none; }
+  .frame { border-radius: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .draw { stroke-dashoffset: 0; }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Mail
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── The connectivity diagram ───────────────────────────────────────────────
+   Two providers on the left, Pulse in the middle, what it can do with a
+   message on the right — with the mail itself visibly moving along the wires.
+   Drawn rather than photographed, like everything else here, so it stays sharp
+   at any size and weighs a few kilobytes. */
+.wires {
+  position: relative;
+  margin-top: clamp(36px, 6vh, 56px);
+  padding: clamp(26px, 4vw, 44px) clamp(20px, 3vw, 36px);
+  border-radius: 24px;
+  background:
+    radial-gradient(70% 90% at 50% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 65%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.085), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.wires svg { width: 100%; height: auto; overflow: visible; }
+
+.wire { fill: none; stroke: rgba(238, 240, 250, 0.16); stroke-width: 1.5; }
+
+/* The light that runs along a wire once the diagram is on screen. Each is a
+   dashed copy of its own path, chasing itself. */
+/* Every flow path carries pathLength="100", so one dash pattern reads the same
+   on a short straight wire and a long curved one — without it the pulse raced
+   across the middle wire and crawled along the outer ones. */
+.flow {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 7 100;
+  stroke-dashoffset: 107;
+  opacity: 0;
+}
+
+.wires.is-in .flow { opacity: 1; animation: run 3.4s linear infinite; }
+.wires.is-in .flow--gmail { stroke: var(--gmail); }
+.wires.is-in .flow--outlook { stroke: var(--outlook); animation-delay: 0.6s; }
+.wires.is-in .flow--out { stroke: var(--accent); animation-delay: 1.5s; }
+.wires.is-in .flow--out2 { stroke: var(--accent); animation-delay: 1.9s; }
+.wires.is-in .flow--out3 { stroke: var(--accent); animation-delay: 2.3s; }
+
+@keyframes run { to { stroke-dashoffset: -7; } }
+
+.node-box { fill: rgba(255, 255, 255, 0.05); stroke: rgba(255, 255, 255, 0.13); stroke-width: 1; }
+.node-label { font-family: var(--sans); font-size: 13px; font-weight: 500; fill: var(--moon); }
+.node-sub { font-family: var(--sans); font-size: 11px; fill: rgba(226, 230, 248, 0.5); }
+
+/* Pulse, at the centre, lit. */
+.hub-box {
+  fill: color-mix(in srgb, var(--accent) 13%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 42%, transparent);
+  stroke-width: 1.2;
+}
+
+.hub-beat { fill: none; stroke: var(--accent); stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.wires.is-in .hub-glow { animation: hub 3.4s ease-in-out infinite; }
+
+@keyframes hub {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.06); }
+}
+
+.wires .note {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  fill: rgba(226, 230, 248, 0.42);
+  font-style: italic;
+}
+
+/* The legend under the diagram, which is where the promises live. */
+.wires-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+  font-size: 14px;
+  color: var(--dim);
+}
+
+.wires-key span { display: inline-flex; align-items: center; gap: 9px; }
+.wires-key svg { width: 15px; height: 15px; flex: none; color: color-mix(in srgb, var(--accent) 80%, var(--moon)); }
+
+/* ── An article ─────────────────────────────────────────────────────────────
+   One left edge, for everything.
+
+   This page used to have three. The page's own hero sat in `.wrap`, the prose
+   was a centred 820px column, and the pictures broke out to the full width
+   again — so a reader's eye met a new left margin every few hundred pixels and
+   none of them lined up. The fix is not a single width (a 1440px line of text
+   is unreadable) but a single ALIGNMENT: the column lives in `.wrap` like
+   everything else, the text inside it is held to a readable measure, and the
+   pictures run the full width. Everything begins in the same place. */
+/* No width of its own: it is always a `.wrap` as well, and a `width: 100%`
+   here is declared later in this file and so quietly beat `.wrap`'s own. */
+.post { }
+
+/* The measure. Anything that is words gets it; anything that is a picture
+   does not, which is the whole of the rule. */
+.post > p,
+.post > h2,
+.post > h3,
+.post > ul,
+.post > .eyebrow,
+.post > .meta,
+.post > .pull,
+.post > .fineprint,
+.post > .pills {
+  max-width: 46rem;
+}
+
+.post h2 { font-size: clamp(30px, 3.6vw, 44px); margin-top: clamp(54px, 8vh, 80px); }
+.post h3 { font-size: clamp(21px, 2.2vw, 26px); margin-top: 40px; }
+.post p { margin: 18px 0 0; color: var(--haze); font-size: 17.5px; line-height: 1.62; }
+.post p strong { color: var(--moon); font-weight: 500; }
+.post ul { margin: 18px 0 0; padding-left: 0; list-style: none; }
+.post li { position: relative; margin-top: 12px; padding-left: 22px; color: var(--haze); }
+.post li::before { content: ''; position: absolute; left: 2px; top: 11px; width: 6px; height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 70%, transparent); }
+.post li strong { color: var(--moon); font-weight: 500; }
+.post a:not(.pill):not(.card) { color: color-mix(in srgb, var(--accent) 85%, var(--moon)); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.post a:not(.pill):not(.card):hover { border-bottom-color: var(--accent); }
+
+/* A picture in an article: the full column, starting where the words do. */
+.post > figure, .post > .wires { margin: clamp(30px, 4vh, 44px) 0 0; }
+
+/* A line worth stopping on. */
+.pull {
+  margin: 40px 0 0;
+  padding: 2px 0 2px 24px;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  font-family: var(--serif);
+  font-size: clamp(21px, 2.4vw, 27px);
+  line-height: 1.35;
+  color: rgba(238, 240, 250, 0.9);
+}
+
+.pull p { margin: 0; color: inherit; font-size: inherit; line-height: inherit; }
+
+code {
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+  color: color-mix(in srgb, var(--accent) 86%, var(--moon));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 22px; font-size: 14.5px; color: var(--dim); }
+.meta .dotsep { opacity: 0.4; }
+
+/* The small print, at the foot of a post. */
+.fineprint {
+  margin-top: 44px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  font-size: 14.5px;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.fineprint p { margin: 0; font-size: inherit; color: inherit; }
+.fineprint p + p { margin-top: 10px; }
+
+
+
+/* The diagram keeps its proportions rather than shrinking its labels into
+   illegibility — on a phone it scrolls sideways instead. */
+.wires-scroll { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.wires-scroll svg { min-width: 660px; }
+.wires-hint { display: none; margin: 10px 0 0; font-size: 13px; color: var(--dim); }
+
+@media (max-width: 760px) {
+  .wires-hint { display: block; }
+}

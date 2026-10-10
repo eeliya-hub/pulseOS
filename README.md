@@ -1,13 +1,18 @@
 # Pulse OS
 
 A personal command-centre dashboard — one screen that never scrolls, carrying
-weather, calendar, news, markets, sport, music and travel, with an AI assistant
+weather, calendar, email, news, markets, sport, music and travel, with an AI assistant
 that can read all of it and act on it. React + Vite frontend, Express backend.
 
+> **New — Mail.** Gmail and Outlook now connect, and Pulse reads a message to
+> find the meetings, deadlines and tasks in it, proposing each for your calendar
+> and to-do list. It never sends, files or deletes anything without you.
+> **[Read the announcement](https://eeliya-hub.github.io/pulseOS/announcements.html#mail)**.
+>
 > **The launch film is out.** Two and a half minutes on every part of Pulse OS,
 > and a thirty-second ad made for phones. Watch both on the
-> **[launch page](https://eeliya-hub.github.io/pulseOS/)**, or read the
-> **[announcement](ANNOUNCEMENT.md)**.
+> **[site](https://eeliya-hub.github.io/pulseOS/)**, or read the
+> **[announcements](ANNOUNCEMENT.md)**.
 
 <p align="center">
   <a href="https://eeliya-hub.github.io/pulseOS/"><img src="docs/launch/launch-preview.gif" width="100%" alt="Scenes from the Pulse OS launch film — watch it on the launch page"></a>
@@ -26,7 +31,7 @@ that can read all of it and act on it. React + Vite frontend, Express backend.
 pulseos/
 ├── frontend/        React + Vite dashboard
 │   └── src/
-│       ├── views/           Home, Launchpad, LifeHub, Markets, Music, Travel, AIAssistant
+│       ├── views/           Home, Launchpad, LifeHub, Mail, Markets, Music, Travel, AIAssistant
 │       ├── components/      Stage (sky/horizon/ground), Sky, Dock, MusicImmersive, …
 │       ├── hooks/           useSky, useWholeRows, useTravelStore, useSpotifyPlayer, …
 │       └── services/api/
@@ -38,7 +43,7 @@ pulseos/
     │   ├── index.js         local bootstrap; also attaches the voice WebSocket
     │   ├── config/env.js    all env access
     │   ├── routes/          weather, stocks, news, sports, ai, calendar, music,
-    │   │                    travel, search, geo, launch
+    │   │                    mail, travel, search, geo, launch
     │   ├── controllers/
     │   ├── services/<feature>/<vendor>.provider.js
     │   ├── realtime/        voiceGateway.js — browser WS ↔ Gemini Live
@@ -81,6 +86,7 @@ return a clear `503 NOT_CONFIGURED` instead of crashing.
 | Sport | Football-Data.org, balldontlie, Jolpica/Ergast | F1 is keyless |
 | Calendar | Google (read+write), Apple iCloud (CalDAV), public `.ics` | OAuth |
 | Music | Spotify Web API + Web Playback SDK + Connect; LRCLIB lyrics | OAuth; lyrics keyless |
+| Email | Gmail (REST), Outlook/Microsoft 365 (Graph) | OAuth; read, send, drafts, archive — never permanent delete |
 | Travel | Google Places *or* OpenStreetMap, AeroDataBox, OpenFreeMap | degrades to keyless |
 | Search | Brave, Tavily, or keyless open web | optional keys |
 | AI | Gemini (default), OpenAI, Claude | swappable per request |

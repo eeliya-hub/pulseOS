@@ -1,3 +1,38 @@
+# Pulse OS — Mail
+
+**Released 9 October 2026.** ·
+**[Read the full post](https://eeliya-hub.github.io/pulseOS/announcements.html#mail)**
+
+Gmail and Outlook now connect to Pulse OS, and the inbox joins the rest of your
+day rather than sitting beside it.
+
+Open a message and one button finds what is actually in it — the meetings, the
+deadlines, the things you have been asked to do, who is involved, and whether it
+needs a reply. Each one comes back as a row with the button that acts on it, so
+a meeting becomes an event in your own calendar and a request becomes a task on
+the project it belongs to.
+
+The dates are the part worth knowing about. A language model asked for the
+calendar date of "Thursday's design review" answers confidently and often
+wrongly, so Pulse does not ask: the model only *quotes* the words the email used,
+and the calendar is worked out in tested code against the day the message was
+sent. The resolved date and the phrase it came from are shown side by side, so a
+misreading is visible as one.
+
+| | |
+|---|---|
+| **Providers** | Gmail (personal and Workspace), Outlook and Microsoft 365 |
+| **Where it lives** | The Life Hub, opened from its card — not a tab of its own |
+| **Scopes** | `gmail.modify` · `gmail.send` · `gmail.compose` · `Mail.ReadWrite` · `Mail.Send` |
+| **Never** | Sends, deletes, archives or files anything without you. Permanent deletion is impossible — the permission is never requested. |
+| **Privacy** | OAuth only, no passwords. Bodies are never written to disk and never appear in an exported backup. The assistant is given one message, one thread or one search — never a mailbox. |
+
+Yahoo is absent because Yahoo retired its Mail API; those IMAP scopes are not
+self-served. The adapter interface is shaped so a Yahoo provider is one more
+file if that ever changes.
+
+---
+
 # Pulse OS — the launch film
 
 **Released 7 October 2026.**
