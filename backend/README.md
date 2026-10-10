@@ -49,14 +49,76 @@ curl http://localhost:4000/api/status
 | News     | **GNews** (100/day)                            | `GET /api/news?category=` · `GET /api/news/search?q=` |
 | Search   | **Keyless** (DuckDuckGo/Google News/Wikipedia) · Brave · Tavily | `GET /api/search?q=` · `GET /api/search/status` |
 | Sports   | **TheSportsDB** (free, works with key `3`)     | `GET /api/sports/upcoming?league=epl` · `/results` · `/standings?league=&season=` |
-| AI       | **Gemini** (default, free) · OpenAI · Claude   | `POST /api/ai/chat` `{ prompt \| messages, provider?, model?, system? }` |
+| AI       | **Gemini** (default, free) · OpenAI · Claude   | `POST /api/ai/chat` `{ prompt \| messages, provider?, model?, system?, thinking?, json? }` |
 | Calendar | **Google** (read+write) · **iCal** (read)      | `GET /api/calendar/google/auth` · `/events` · `POST /api/calendar/events` |
 | Music    | **Spotify** (OAuth)                            | `GET /api/music/auth` · `/now-playing` · `/playlists` · `/recently-played` |
+| Email    | **Gmail** (REST) · **Outlook/M365** (Graph)    | `GET /api/mail/status` · `/summary` · `/mailboxes` · `/messages` · `/messages/:id` · `/threads/:id` · `/context` · `POST /send` · `/drafts` · `/messages/:id/move` |
 | Travel   | **Keyless**: adsbdb + adsb.lol/airplanes.live (flights) · Frankfurter/ECB (FX) · Nominatim + Wikipedia (places, photos) · optional **Google Places** | `GET /api/travel/destination?q=` · `/flight?code=BA117&date=` · `/fx?from=GBP&to=JPY` · `/places?q=&kind=hotel` · `/photos?q=` · `/photo?ref=` |
 
 > Finance has **no** external API — it stays fully local/manual in the frontend
 > (localStorage). Travel keeps its trips local too; only the live data
 > (flights, rates, weather, places) comes from the backend.
+
+### Email
+
+Provider-agnostic, behind one internal abstraction:
+
+```
+Gmail REST  ─┐
+             ├─ provider adapter → mail.service → routes → UI / AI / tasks / calendar
+MS Graph    ─┘
+```
+
+Nothing above `mail.service.js` knows which provider an account belongs to.
+Each adapter declares its own **capabilities**, and the UI offers only what is
+actually there — Gmail's Primary/Social/Promotions/Updates appear for a Gmail
+account and are absent for Outlook, rather than showing four mailboxes that
+would always be empty.
+
+- **Mailboxes** are canonical (`inbox · starred · important · drafts · sent ·
+  archive · spam · trash`) and mapped per provider: Gmail labels one way,
+  Graph's well-known folders the other. Gmail has no Archive label, so archive
+  is a search (`-in:inbox -in:trash …`); Graph has no Starred folder, so starred
+  is a filter on the flag. Spam and bin are **never** counted in any inbox figure.
+- **Multiple accounts.** Mail is the first integration with more than one
+  account of a kind, stored as `mail:<provider>:<accountId>` in the token store.
+  Reads across accounts interleave by date and each message carries its
+  `accountId`; the page cursor is one token *per account*, so paging works the
+  same for one mailbox or several.
+- **Separate grant from the calendar.** Mail asks for mail scopes only, lands on
+  its own redirect, and is stored under its own key — so connecting or revoking
+  a mailbox never touches `GOOGLE_CLIENT_ID`'s calendar sign-in, and neither
+  token works for the other.
+- **Scopes.** Gmail: `gmail.modify`, `gmail.send`, `gmail.compose`. Graph:
+  `Mail.ReadWrite`, `Mail.Send`. The full `https://mail.google.com/` scope is
+  deliberately *not* requested, so **nothing can permanently delete mail** —
+  there is no move target but inbox, archive, spam and bin.
+- **Bodies are sanitised server-side** (`sanitize.js`) before they cross the
+  wire, and the reader renders what survives inside an iframe sandboxed without
+  `allow-scripts`. Two independent defences, because an email body is the one
+  input an attacker chooses. Remote images are held back by default — loading
+  one tells the sender the mail was opened.
+- **Nothing is persisted.** The service has no storage layer: listings are held
+  in memory for `MAIL_LIST_TTL_MS`, bodies for `MAIL_MESSAGE_TTL_MS`, and an
+  explicit refresh bypasses both. The frontend keeps *headers* in localStorage
+  so the inbox paints instantly, and never a body.
+- **`GET /api/mail/context`** is the only door to the assistant, and a narrow
+  one: `message`, `thread` (last 3 of it), `search` and `priority` (headers
+  only), each with a hard ceiling. There is no request shape that hands a model
+  a mailbox.
+- **Dates are not the model's job.** Asked for the calendar date of "Thursday's
+  design review", a model answers confidently and wrongly, and differently on a
+  second run. So it is asked only to *quote* the email's own words — `dateText:
+  "end of day Friday"` — and `frontend/src/services/mail/dates.js` does the
+  arithmetic against the date the email was SENT, in code with tests. The
+  resolved date and the phrase it came from are shown together in the UI, which
+  is the only way to spot a misreading.
+- **Yahoo** is absent because Yahoo retired its Mail API: access is IMAP/SMTP
+  with OAuth2, and those scopes are not self-served — a third party must apply
+  to Yahoo and be approved first. The adapter interface is shaped so a Yahoo
+  provider is one more file if that approval exists.
+
+Run the mail and provider tests with `npm test` in `backend/`.
 
 ### Travel
 
@@ -113,6 +175,23 @@ Picked for **generous free tiers you won't blow through** in personal use.
 Each domain uses a provider pattern, so swapping (e.g. Finnhub → Twelve Data,
 GNews → NewsData) means writing one new `*.provider.js` and pointing the service
 at it — controllers, routes, and the frontend never change.
+
+### Asking for JSON, and paying for thinking
+
+Two options on `/api/ai/chat` that only Gemini acts on (the others ignore them,
+and a caller that wants JSON from them still has to parse it out of prose):
+
+- **`json`** — a JSON schema, or `true`. The answer comes back as that shape
+  rather than as prose with a code fence around it.
+- **`thinking`** — `'none' | 'low' | 'high'`. Gemini 3 reasons before it
+  answers, and **`maxTokens` is the budget for the thinking and the answer
+  together**. This is worth knowing because the failure mode is silent: a caller
+  that asks for a small JSON object inside a small budget gets a *truncated*
+  200, not an error — the mail feature spent 670 of its 700 tokens reasoning and
+  returned `{"title": "Design review", "date": "2`, which parsed as nothing and
+  surfaced as "Pulse could not read anything definite out of that" on every
+  single request. Pass `thinking: 'low'` for extraction work, or raise
+  `maxTokens` well above the size of the answer you want.
 
 ### AI provider choice
 

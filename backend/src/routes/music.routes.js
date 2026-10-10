@@ -6,6 +6,7 @@ export const musicRouter = Router();
 // OAuth
 musicRouter.get('/auth', musicController.auth);
 musicRouter.get('/callback', musicController.callback);
+musicRouter.post('/disconnect', musicController.disconnect);
 
 // Web Playback SDK (in-tab player, Premium)
 musicRouter.get('/token', musicController.token);

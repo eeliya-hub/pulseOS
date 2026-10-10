@@ -409,6 +409,77 @@ export const TOOLS = [
       required: ['item'],
     },
   },
+  {
+    name: 'get_mail_summary',
+    description:
+      "How the user's inbox stands right now, across every connected mail account: how many are unread, how many look important, how many appear to ask the user for something, how many mention a deadline or a meeting, and the two or three most worth their attention. Headers only — no message bodies. Use this for 'any new email?', 'anything I need to deal with?', or as the first step before reading anything.",
+    parameters: { type: 'object', properties: {} },
+  },
+  {
+    name: 'search_mail',
+    description:
+      "Search the user's mail and get back matching messages as sender, subject, preview line, date and flags — never full bodies. Use it to FIND a message ('the email from the bank', 'anything about the deposit'), then call read_mail with the id to read one properly. Searching is the only way to reach mail the user has not got open.",
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'What to look for — words from the subject, the sender, or the body.' },
+        limit: { type: 'integer', description: 'How many to return (default 5, max 10).' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'read_mail',
+    description:
+      "Read ONE email in full: who it is from and to, when, the subject, the body as plain text, and what is attached. Pass `thread: true` to get the last few messages of its conversation too, which is what you need before drafting a reply. Get the `id` from get_mail_summary, search_mail or list_unread_mail. Long bodies are shortened and say so.",
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'The message id.' },
+        account_id: { type: 'string', description: 'Which account it belongs to, when the user has more than one.' },
+        thread: { type: 'boolean', description: 'Include the recent messages of its conversation (default false).' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_unread_mail',
+    description:
+      "The user's unread mail, most worth attention first, as headers only. Each one says what stood out about it — whether it asks for something, mentions a deadline, mentions a meeting, or is bulk mail. Use for 'what's in my inbox?' or 'what should I deal with first?'.",
+    parameters: {
+      type: 'object',
+      properties: { limit: { type: 'integer', description: 'How many to return (default 8, max 10).' } },
+    },
+  },
+  {
+    name: 'draft_email',
+    description:
+      "Open the user's email composer with a message filled in, ready for them to read and send THEMSELVES. Use this whenever they ask you to write, reply to or forward an email. You CANNOT send mail and must never say you have sent, replied to or forwarded anything — say you have drafted it and it is open for them to send. To reply to a specific email, pass `reply_to_id` and the composer threads it properly.",
+    parameters: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', description: 'Recipients, comma separated. Omit when replying — the reply fills them in.' },
+        cc: { type: 'string', description: 'Copied recipients, comma separated.' },
+        subject: { type: 'string', description: 'The subject. Omit when replying.' },
+        body: { type: 'string', description: 'The message itself, written out in full.' },
+        reply_to_id: { type: 'string', description: 'The id of the message being replied to, when this is a reply.' },
+        reply_all: { type: 'boolean', description: 'Reply to everyone on it rather than just the sender.' },
+        account_id: { type: 'string', description: 'Which account to send from, when the user has more than one.' },
+      },
+    },
+  },
+  {
+    name: 'open_mail',
+    description:
+      "Take the user to their Mail view, optionally with one message open. Use it when they ask to see or open their email, or after you have found something they will want to look at.",
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'A message to open. Omit to just show the inbox.' },
+        account_id: { type: 'string', description: 'Which account that message belongs to.' },
+      },
+    },
+  },
 ];
 
 export function systemPrompt(userName = 'the user', instructions = '', options = {}) {
@@ -450,6 +521,14 @@ export function systemPrompt(userName = 'the user', instructions = '', options =
     'Their to-do list, habits, watchlist, trips and music are yours to change too: get_tasks, add_task, complete_task, remove_task; add_habit, log_habit, remove_habit; add_stock, remove_stock; add_packing_item, check_packing_item; play_on_device to move the music; open_view to take them to a part of the dashboard.',
     `${rule}`,
     'BEFORE you create or change an event, apply what you know about them from the context above. If they have said which calendar a kind of event belongs on, put it there. If they have said what the location should be, set it. If they have said how long that kind of event runs, work out the end time and pass it. Fill those in silently rather than leaving a default or asking — they have already told you once.',
+    '',
+    'EMAIL',
+    'Their mail is yours to READ and to DRAFT from — never to send. get_mail_summary for how the inbox stands, list_unread_mail for what is waiting, search_mail to find one, read_mail to read it properly (with `thread: true` before you reply to anything).',
+    'You CANNOT send email, and nothing you do will. draft_email opens their composer with your words in it, for them to read and send themselves. So never say you have sent, replied to or forwarded anything — say you have drafted it and it is waiting for them. If they ask you to send one, write it, open it, and tell them it is ready for them to press send.',
+    'Read before you write. A reply drafted without reading the thread gets the facts and the names wrong, and they will notice before the recipient does.',
+    'You also cannot archive, bin or mark their mail — those are theirs to do from the message itself. Say so plainly if they ask.',
+    'The signals on a message — asks, deadline, meeting, bulk — are Pulse\'s own reading of the subject and the preview, not certainties. Treat them as a hint about what to read first, and check the message itself before telling them something is due.',
+    'When mail turns into a task, an event or something on a project, use the ordinary tools for those (add_task, create_calendar_event) and say which email it came from, so it can be traced back.',
     '',
     'THE INTERNET',
     'search_web runs a real web search and reads the pages it finds. Use it for ANYTHING you cannot answer for certain: facts, prices, opening times, how-to questions, products, people, places, anything after your training cutoff, or checking a claim. Reach for it early rather than apologising or guessing.',
@@ -499,6 +578,8 @@ export function systemPrompt(userName = 'the user', instructions = '', options =
       'When the tools come back, confirm each item out loud by name with its day and time. If a result says duplicate, tell them it was already there and nothing extra was added. If a result has an error, say which one failed and why. Never say something is done unless its tool said so.',
       'Never redo something you already did in this conversation. If they ask for what sounds like the same thing again, it is almost always because they did not catch your confirmation — check the calendar or list and tell them it is there, rather than adding a second copy.',
       'If a change or removal comes back with matches, several events fitted and nothing was touched — ask which one. To clear out duplicate copies, use delete_calendar_event with keep_one.',
+      'Their email you can read and draft, never send. get_mail_summary for how the inbox stands, list_unread_mail for what is waiting, search_mail to find one, read_mail to read it out. draft_email puts your words in their composer for THEM to send — so never say you have sent or replied to anything, say it is drafted and waiting for them.',
+      'Read the thread before drafting a reply to it. And you cannot archive, bin or mark mail — tell them that is theirs to do.',
       'You can also run their to-do list, habits, watchlist, packing list and music: get_tasks, complete_task, remove_task, log_habit, remove_stock, add_packing_item, check_packing_item, play_on_device, and open_view to take them to part of the dashboard.',
       // The text prompt has this rule; without it here, spoken requests were
       // getting the title and time right and defaulting everything else.

@@ -1,5 +1,6 @@
 import { config } from '../../config/env.js';
 import { createCache } from '../../utils/cache.js';
+import { geoService } from '../geo/geo.service.js';
 import { openWeatherProvider } from './openweather.provider.js';
 
 /**
@@ -125,14 +126,20 @@ async function resolveCoords(params) {
   if (!raw) return null;
 
   const matches = await openWeatherProvider.geocode({ city: raw }).catch(() => []);
+  const bias = config.weather.defaultCountry;
+
+  // OpenWeather's geocoder knows towns, not counties: "Kent" has no match in
+  // the UK at all, and its first answer is Ghent, in Belgium. When nothing
+  // comes back from home, ask OpenStreetMap — which knows a county — inside
+  // the home country before settling for a namesake abroad.
+  const home = bias && !raw.includes(',') ? matches?.find((m) => m.country === bias) : null;
+  if (bias && !raw.includes(',') && !home) {
+    const local = await geoService.geocode(raw, { country: bias }).catch(() => null);
+    if (local) return { lat: local.lat, lon: local.lon, name: raw, country: bias, state: null };
+  }
   if (!matches?.length) return null;
 
-  let best = matches[0];
-  const bias = config.weather.defaultCountry;
-  if (bias && !raw.includes(',')) {
-    const biased = matches.find((m) => m.country === bias);
-    if (biased) best = biased;
-  }
+  const best = home ?? matches[0];
   return {
     lat: best.lat,
     lon: best.lon,

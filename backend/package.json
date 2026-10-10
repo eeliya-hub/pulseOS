@@ -2,12 +2,13 @@
   "name": "@pulseos/backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Pulse OS backend — Express API gateway to weather, stocks, news, sports, AI, calendar and music providers.",
+  "description": "Pulse OS backend \u2014 Express API gateway to weather, stocks, news, sports, AI, calendar and music providers.",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test \"src/**/__tests__/*.test.js\""
   },
   "dependencies": {
     "@google/genai": "^2.13.0",

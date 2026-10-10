@@ -6,11 +6,16 @@ import { fetchJson } from '../../utils/httpClient.js';
 const cache = createCache(24 * 60 * 60 * 1000);
 
 export const geoService = {
-  async geocode(query) {
+  /**
+   * @param {string} query
+   * @param {{ country?: string }} [options] an ISO code to keep the search inside
+   */
+  async geocode(query, { country } = {}) {
     const q = (query || '').trim();
     if (!q) return null;
-    return cache.wrap(`geo:${q.toLowerCase()}`, async () => {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+    const within = country ? `&countrycodes=${encodeURIComponent(country.toLowerCase())}` : '';
+    return cache.wrap(`geo:${q.toLowerCase()}${within}`, async () => {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}${within}`;
       const data = await fetchJson(url, {
         integration: 'Nominatim',
         headers: { 'user-agent': 'PulseOS/0.1 (personal dashboard)' },

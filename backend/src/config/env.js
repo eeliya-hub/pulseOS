@@ -166,6 +166,52 @@ export const config = {
     // Optional default .ics feed URL to read when none is supplied per-request.
     defaultFeedUrl: get('ICAL_FEED_URL'),
   },
+  mail: {
+    /*
+     * Email. Each provider's grant is kept apart from every other integration's,
+     * including the calendar's Google sign-in: mail asks for mail scopes only,
+     * lands on its own redirect, and is stored under its own token keys. So
+     * connecting or revoking a mailbox never touches the calendar, and a mail
+     * token can never be used to read a calendar.
+     *
+     * The Google client ID/secret may be SHARED with the calendar's (the same
+     * Cloud project, with the Gmail API enabled and the redirect below added) —
+     * that is only the application's identity. The consent, the scopes and the
+     * stored token are separate, which is what matters. Set MAIL_GOOGLE_* to use
+     * a different OAuth client entirely.
+     */
+    google: {
+      clientId: get('MAIL_GOOGLE_CLIENT_ID') || get('GOOGLE_CLIENT_ID'),
+      clientSecret: get('MAIL_GOOGLE_CLIENT_SECRET') || get('GOOGLE_CLIENT_SECRET'),
+      redirectUri: get('MAIL_GOOGLE_REDIRECT_URI', 'http://localhost:4000/api/mail/google/callback'),
+    },
+    // Microsoft 365 / Outlook.com, through Microsoft Graph. `common` lets both
+    // work accounts and personal ones sign in; a single-tenant app sets its
+    // tenant id here.
+    microsoft: {
+      clientId: get('MICROSOFT_CLIENT_ID'),
+      clientSecret: get('MICROSOFT_CLIENT_SECRET'),
+      tenant: get('MICROSOFT_TENANT', 'common'),
+      redirectUri: get('MAIL_MICROSOFT_REDIRECT_URI', 'http://localhost:4000/api/mail/microsoft/callback'),
+    },
+    /*
+     * Yahoo is not here yet, and that is a finding rather than an omission:
+     * Yahoo has retired its own Mail API, so access is IMAP/SMTP with OAuth2,
+     * and those scopes are not self-served — a third party has to apply to
+     * Yahoo and be approved before they can be requested at all. The provider
+     * interface in services/mail/ is shaped so a Yahoo adapter is one more file
+     * when that approval exists.
+     */
+
+    // Largest attachment Pulse will carry in either direction.
+    maxAttachmentBytes: num('MAIL_MAX_ATTACHMENT_BYTES', 15 * 1024 * 1024),
+    // How long a listing may be served from memory before the provider is asked
+    // again. Short: mail arrives while you are looking at it.
+    listTtlMs: num('MAIL_LIST_TTL_MS', 45_000),
+    // A body never changes once it has arrived, so it can be held much longer —
+    // in memory only, and never written to disk.
+    messageTtlMs: num('MAIL_MESSAGE_TTL_MS', 10 * 60_000),
+  },
   spotify: {
     clientId: get('SPOTIFY_CLIENT_ID'),
     clientSecret: get('SPOTIFY_CLIENT_SECRET'),
@@ -217,6 +263,13 @@ export function integrationStatus() {
       ical: Boolean(config.ical.defaultFeedUrl) || 'per-request',
     },
     music: Boolean(config.spotify.clientId && config.spotify.clientSecret),
+    mail: {
+      google: Boolean(config.mail.google.clientId && config.mail.google.clientSecret),
+      microsoft: Boolean(config.mail.microsoft.clientId && config.mail.microsoft.clientSecret),
+      // Needs Yahoo to approve the IMAP/SMTP mail scopes for an application
+      // before it can be built at all — see the note in `config.mail`.
+      yahoo: false,
+    },
     travel: {
       // Always true — flights, currency, maps and OSM place search are keyless.
       enabled: true,

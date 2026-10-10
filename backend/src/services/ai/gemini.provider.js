@@ -35,17 +35,48 @@ function toContents(messages) {
   });
 }
 
+/**
+ * How much deliberation a request is worth.
+ *
+ * Gemini 3 takes a level; 2.5 took a numeric budget, and `thinkingBudget: 0`
+ * remains the way to turn it off outright, so both are sent for "none".
+ */
+const thinkingFor = (level) =>
+  level === 'none' ? { thinkingBudget: 0 } : { thinkingLevel: level === 'high' ? 'high' : 'low' };
+
 export const geminiProvider = {
   id: 'gemini',
   isConfigured: () => Boolean(config.ai.geminiKey),
 
-  async chat({ messages, system, model, maxTokens = 1024, tools }) {
+  async chat({ messages, system, model, maxTokens = 1024, tools, thinking, json }) {
     if (!config.ai.geminiKey) throw ApiError.notConfigured(INTEGRATION);
     const useModel = model || config.ai.geminiModel;
 
     const body = {
       contents: toContents(messages),
-      generationConfig: { maxOutputTokens: maxTokens },
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        /*
+         * Gemini 3 thinks before it answers, and `maxOutputTokens` is the
+         * budget for the thinking AND the answer together. That caught the mail
+         * feature out badly: asking for a small JSON object inside a 700-token
+         * budget spent ~670 of it reasoning and then stopped mid-string, so
+         * every extraction came back as `{"title": "Design review", "date": "2` —
+         * unparseable, and reported to the user as "Pulse could not read
+         * anything definite out of that".
+         *
+         * A caller that knows the shape of what it wants can say how much
+         * deliberation it is worth. "low" leaves room for the answer in a small
+         * budget; "none" turns thinking off for work that is pure transcription.
+         */
+        ...(thinking ? { thinkingConfig: thinkingFor(thinking) } : {}),
+        /*
+         * And a caller that wants JSON can have it guaranteed rather than asked
+         * for: a response schema makes the model emit exactly this shape, so
+         * there is no fenced code block or "Here you go" to scrape off.
+         */
+        ...(json ? { responseMimeType: 'application/json', ...(json === true ? {} : { responseSchema: json }) } : {}),
+      },
       ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
       ...(tools?.length ? { tools: [{ functionDeclarations: tools }] } : {}),
     };

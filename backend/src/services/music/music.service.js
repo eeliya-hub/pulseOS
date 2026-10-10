@@ -8,6 +8,7 @@ export const musicService = {
 
   getAuthUrl: () => ({ url: spotifyProvider.getAuthUrl() }),
   connect: (code, user) => spotifyProvider.handleCallback(code, user),
+  disconnect: (user) => spotifyProvider.disconnect(user),
   token: (user) => spotifyProvider.token(user),
   transfer: (payload, user) => spotifyProvider.transfer(payload, user),
   play: (payload, user) => spotifyProvider.play(payload, user),

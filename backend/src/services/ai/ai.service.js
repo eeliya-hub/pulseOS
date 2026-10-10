@@ -35,8 +35,12 @@ export const aiService = {
    * @param {string} [params.provider] override the default provider
    * @param {string} [params.model]
    * @param {number} [params.maxTokens]
+   * @param {'none'|'low'|'high'} [params.thinking] how much deliberation to
+   *   allow. Only Gemini acts on it; the others ignore it.
+   * @param {object|boolean} [params.json] a JSON schema (or `true`) to make the
+   *   answer machine-readable rather than prose that has to be scraped.
    */
-  async chat({ messages, prompt, system, provider, model, maxTokens, tools, userName, instructions }) {
+  async chat({ messages, prompt, system, provider, model, maxTokens, tools, userName, instructions, thinking, json }) {
     const convo = messages?.length ? messages : prompt ? [{ role: 'user', content: prompt }] : null;
     if (!convo) throw ApiError.badRequest('Provide `prompt` or a non-empty `messages` array.');
 
@@ -61,6 +65,8 @@ export const aiService = {
       // A request can ask for fewer tokens than the cap, never more.
       maxTokens: Math.min(maxTokens || 1024, config.ai.maxTokensCap),
       tools: toolSchemas,
+      thinking,
+      json,
     });
 
     recordTokens(chosen.id, result.usage);

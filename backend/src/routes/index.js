@@ -6,6 +6,7 @@ import { aiRouter } from './ai.routes.js';
 import { calendarRouter } from './calendar.routes.js';
 import { geoRouter } from './geo.routes.js';
 import { launchRouter } from './launch.routes.js';
+import { mailRouter } from './mail.routes.js';
 import { musicRouter } from './music.routes.js';
 import { newsRouter } from './news.routes.js';
 import { searchRouter } from './search.routes.js';
@@ -37,4 +38,7 @@ apiRouter.use('/calendar', mutationLimiter, calendarRouter);
 apiRouter.use('/geo', geoRouter);
 apiRouter.use('/travel', travelRouter);
 apiRouter.use('/music', mutationLimiter, musicRouter);
+// Mail changes state upstream — sending, archiving, binning — so it takes the
+// write budget, same as the calendar.
+apiRouter.use('/mail', mutationLimiter, mailRouter);
 apiRouter.use('/launch', launchRouter);

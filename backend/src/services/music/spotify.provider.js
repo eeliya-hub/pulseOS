@@ -153,6 +153,13 @@ export const spotifyProvider = {
 
   isConnected: (user) => tokenStore.has('spotify', user),
 
+  // Forget this account's tokens. Spotify keeps the app in the account's list
+  // of connected apps until it's removed there, but nothing here can act on it.
+  disconnect(user) {
+    tokenStore.clear('spotify', user);
+    return { connected: false };
+  },
+
   // Fresh access token for the browser Web Playback SDK (getOAuthToken).
   async token(user) {
     const access = await accessToken(user);

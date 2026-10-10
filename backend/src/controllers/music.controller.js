@@ -11,6 +11,11 @@ export const musicController = {
     res.send('Spotify connected. You can close this window.');
   }),
 
+  // POST /api/music/disconnect → { connected: false }
+  disconnect: asyncHandler(async (_req, res) => {
+    res.json(musicService.disconnect());
+  }),
+
   // GET /api/music/token → { accessToken, expiresAt }  (for the Web Playback SDK)
   token: asyncHandler(async (_req, res) => {
     res.json(await musicService.token());
