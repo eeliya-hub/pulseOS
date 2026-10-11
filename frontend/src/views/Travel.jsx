@@ -260,27 +260,6 @@ export default function Travel() {
         ) : null}
 
         <div className="min-w-0">
-          {trips.length > 1 ? (
-            <div className="hide-scrollbar mb-3 flex max-w-[42rem] items-center gap-1.5 overflow-x-auto">
-              {trips.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  aria-pressed={t.id === trip.id}
-                  onClick={() => {
-                    store.selectTrip(t.id);
-                    setActiveDayId(null);
-                    setActiveFlightId(null);
-                  }}
-                  className="pill h-8 shrink-0 px-3.5 text-[0.8125rem]"
-                >
-                  {t.destination?.flag ? `${t.destination.flag} ` : ''}
-                  {t.name}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
           <p className="t-lede flex flex-wrap items-baseline gap-x-3">
             <span className="t-eyebrow">{phase?.label}</span>
             <span className="text-moon/85">
@@ -299,6 +278,42 @@ export default function Travel() {
           <TripFacts destination={destination} phase={phase} clock={clock} weather={live.weather} />
 
           <div className="mt-5 flex items-center gap-2">
+            {/*
+              Switching trips, as a picker rather than a row of them.
+
+              It was a row of pills above the whole hero, which cost a line of
+              the sky whether you had two trips or ten — and the sky is a fixed
+              height shared with every other view, so on a big screen with three
+              trips the row below this one was pushed through the horizon. A
+              picker costs nothing, sits in a row that already exists, and does
+              not grow with the number of trips (the pills scrolled sideways
+              once they ran past 42rem, which was its own problem).
+            */}
+            {trips.length > 1 ? (
+              <div className="relative shrink-0">
+                <select
+                  value={trip.id}
+                  onChange={(event) => {
+                    store.selectTrip(event.target.value);
+                    setActiveDayId(null);
+                    setActiveFlightId(null);
+                  }}
+                  aria-label="Which trip"
+                  className="h-9 max-w-[14rem] appearance-none truncate rounded-full bg-white/[0.07] pl-4 pr-9 text-[0.875rem] text-moon shadow-[inset_0_0_0_1px_rgba(255,255,255,0.09)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                >
+                  {trips.map((t) => (
+                    <option key={t.id} value={t.id} className="bg-ink text-moon">
+                      {t.destination?.flag ? `${t.destination.flag} ` : ''}
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-moon/50"
+                  aria-hidden="true"
+                />
+              </div>
+            ) : null}
             <button type="button" onClick={() => setEditingTrip('new')} className="pill h-9 px-4">
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               Trip
