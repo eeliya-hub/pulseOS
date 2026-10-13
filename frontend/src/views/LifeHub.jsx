@@ -1,8 +1,5 @@
 import {
-  CalendarDays,
   Check,
-  ChevronLeft,
-  ChevronRight,
   CloudOff,
   ExternalLink,
   Eye,
@@ -19,9 +16,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import ProjectsSummary from '../components/ProjectsSummary.jsx';
-import { Column, ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
-import { ensureCalendarRange, SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
+import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
+import MonthGrid from './schedule/MonthGrid.jsx';
+import { SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { api } from '../services/api/backendClient.js';
 import {
   CALENDARS,
@@ -38,7 +35,6 @@ import { useSettings } from '../hooks/useSettings.js';
 const inputClass =
   'w-full rounded-lg bg-white/8 px-3 py-2 text-sm text-moon placeholder:text-moon/35 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/45';
 
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 // Grey provider marks shown next to events/calendars so it's clear where each
 // one comes from. Rendered as a monochrome grey silhouette regardless of the
@@ -75,7 +71,7 @@ const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
  * calendar itself is the picker, so any day is one tap away. The ground carries
  * that day's schedule, its to-dos and habits, and the projects they belong to.
  */
-export default function LifeHub({ onOpenProjects }) {
+export default function LifeHub() {
   const life = useLifeData();
   const calendar = useCalendarEvents();
   /*
@@ -87,7 +83,6 @@ export default function LifeHub({ onOpenProjects }) {
   useMinute();
 
   const [selectedKey, setSelectedKey] = useState(() => dateKey(new Date()));
-  const [showCalendar, setShowCalendar] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
   const [editing, setEditing] = useState(null); // null · 'new' · local event
   const [editingConnected, setEditingConnected] = useState(null); // connected event
@@ -115,18 +110,16 @@ export default function LifeHub({ onOpenProjects }) {
 
   const pick = (key) => {
     setSelectedKey(key);
-    setShowCalendar(false);
   };
   const jumpToToday = () => {
     setSelectedKey(dateKey(new Date()));
-    setShowCalendar(false);
   };
 
   return (
     <div className="flex h-full flex-col">
       {/* ── Sky: the day you're looking at, and the month it sits in ─────── */}
-      <SkyZone className="grid grid-cols-[minmax(0,1fr)_minmax(0,clamp(14rem,24%,21rem))] items-end gap-6 xl:gap-10">
-        <div className="min-w-0">
+      <SkyZone className="flex items-end">
+        <div className="min-w-0 flex-1">
           <p className="t-eyebrow">{relativeDayLabel(selectedKey)}</p>
           <h1 className="t-hero mt-3 truncate">
             {keyToDate(selectedKey).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -142,16 +135,6 @@ export default function LifeHub({ onOpenProjects }) {
             </button>
             <button type="button" onClick={jumpToToday} aria-label="Jump to today" className="pill h-10 px-4">
               Today
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCalendar((v) => !v)}
-              aria-pressed={showCalendar}
-              aria-label="Pick a day"
-              className="pill h-10 px-4"
-            >
-              <CalendarDays className="h-4 w-4" aria-hidden="true" />
-              Month
             </button>
             <button
               type="button"
@@ -172,51 +155,60 @@ export default function LifeHub({ onOpenProjects }) {
           </div>
         </div>
 
-        {/* What is on across every board, and the way through to them. */}
-        <ProjectsSummary onOpen={onOpenProjects} />
       </SkyZone>
 
-      {/* ── Ground: the day's plan, what to do, habits, projects ─────────── */}
-      <Ground className="grid grid-cols-[1.5fr_1.1fr_0.9fr]">
-        <Column
-          label="Schedule"
-          action={calendar?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent/70" aria-hidden="true" /> : null}
-          className="pr-8 pt-7"
-          bodyClassName="flex min-h-0 flex-col"
-        >
-          {/* The month drops in above the day's plan rather than replacing it,
-              so choosing a day and reading it happen in the same place. */}
-          {showCalendar ? <MonthCalendar selectedKey={selectedKey} events={allEvents} onPick={pick} /> : null}
+      {/* ── Ground: the month, and the day you have picked out of it ────── */}
+      <Ground className="grid grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
+        {/* The calendar, at the size that makes it the point of this screen
+            rather than one of three equal columns. */}
+        <div className="flex min-h-0 flex-col pr-8 pt-6">
+          <MonthGrid
+            selectedKey={selectedKey}
+            events={allEvents}
+            onPick={pick}
+            onOpenEvent={(event) => setViewing(event)}
+          />
+        </div>
 
-          <div className="glass-scroll cascade mt-3 min-h-0 flex-1 overflow-y-auto pb-3 pr-1 [mask-image:linear-gradient(180deg,#000_91%,transparent)]">
-            {events.length === 0 ? (
-              <EmptyLine>{calendar?.loading ? 'Syncing calendars…' : 'Nothing planned'}</EmptyLine>
-            ) : (
-              events.map((event) => <EventRow key={event.id} event={event} onClick={() => setViewing(event)} />)
-            )}
-          </div>
-        </Column>
-
-        <Column label="To-do" className="ground-rule px-8 pt-7" bodyClassName="glass-scroll overflow-y-auto pr-1">
-          {todos.length === 0 ? (
-            <EmptyLine>Nothing to do</EmptyLine>
-          ) : (
-            <div className="cascade mt-1 space-y-0.5">
-              {todos.map((todo) => (
-                <TodoRow
-                  key={todo.id}
-                  todo={todo}
-                  onToggle={() => life.toggleTodo(todo.id)}
-                  onRemove={() => life.removeTodo(todo.id)}
-                />
-              ))}
+        {/* The chosen day, and the things that belong to it rather than to a
+            date — stacked, because they are one reading rather than three. */}
+        <div className="ground-rule glass-scroll flex min-h-0 flex-col gap-6 overflow-y-auto pl-8 pr-1 pt-6">
+          <section>
+            <ColumnHead
+              label={relativeDayLabel(selectedKey)}
+              action={calendar?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent/70" aria-hidden="true" /> : null}
+            />
+            <div className="cascade mt-1">
+              {events.length === 0 ? (
+                <EmptyLine>{calendar?.loading ? 'Syncing calendars…' : 'Nothing planned'}</EmptyLine>
+              ) : (
+                events.map((event) => <EventRow key={event.id} event={event} onClick={() => setViewing(event)} />)
+              )}
             </div>
-          )}
-        </Column>
+          </section>
 
-        <Column className="ground-rule pl-8 pt-7" bodyClassName="glass-scroll overflow-y-auto pr-1">
-          <HabitsBlock life={life} />
-        </Column>
+          <section>
+            <ColumnHead label="To-do" />
+            {todos.length === 0 ? (
+              <EmptyLine>Nothing to do</EmptyLine>
+            ) : (
+              <div className="cascade mt-1 space-y-0.5">
+                {todos.map((todo) => (
+                  <TodoRow
+                    key={todo.id}
+                    todo={todo}
+                    onToggle={() => life.toggleTodo(todo.id)}
+                    onRemove={() => life.removeTodo(todo.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="pb-4">
+            <HabitsBlock life={life} />
+          </section>
+        </div>
       </Ground>
 
       {viewing && (
@@ -887,101 +879,6 @@ function EventRow({ event, onClick }) {
   );
 }
 
-function MonthCalendar({ selectedKey, events, onPick }) {
-  const [cursor, setCursor] = useState(() => {
-    const d = keyToDate(selectedKey);
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
-  const year = cursor.getFullYear();
-  const month = cursor.getMonth();
-  const todayKey = dateKey(new Date());
-
-  useEffect(() => {
-    const d = keyToDate(selectedKey);
-    setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
-  }, [selectedKey]);
-
-  // Whatever month is on screen has to be loaded. The dashboard keeps several
-  // months to hand, but paging past them used to show empty days rather than
-  // fetching them.
-  useEffect(() => {
-    ensureCalendarRange(new Date(year, month, 1), new Date(year, month + 1, 1));
-  }, [year, month]);
-  const offset = (new Date(year, month, 1).getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // Always six rows. A month that only needs five would otherwise be shorter,
-  // and since the hero sits on the horizon the whole calendar would jump every
-  // time you paged into a longer month.
-  const cells = [...Array(offset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-  while (cells.length < 42) cells.push(null);
-
-  return (
-    <div className="mt-1 shrink-0 border-b border-white/[0.07] pb-5">
-      <div className="grid w-full grid-cols-[2.25rem_1fr_2.25rem] items-center">
-        <IconButton onClick={() => setCursor(new Date(year, month - 1, 1))} label="Previous month">
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        </IconButton>
-        <span className="display-type text-center text-[1.375rem] text-moon">
-          {cursor.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-        </span>
-        <IconButton onClick={() => setCursor(new Date(year, month + 1, 1))} label="Next month">
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </IconButton>
-      </div>
-
-      <div className="mt-3">
-        <div className="grid grid-cols-7 gap-1 text-center text-[0.75rem] font-medium text-moon/40">
-          {WEEKDAYS.map((day, i) => (
-            <span key={i}>{day}</span>
-          ))}
-        </div>
-
-        <div className="mt-1 grid grid-cols-7 gap-x-1 gap-y-0.5">
-          {cells.map((day, i) => {
-            if (day === null) return <span key={`b${i}`} className="h-8" />;
-            const key = dateKey(new Date(year, month, day));
-            const isSelected = key === selectedKey;
-            const isToday = key === todayKey;
-            const dayEvents = events.filter((event) => occursOn(event, key));
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => onPick(key)}
-                className={[
-                  'flex h-8 flex-col items-center justify-center gap-0.5 rounded-full text-[0.875rem] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
-                  isSelected
-                    ? 'bg-moon'
-                    : isToday
-                      ? 'shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_50%,transparent)] hover:bg-white/8'
-                      : 'hover:bg-white/8',
-                ].join(' ')}
-              >
-                <span
-                  className={[
-                    'clock-figures leading-none',
-                    isSelected ? 'font-semibold text-ink' : isToday ? 'text-accent' : 'text-moon/75',
-                  ].join(' ')}
-                >
-                  {day}
-                </span>
-                <span className="flex h-1 items-center gap-0.5">
-                  {dayEvents.slice(0, 3).map((event) => (
-                    <span
-                      key={event.id}
-                      className="h-1 w-1 rounded-full"
-                      style={{ backgroundColor: event.color || calendarColor(event.calendar) }}
-                    />
-                  ))}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function AddEditPopup({ life, calendar, selectedKey, event, onClose }) {
   const isNew = !event;

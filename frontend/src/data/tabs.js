@@ -13,8 +13,8 @@ import { Calendar, Home, KanbanSquare, LayoutGrid, Mail, MapPin, Music, Newspape
  */
 export const TABS = {
   home: { id: 'home', label: 'Home', Icon: Home },
-  launchpad: { id: 'launchpad', label: 'Launchpad', Icon: LayoutGrid },
-  life: { id: 'life', label: 'Life Hub', Icon: Calendar },
+  launchpad: { id: 'launchpad', label: 'Apps', Icon: LayoutGrid },
+  life: { id: 'life', label: 'Schedule', Icon: Calendar },
   mail: { id: 'mail', label: 'Mail', Icon: Mail },
   projects: { id: 'projects', label: 'Projects', Icon: KanbanSquare },
   markets: { id: 'markets', label: 'News', Icon: Newspaper },

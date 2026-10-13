@@ -3266,7 +3266,10 @@ select.field {
    ─────────────────────────────────────────────────────────────────────────── */
 
 .proj-ground { display: flex; flex-direction: column; min-height: 0; }
-.proj-ground--board { overflow: hidden; }
+/* No overflow here: `.ground`'s horizon and its glow are pseudo-elements laid
+   out past the content box to reach the window's edges, and clipping this
+   element cuts them off mid-line. `.proj-board` does its own scrolling. */
+.proj-ground--board { min-height: 0; }
 
 /* How to look at it — the same shape as the dock's own segmented control. */
 .proj-views {
@@ -3347,7 +3350,14 @@ select.field {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
-.proj-lane-head { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.25rem 0.5rem; }
+.proj-lane-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0.25rem 0.5rem;
+  padding-bottom: 0.5rem;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.07);
+}
 
 .proj-lane-name {
   display: inline-flex;
@@ -3361,9 +3371,31 @@ select.field {
   text-align: left;
 }
 
-.proj-lane-count { margin-left: auto; font-size: 0.75rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.proj-lane-count {
+  margin-left: auto;
+  min-width: 1.25rem;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  text-align: center;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+}
 .proj-lane-cards { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; overflow-y: auto; padding: 0 0.25rem 0.25rem; }
-.proj-lane-empty { padding: 0.75rem 0.25rem; font-size: 0.8125rem; color: color-mix(in srgb, var(--moon) 34%, transparent); }
+.proj-lane-empty {
+  padding: 1rem 0.25rem;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--moon) 34%, transparent);
+}
+
+.proj-lane-empty-add {
+  margin-top: 0.3125rem;
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--accent) 75%, var(--moon));
+}
+
+.proj-lane-empty-add:hover { text-decoration: underline; }
 
 /* Where a dragged card would land. */
 .proj-gap {
@@ -3388,8 +3420,19 @@ select.field {
 .proj-card.is-dragging { opacity: 0.4; transform: scale(0.98); }
 .proj-card.is-done .proj-card-title { color: color-mix(in srgb, var(--moon) 42%, transparent); text-decoration: line-through; }
 
-.proj-card-labels { display: flex; gap: 0.25rem; margin-bottom: 0.4375rem; }
-.proj-card-label { width: 1.75rem; height: 0.25rem; border-radius: 999px; }
+.proj-card-labels { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.4375rem; }
+
+/* A stripe says a card is tagged; a name says what with. At this size the
+   name costs the same room the stripe did. */
+.proj-card-label {
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--tint);
+  background: color-mix(in srgb, var(--tint) 18%, transparent);
+}
 
 .proj-card-title {
   flex: 1;
@@ -3402,13 +3445,47 @@ select.field {
 
 .proj-card-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.625rem;
-  margin-top: 0.5rem;
+  gap: 0.3125rem;
+  margin-top: 0.4375rem;
   padding-left: 1.375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.proj-card-meta:empty { display: none; }
+
+.proj-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.4375rem;
+  border-radius: 999px;
   font-size: 0.6875rem;
   color: var(--dim);
-  font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.proj-pill.is-complete { color: var(--rise); background: color-mix(in srgb, var(--rise) 16%, transparent); }
+.proj-pill.proj-due--overdue { color: var(--fall); background: color-mix(in srgb, var(--fall) 16%, transparent); }
+.proj-pill.proj-due--today { color: #ffb340; background: color-mix(in srgb, #ffb340 16%, transparent); }
+.proj-pill.proj-due--done { color: var(--rise); background: color-mix(in srgb, var(--rise) 14%, transparent); }
+
+/* How far through a card's own checklist is, without reading the numbers. */
+.proj-bar-track {
+  height: 0.1875rem;
+  margin: 0.5rem 0 0 1.375rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.proj-bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--rise);
+  transition: width 420ms var(--ease-out);
 }
 
 .proj-card-del { margin-left: auto; opacity: 0; color: var(--dim); transition: opacity 160ms ease, color 160ms ease; }
@@ -3670,4 +3747,200 @@ select.field {
 
 @media (max-width: 900px) {
   .proj-lane { flex-basis: 15rem; }
+}
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   The calendar
+   
+   The month at the size of the month, filling the height it is given, with
+   what is on written into the days rather than counted under them.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.cal { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+
+.cal-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding-bottom: 0.875rem; }
+
+.cal-month {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--moon);
+}
+
+.cal-year { font-size: 0.55em; color: color-mix(in srgb, var(--moon) 38%, transparent); }
+
+.cal-step {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: var(--dim);
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.cal-step:hover { color: var(--moon); background: rgba(255, 255, 255, 0.08); }
+
+.cal-today {
+  height: 2rem;
+  padding: 0 0.875rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--dim);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.cal-today:hover { color: var(--moon); background: rgba(255, 255, 255, 0.08); }
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  padding-bottom: 0.4375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--moon) 34%, transparent);
+}
+
+.cal-weekdays span { padding-left: 0.375rem; }
+
+/* Six rows that share whatever height is left, so the grid meets the dock
+   whatever the window — and never changes height as you page through months. */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 0.25rem;
+  min-height: 0;
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
+
+.cal-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.3125rem;
+  border-radius: 0.6rem;
+  /* The cell measures itself, so it can decide how many events it has room to
+     write rather than rendering two and clipping one. */
+  container-type: size;
+  background: rgba(255, 255, 255, 0.022);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+  transition: background 180ms ease, box-shadow 180ms ease;
+}
+
+.cal-day:hover { background: rgba(255, 255, 255, 0.055); }
+.cal-day.is-weekend { background: rgba(255, 255, 255, 0.012); }
+.cal-day.is-outside { opacity: 0.38; }
+.cal-day.is-outside .cal-chip { display: none; }
+
+.cal-day.is-today { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.cal-day.is-today .cal-num {
+  color: var(--ink);
+  background: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.cal-day.is-selected {
+  background: color-mix(in srgb, var(--accent) 11%, rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 62%, transparent);
+}
+
+/* The whole cell picks the day; the chips inside it open their own event. */
+.cal-day-hit { position: absolute; inset: 0; border-radius: inherit; z-index: 0; }
+
+.cal-num {
+  position: absolute;
+  top: 0.3125rem;
+  left: 0.375rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  font-family: var(--pulse-display-font, inherit);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--moon) 72%, transparent);
+}
+
+.cal-events {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  /* Top-down, so what is shown is the start of the day. */
+  justify-content: flex-start;
+  gap: 0.125rem;
+  margin-top: 1.3125rem;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cal-events > * { pointer-events: auto; }
+
+/* An event, written rather than dotted: its calendar's colour down the edge,
+   the time if it has one, and as much of the title as the day is wide. */
+.cal-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-width: 0;
+  padding: 0.0625rem 0.3125rem 0.0625rem 0.25rem;
+  border-radius: 0.3125rem;
+  font-size: 0.65rem;
+  line-height: 1.3;
+  text-align: left;
+  color: var(--moon);
+  background: color-mix(in srgb, var(--chip) 22%, transparent);
+  border-left: 2px solid var(--chip);
+  transition: background 150ms ease;
+}
+
+.cal-chip:hover { background: color-mix(in srgb, var(--chip) 38%, transparent); }
+.cal-chip-time { flex: none; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--moon) 62%, transparent); }
+
+/* What would not fit, said where it costs no height. */
+.cal-more {
+  position: absolute;
+  top: 0.4375rem;
+  right: 0.4375rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--moon) 42%, transparent);
+}
+
+@media (max-width: 1100px) {
+  .cal-chip-time { display: none; }
+}
+
+/*
+ * How many events a day can write depends on how tall a sixth of the grid is,
+ * which depends on the window — so the cell asks rather than the stylesheet
+ * guessing. Below the first threshold there is only room for one event; below
+ * the second there is room for none, and the count beside the date carries it
+ * alone. A clipped half-event is worse than an honest number.
+ */
+.cal-chip:nth-of-type(2) { display: none; }
+
+@container (min-height: 80px) {
+  .cal-chip:nth-of-type(2) { display: flex; }
+}
+
+@container (max-height: 60px) {
+  .cal-events { display: none; }
 }

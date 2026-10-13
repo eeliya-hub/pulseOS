@@ -1,4 +1,4 @@
-import { Check, MessageSquare, MoreHorizontal, Paperclip, Plus, Trash2, X } from 'lucide-react';
+import { AlignLeft, CalendarDays, Check, CheckSquare, MessageSquare, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cardsIn, colourOf, dueState, progressOf } from '../../services/projects/board.js';
 import { readDate } from '../../services/mail/dates.js';
@@ -216,7 +216,18 @@ function Lane({
         {over?.columnId === column.id && over.index >= cards.length ? <span className="proj-gap" aria-hidden="true" /> : null}
 
         {!cards.length && !adding ? (
-          <p className="proj-lane-empty">{hidden ? `${hidden} hidden by the filter` : 'Nothing here yet'}</p>
+          <div className="proj-lane-empty">
+            {hidden ? (
+              <p>{hidden} hidden by the filter</p>
+            ) : (
+              <>
+                <p>Nothing here</p>
+                <button type="button" onClick={() => onAdding(true)} className="proj-lane-empty-add">
+                  Add the first card
+                </button>
+              </>
+            )}
+          </div>
         ) : null}
 
         {adding ? (
@@ -285,7 +296,13 @@ function Card({ card, project, store, dragging, onDragStart, onOpen }) {
       {labels.length ? (
         <div className="proj-card-labels">
           {labels.map((label) => (
-            <span key={label.id} className="proj-card-label" style={{ background: colourOf(label.colour).hex }} title={label.name} />
+            <span
+              key={label.id}
+              className="proj-card-label"
+              style={{ '--tint': colourOf(label.colour).hex }}
+            >
+              {label.name}
+            </span>
           ))}
         </div>
       ) : null}
@@ -304,33 +321,45 @@ function Card({ card, project, store, dragging, onDragStart, onOpen }) {
         </button>
       </div>
 
-      {(progress || card.due || card.comments?.length || card.links?.length || card.notes) ? (
-        <div className="proj-card-meta">
-          {card.due ? (
-            <span className={`proj-due proj-due--${state}`}>{readDate(card.due)}</span>
-          ) : null}
-          {progress ? (
-            <span className={progress.ratio === 1 ? 'text-rise' : ''}>
-              {progress.done}/{progress.total}
-            </span>
-          ) : null}
-          {card.notes ? <Paperclip className="h-3 w-3" aria-hidden="true" /> : null}
-          {card.comments?.length ? (
-            <span className="inline-flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" aria-hidden="true" />
-              {card.comments.length}
-            </span>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => store.removeCard(project.id, card.id)}
-            aria-label={`Delete ${card.title || 'this card'}`}
-            className="proj-card-del"
-          >
-            <Trash2 className="h-3 w-3" aria-hidden="true" />
-          </button>
+      {progress ? (
+        <div className="proj-bar-track" title={`${progress.done} of ${progress.total} done`}>
+          <span style={{ width: `${progress.ratio * 100}%` }} />
         </div>
       ) : null}
+
+      <div className="proj-card-meta">
+        {card.due ? (
+          <span className={`proj-pill proj-due--${state}`}>
+            <CalendarDays className="h-3 w-3" aria-hidden="true" />
+            {readDate(card.due)}
+          </span>
+        ) : null}
+        {progress ? (
+          <span className={`proj-pill ${progress.ratio === 1 ? 'is-complete' : ''}`}>
+            <CheckSquare className="h-3 w-3" aria-hidden="true" />
+            {progress.done}/{progress.total}
+          </span>
+        ) : null}
+        {card.notes ? (
+          <span className="proj-pill" title="Has notes">
+            <AlignLeft className="h-3 w-3" aria-hidden="true" />
+          </span>
+        ) : null}
+        {card.comments?.length ? (
+          <span className="proj-pill">
+            <MessageSquare className="h-3 w-3" aria-hidden="true" />
+            {card.comments.length}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => store.removeCard(project.id, card.id)}
+          aria-label={`Delete ${card.title || 'this card'}`}
+          className="proj-card-del"
+        >
+          <Trash2 className="h-3 w-3" aria-hidden="true" />
+        </button>
+      </div>
     </article>
   );
 }
