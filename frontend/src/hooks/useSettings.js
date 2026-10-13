@@ -71,7 +71,7 @@ const DEFAULTS = {
   // The big clocks — top bar, resting screen, immersive player — in 24 or 12 hours.
   clock24: true,
   // The tab bar, left to right with Ask Pulse in the middle, and the ones you've put away.
-  tabs: ['home', 'launchpad', 'life', 'markets', 'music', 'travel'],
+  tabs: ['home', 'launchpad', 'life', 'projects', 'mail', 'markets', 'music', 'travel'],
   hiddenTabs: [],
   // What the resting clock shows besides the time.
   restShows: { greeting: true, date: true, weather: false, next: false },

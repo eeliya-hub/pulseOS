@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import MailSummary from '../components/MailSummary.jsx';
+import ProjectsSummary from '../components/ProjectsSummary.jsx';
 import { Column, ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import { ensureCalendarRange, SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { api } from '../services/api/backendClient.js';
@@ -39,7 +39,6 @@ const inputClass =
   'w-full rounded-lg bg-white/8 px-3 py-2 text-sm text-moon placeholder:text-moon/35 ring-1 ring-white/12 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/45';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const projectAccents = ['#0A84FF', '#BF5AF2', '#30D158', '#FF9F0A', '#FF453A'];
 
 // Grey provider marks shown next to events/calendars so it's clear where each
 // one comes from. Rendered as a monochrome grey silhouette regardless of the
@@ -76,7 +75,7 @@ const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
  * calendar itself is the picker, so any day is one tap away. The ground carries
  * that day's schedule, its to-dos and habits, and the projects they belong to.
  */
-export default function LifeHub({ onOpenMail }) {
+export default function LifeHub({ onOpenProjects }) {
   const life = useLifeData();
   const calendar = useCalendarEvents();
   /*
@@ -173,12 +172,12 @@ export default function LifeHub({ onOpenMail }) {
           </div>
         </div>
 
-        {/* Mail: the figure, what Pulse noticed in it, and the way in. */}
-        <MailSummary onOpen={(message) => onOpenMail?.(message)} />
+        {/* What is on across every board, and the way through to them. */}
+        <ProjectsSummary onOpen={onOpenProjects} />
       </SkyZone>
 
       {/* ── Ground: the day's plan, what to do, habits, projects ─────────── */}
-      <Ground className="grid grid-cols-[1.35fr_1fr_1fr]">
+      <Ground className="grid grid-cols-[1.5fr_1.1fr_0.9fr]">
         <Column
           label="Schedule"
           action={calendar?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent/70" aria-hidden="true" /> : null}
@@ -213,10 +212,11 @@ export default function LifeHub({ onOpenMail }) {
               ))}
             </div>
           )}
-          <HabitsBlock life={life} />
         </Column>
 
-        <ProjectsColumn life={life} />
+        <Column className="ground-rule pl-8 pt-7" bodyClassName="glass-scroll overflow-y-auto pr-1">
+          <HabitsBlock life={life} />
+        </Column>
       </Ground>
 
       {viewing && (
@@ -1312,181 +1312,9 @@ function Chip({ on, onClick, children }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Projects — deliberately styled apart from the day card             */
-/* ------------------------------------------------------------------ */
-
-function ProjectsColumn({ life }) {
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState('');
-
-  const submit = (e) => {
-    e.preventDefault();
-    const value = name.trim();
-    if (!value) return;
-    life.addProject(value);
-    setName('');
-    setAdding(false);
-  };
-
-  return (
-    <Column
-      label="Projects"
-      action={
-        <button
-          type="button"
-          onClick={() => setAdding((v) => !v)}
-          aria-pressed={adding}
-          aria-label="Add project"
-          className="pill h-7 w-7 px-0 text-moon/75"
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      }
-      className="ground-rule pl-8 pt-7"
-      bodyClassName="glass-scroll overflow-y-auto pr-1"
-    >
-      {adding && (
-        <form onSubmit={submit} className="mt-2">
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" className={inputClass} />
-        </form>
-      )}
-      <div className="cascade mt-2 space-y-7">
-        {life.projects.map((project, i) => (
-          <ProjectItem key={project.id} project={project} accent={projectAccents[i % projectAccents.length]} life={life} />
-        ))}
-      </div>
-      {life.projects.length === 0 && <EmptyLine>No projects yet</EmptyLine>}
-    </Column>
-  );
-}
-
-function ProjectItem({ project, accent, life }) {
-  const done = project.todos.filter((todo) => todo.done).length;
-  const pct = project.todos.length ? (done / project.todos.length) * 100 : 0;
-
-  return (
-    <div className="group">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="t-title truncate text-[1.375rem]">{project.name}</p>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="clock-figures text-[0.8125rem] text-dim">
-            {done} of {project.todos.length}
-          </span>
-          <RemoveButton onClick={() => life.removeProject(project.id)} />
-        </div>
-      </div>
-      <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-white/[0.07]">
-        <div className="bar-grow h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: accent }} />
-      </div>
-      <div className="mt-2 space-y-0.5">
-        {project.todos.map((todo) => (
-          <TodoRow key={todo.id} todo={todo} compact onToggle={() => life.toggleProjectTodo(project.id, todo.id)} />
-        ))}
-      </div>
-      <InlineAdd placeholder="Add task" onAdd={(label) => life.addProjectTodo(project.id, label)} />
-    </div>
-  );
-}
-
-/**
- * Today's habits as pills: tap one and it lights, which is the whole point of a
- * habit tracker — the satisfaction of switching it on.
- */
-function HabitsBlock({ life }) {
-  const todayKey = dateKey(new Date());
-  const doneToday = life.habitLog[todayKey] ?? [];
-  const [adding, setAdding] = useState(false);
-  const [text, setText] = useState('');
-  const doneCount = life.habits.filter((habit) => doneToday.includes(habit.id)).length;
-
-  const submit = (e) => {
-    e.preventDefault();
-    const value = text.trim();
-    if (!value) return;
-    life.addHabit(value);
-    setText('');
-    setAdding(false);
-  };
-
-  return (
-    <div className="mt-9">
-      <ColumnHead
-        label="Habits today"
-        action={
-          <div className="flex items-center gap-2">
-          <span className="clock-figures text-[0.8125rem] text-dim">
-            {doneCount} of {life.habits.length}
-          </span>
-          <button
-            type="button"
-            onClick={() => setAdding((v) => !v)}
-            aria-pressed={adding}
-            aria-label="Add habit"
-            className="pill h-7 w-7 px-0 text-moon/75"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-          </div>
-        }
-      />
-
-      {adding && (
-        <form onSubmit={submit} className="mt-2">
-          <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="New habit" className={inputClass} />
-        </form>
-      )}
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {life.habits.map((habit) => {
-          const done = doneToday.includes(habit.id);
-          return (
-            <span key={habit.id} className="group relative inline-flex">
-              <button
-                type="button"
-                onClick={() => life.toggleHabit(habit.id, todayKey)}
-                aria-pressed={done}
-                className="pill h-10 px-4 text-[0.875rem]"
-              >
-                {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                {habit.label}
-              </button>
-              <span className="absolute -right-1 -top-1">
-                <RemoveButton onClick={() => life.removeHabit(habit.id)} />
-              </span>
-            </span>
-          );
-        })}
-      </div>
-      {life.habits.length === 0 && <EmptyLine>Add your first habit</EmptyLine>}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Shared bits                                                         */
 /* ------------------------------------------------------------------ */
 
-function InlineAdd({ placeholder, onAdd }) {
-  const [text, setText] = useState('');
-  const submit = (e) => {
-    e.preventDefault();
-    const value = text.trim();
-    if (!value) return;
-    onAdd(value);
-    setText('');
-  };
-  return (
-    <form onSubmit={submit} className="mt-1.5 flex items-center gap-2.5 px-1.5">
-      <Plus className="h-4 w-4 shrink-0 text-moon/30" aria-hidden="true" />
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={placeholder}
-        className="w-full bg-transparent py-1 text-[0.875rem] text-moon placeholder:text-moon/35 focus:outline-none"
-      />
-    </form>
-  );
-}
 
 function TodoRow({ todo, onToggle, onRemove, compact }) {
   return (
@@ -1546,6 +1374,76 @@ function IconButton({ onClick, active, label, children }) {
 
 function SectionLabel({ children }) {
   return <p className="t-label">{children}</p>;
+}
+
+function HabitsBlock({ life }) {
+  const todayKey = dateKey(new Date());
+  const doneToday = life.habitLog[todayKey] ?? [];
+  const [adding, setAdding] = useState(false);
+  const [text, setText] = useState('');
+  const doneCount = life.habits.filter((habit) => doneToday.includes(habit.id)).length;
+
+  const submit = (e) => {
+    e.preventDefault();
+    const value = text.trim();
+    if (!value) return;
+    life.addHabit(value);
+    setText('');
+    setAdding(false);
+  };
+
+  return (
+    <div>
+      <ColumnHead
+        label="Habits today"
+        action={
+          <div className="flex items-center gap-2">
+          <span className="clock-figures text-[0.8125rem] text-dim">
+            {doneCount} of {life.habits.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            aria-pressed={adding}
+            aria-label="Add habit"
+            className="pill h-7 w-7 px-0 text-moon/75"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          </div>
+        }
+      />
+
+      {adding && (
+        <form onSubmit={submit} className="mt-2">
+          <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="New habit" className={inputClass} />
+        </form>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {life.habits.map((habit) => {
+          const done = doneToday.includes(habit.id);
+          return (
+            <span key={habit.id} className="group relative inline-flex">
+              <button
+                type="button"
+                onClick={() => life.toggleHabit(habit.id, todayKey)}
+                aria-pressed={done}
+                className="pill h-10 px-4 text-[0.875rem]"
+              >
+                {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                {habit.label}
+              </button>
+              <span className="absolute -right-1 -top-1">
+                <RemoveButton onClick={() => life.removeHabit(habit.id)} />
+              </span>
+            </span>
+          );
+        })}
+      </div>
+      {life.habits.length === 0 && <EmptyLine>Add your first habit</EmptyLine>}
+    </div>
+  );
 }
 
 function EmptyLine({ children }) {

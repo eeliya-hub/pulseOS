@@ -21,6 +21,7 @@ import MusicImmersive from './components/MusicImmersive.jsx';
 import { useSettings } from './hooks/useSettings.js';
 import { useSpotifyPlayer } from './hooks/useSpotifyPlayer.js';
 import LifeHub from './views/LifeHub.jsx';
+import Projects from './views/Projects.jsx';
 import Mail from './views/Mail.jsx';
 import Markets from './views/Markets.jsx';
 import Music from './views/Music.jsx';
@@ -66,7 +67,6 @@ export default function App() {
   const [pendingPrompt, setPendingPrompt] = useState('');
   // A message the Life Hub's mail card asked to open, so arriving in Mail lands
   // on the one you clicked rather than on the top of the inbox.
-  const [pendingMessage, setPendingMessage] = useState(null);
   const [now, setNow] = useState(() => new Date());
 
   // Idle + music playing + opted in = the immersive player stands in for the
@@ -117,11 +117,10 @@ export default function App() {
     deleteConversation,
   } = useConversations();
 
-  const activeItem = useMemo(() => {
-    // Views that live inside another one keep that one lit in the bar.
-    const inBar = activeView === 'mail' ? 'life' : activeView;
-    return navItems.find((item) => item.id === inBar) ?? navItems[0];
-  }, [activeView, navItems]);
+  const activeItem = useMemo(
+    () => navItems.find((item) => item.id === activeView) ?? navItems[0],
+    [activeView, navItems],
+  );
 
   // A text conversation that's sat idle for over an hour is stale — the next time
   // it's opened, start fresh instead of resuming a cold thread. A ref keeps the
@@ -286,25 +285,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [voiceShortcut]);
 
-  const openMail = useCallback(
-    (message) => {
-      setPendingMessage(message?.id ? message : null);
-      setActiveView('mail');
-      setIsIdleScreen(false);
-    },
-    [],
-  );
 
   const views = {
     home: <HomeView {...viewProps} onOpenSettings={() => openSettings('you')} />,
-    life: <LifeHub onOpenMail={openMail} />,
-    mail: (
-      <Mail
-        initialMessage={pendingMessage}
-        onOpenSettings={() => openSettings('mail')}
-        onBack={() => setActiveView('life')}
-      />
-    ),
+    life: <LifeHub onOpenProjects={() => setActiveView('projects')} />,
+    mail: <Mail onOpenSettings={() => openSettings('mail')} />,
+    projects: <Projects onOpenSettings={() => openSettings('life')} />,
     launchpad: <Launchpad />,
     markets: <Markets />,
     music: <Music />,
