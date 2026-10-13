@@ -128,7 +128,7 @@ function load() {
    * as true for every existing file, which is exactly the case it exists to
    * catch.
    */
-  return { ...DEFAULTS, tabsArranged: true };
+  return { ...DEFAULTS, tabsArrangedV2: true };
 }
 
 // Normalize older stored follows (e.g. the F1 entry used to be per-constructor).
@@ -174,12 +174,12 @@ function migrate(saved) {
    *
    * Except once. Mail and Projects were carved out of the Life Hub, and
    * appending them left anyone with a saved order looking at a bar that ended
-   * in two tabs rather than one that read in the intended shape. `tabsArranged`
+   * in two tabs rather than one that read in the intended shape. `tabsArrangedV2`
    * takes the default arrangement a single time and then never touches the
    * order again, so a bar you have arranged yourself stays arranged.
    */
   const known = DEFAULTS.tabs;
-  const tabs = saved.tabsArranged
+  const tabs = saved.tabsArrangedV2
     ? [...new Set([...(saved.tabs ?? []).filter((t) => known.includes(t)), ...known])]
     : [...known];
   return {
@@ -187,7 +187,7 @@ function migrate(saved) {
     follows,
     launchpad,
     seededSites: true,
-    tabsArranged: true,
+    tabsArrangedV2: true,
     pinned: { ...DEFAULTS.pinned, ...pinned },
     customPrompts,
     memories,
