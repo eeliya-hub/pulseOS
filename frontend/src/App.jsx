@@ -35,9 +35,10 @@ const BACK_LABEL = {
   home: 'Home',
   launchpad: 'Launchpad',
   life: 'Life Hub',
+  projects: 'Projects',
   mail: 'Mail',
   ai: 'Ask Pulse',
-  markets: 'Markets & News',
+  markets: 'News',
   music: 'Music',
   travel: 'Travel',
 };

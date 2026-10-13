@@ -17,7 +17,7 @@ export const TABS = {
   life: { id: 'life', label: 'Life Hub', Icon: Calendar },
   mail: { id: 'mail', label: 'Mail', Icon: Mail },
   projects: { id: 'projects', label: 'Projects', Icon: KanbanSquare },
-  markets: { id: 'markets', label: 'Markets & News', Icon: Newspaper },
+  markets: { id: 'markets', label: 'News', Icon: Newspaper },
   music: { id: 'music', label: 'Music', Icon: Music },
   travel: { id: 'travel', label: 'Travel', Icon: MapPin },
 };

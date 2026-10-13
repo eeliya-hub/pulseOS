@@ -71,7 +71,7 @@ const DEFAULTS = {
   // The big clocks — top bar, resting screen, immersive player — in 24 or 12 hours.
   clock24: true,
   // The tab bar, left to right with Ask Pulse in the middle, and the ones you've put away.
-  tabs: ['home', 'launchpad', 'life', 'projects', 'mail', 'markets', 'music', 'travel'],
+  tabs: ['home', 'launchpad', 'life', 'projects', 'mail', 'markets', 'travel', 'music'],
   hiddenTabs: [],
   // What the resting clock shows besides the time.
   restShows: { greeting: true, date: true, weather: false, next: false },
@@ -121,7 +121,14 @@ function load() {
   } catch {
     /* ignore */
   }
-  return DEFAULTS;
+  /*
+   * A fresh install is already in the arrangement above, and says so — the flag
+   * deliberately lives here rather than in DEFAULTS, because load() merges
+   * `{ ...DEFAULTS, ...saved }` and a flag in DEFAULTS would reach migrate()
+   * as true for every existing file, which is exactly the case it exists to
+   * catch.
+   */
+  return { ...DEFAULTS, tabsArranged: true };
 }
 
 // Normalize older stored follows (e.g. the F1 entry used to be per-constructor).
@@ -161,15 +168,26 @@ function migrate(saved) {
         ...(saved.launchpad ?? []),
         ...STARTER_SITES.filter((site) => !(saved.launchpad ?? []).some((item) => item?.url === site.url)),
       ];
-  // Every tab exactly once, in the saved order, with any tab added since the
-  // order was saved put back at the end rather than lost.
+  /*
+   * Every tab exactly once, in the saved order, with any tab added since that
+   * order was saved put back at the end rather than lost.
+   *
+   * Except once. Mail and Projects were carved out of the Life Hub, and
+   * appending them left anyone with a saved order looking at a bar that ended
+   * in two tabs rather than one that read in the intended shape. `tabsArranged`
+   * takes the default arrangement a single time and then never touches the
+   * order again, so a bar you have arranged yourself stays arranged.
+   */
   const known = DEFAULTS.tabs;
-  const tabs = [...new Set([...(saved.tabs ?? []).filter((t) => known.includes(t)), ...known])];
+  const tabs = saved.tabsArranged
+    ? [...new Set([...(saved.tabs ?? []).filter((t) => known.includes(t)), ...known])]
+    : [...known];
   return {
     ...saved,
     follows,
     launchpad,
     seededSites: true,
+    tabsArranged: true,
     pinned: { ...DEFAULTS.pinned, ...pinned },
     customPrompts,
     memories,
