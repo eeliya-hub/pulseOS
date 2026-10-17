@@ -277,6 +277,23 @@ export function ensureCalendarRange(from, to) {
   void fetchAll(currentFeeds());
 }
 
+/**
+ * Whatever came over the wire, as something that can be drawn.
+ *
+ * Every provider promises strings here and one of them does not always keep
+ * that promise: a parameterised iCalendar property arrives as `{ params, val }`
+ * rather than text, and React does not render an object — it throws, and the
+ * error boundary takes the whole view with it. That is fixed where it comes
+ * from, in the backend's iCal parser. This is the belt: a feed cannot take
+ * Schedule down with a shape nobody expected.
+ */
+function asText(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') return typeof value.val === 'string' ? value.val : '';
+  return String(value);
+}
+
 // Map a backend calendar event → the LifeHub shape, keeping CRUD references.
 function toLifeEvent(e, colorForCalendar) {
   const start = e.start ? new Date(e.start) : null;
@@ -290,8 +307,8 @@ function toLifeEvent(e, colorForCalendar) {
     id: `ext:${e.source}:${e.calendarId ?? ''}:${e.id}`,
     date,
     time,
-    title: e.title || '(untitled)',
-    place: e.location || '',
+    title: asText(e.title) || '(untitled)',
+    place: asText(e.location),
     repeat: 'none',
     calendar: e.source,
     calendarId: e.calendarId ?? null,
@@ -307,8 +324,8 @@ function toLifeEvent(e, colorForCalendar) {
     etag: e.etag ?? null,
     uid: e.uid ?? null,
     recurring: Boolean(e.recurring),
-    description: e.description || '',
-    location: e.location || '',
+    description: asText(e.description),
+    location: asText(e.location),
     allDay: Boolean(e.allDay),
     startISO: e.start,
     endISO: e.end,
