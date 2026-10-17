@@ -11,6 +11,7 @@ the credits. Copy freely.
 |---|---|---|---|
 | **The launch film** | 2 min 29 s | 1920 × 1080, 30 fps, narrated, with English captions | [pulseos-launch-film.mp4](pulseos-launch-film.mp4) (70 MB) · [captions (.vtt)](pulseos-launch-film.en.vtt) |
 | **The ad** | 30 s | 1080 × 1920, 30 fps, music only | [pulseos-ad.mp4](pulseos-ad.mp4) (17 MB) |
+| **The update film** (17 October) | 2 min 12 s | 1920 × 1080, 30 fps, narrated, with English captions — Mail, Projects and Schedule | [pulseos-update.mp4](../update/pulseos-update.mp4) (54 MB) · [captions (.vtt)](../update/pulseos-update.en.vtt) |
 
 Both are also attached to the [launch release](https://github.com/eeliya-hub/pulseOS/releases/tag/launch-film).
 
@@ -43,6 +44,7 @@ the moment you land. Pulse OS. Your day, in a heartbeat.
 - From nine apps… to one.
 - Everything your day needs, finally together.
 - Pulse OS. Your day, in a heartbeat.
+- Your mail, your plans, your days. Finally talking to each other. *(the update film)*
 
 ---
 

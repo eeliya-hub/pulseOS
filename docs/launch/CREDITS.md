@@ -1,12 +1,12 @@
-# Credits — the Pulse OS launch film and ad
+# Credits — the Pulse OS films
 
-Both films were made in code with [Remotion](https://www.remotion.dev). Every
+The launch film, the ad and the update film were all made in code with [Remotion](https://www.remotion.dev). Every
 interface in them is Pulse OS's own views, rebuilt from the app's components —
 not screen recordings.
 
 ## Photographs
 
-From Wikimedia Commons. The Creative Commons licences below need this credit
+In the launch film and the ad; the update film uses none. From Wikimedia Commons. The Creative Commons licences below need this credit
 wherever the films are shown — a video description is the usual place. CC BY-SA
 also asks that adaptations be shared alike.
 
@@ -32,16 +32,24 @@ also asks that adaptations be shared alike.
   License. The sound effects are from Mixkit, under the Mixkit Sound Effects
   Free License. Both licences allow commercial use without attribution; the
   credit is given anyway.
+- **The update film** — the score was composed for it in code, like the launch
+  film's. Four of its sound effects are Mixkit recordings also used in the ad
+  (an air woosh, a positive notification, a fairy-magic sparkle and a message
+  pop), under the Mixkit Sound Effects Free License.
 
 ## Voices
 
-The launch film's narration is AI-generated with Google Gemini text-to-speech
-(voices Charon and Puck). The audio carries Google's SynthID watermark. Some
-platforms ask for synthetic voices to be labelled — say so when you post it.
+The narration in the launch film and the update film is AI-generated with
+Google Gemini text-to-speech (voices Charon and Puck). The audio carries
+Google's SynthID watermark. Some platforms ask for synthetic voices to be
+labelled — say so when you post it.
 
 ## Trademarks
 
-The Spotify, Google Calendar and Apple Calendar marks, and the club and league
-crests (Arsenal and the Jacksonville Jaguars among them), belong to their
-owners. They appear to show what Pulse OS connects to. No endorsement is
-implied.
+The Spotify, Google Calendar, Apple Calendar, Gmail and Outlook marks, and the
+club and league crests (Arsenal and the Jacksonville Jaguars among them), belong
+to their owners. The Gmail and Outlook logos in the update film are the
+Wikimedia Commons files [Gmail icon (2020)](https://commons.wikimedia.org/wiki/File:Gmail_icon_(2020).svg)
+and [Microsoft Office Outlook (2018–present)](https://commons.wikimedia.org/wiki/File:Microsoft_Office_Outlook_(2018%E2%80%93present).svg),
+public domain but trademarked. They appear to show what Pulse OS connects to.
+No endorsement is implied.

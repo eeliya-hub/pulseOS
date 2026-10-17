@@ -4,10 +4,16 @@ A personal command-centre dashboard — one screen that never scrolls, carrying
 weather, calendar, email, news, markets, sport, music and travel, with an AI assistant
 that can read all of it and act on it. React + Vite frontend, Express backend.
 
-> **New — Mail.** Gmail and Outlook now connect, and Pulse reads a message to
-> find the meetings, deadlines and tasks in it, proposing each for your calendar
-> and to-do list. It never sends, files or deletes anything without you.
-> **[Read the announcement](https://eeliya-hub.github.io/pulseOS/announcements.html#mail)**.
+> **New — Mail, Projects and Schedule, talking to each other.** Projects is a
+> board with a timeline and a table, Schedule is rebuilt around the month, and
+> Mail feeds both: a date into your calendar, a line onto a board. Ask Pulse can
+> read a board and change it. There is a two-minute film about all of it.
+> **[Read the announcement](https://eeliya-hub.github.io/pulseOS/announcements.html#whats-new)**.
+>
+> **Mail** (9 October) connects Gmail and Outlook, and Pulse reads a message to
+> find the meetings, deadlines and tasks in it. It never sends, files or deletes
+> anything without you.
+> **[Read about Mail](https://eeliya-hub.github.io/pulseOS/announcements.html#mail)**.
 >
 > **The launch film is out.** Two and a half minutes on every part of Pulse OS,
 > and a thirty-second ad made for phones. Watch both on the
@@ -31,7 +37,7 @@ that can read all of it and act on it. React + Vite frontend, Express backend.
 pulseos/
 ├── frontend/        React + Vite dashboard
 │   └── src/
-│       ├── views/           Home, Launchpad, LifeHub, Mail, Markets, Music, Travel, AIAssistant
+│       ├── views/           Home, Launchpad, LifeHub (Schedule), Projects, Mail, Markets, Music, Travel, AIAssistant
 │       ├── components/      Stage (sky/horizon/ground), Sky, Dock, MusicImmersive, …
 │       ├── hooks/           useSky, useWholeRows, useTravelStore, useSpotifyPlayer, …
 │       └── services/api/

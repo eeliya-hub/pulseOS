@@ -155,6 +155,19 @@
     });
   }
 
+  /* ── Arriving at a feature ────────────────────────────────────────────────
+     The features fold, so a link to one of them — #projects from the cards up
+     the page, or from an announcement — would land on a closed row and leave
+     the visitor to find the click. It opens the one it was sent to. */
+  function openFromHash() {
+    var id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    var target = document.getElementById(id);
+    if (target && target.tagName === 'DETAILS') target.open = true;
+  }
+  openFromHash();
+  window.addEventListener('hashchange', openFromHash);
+
   /* ── Copy a link ──────────────────────────────────────────────────────────
      For sharing a post without reaching for the address bar. Falls back to
      doing nothing visible rather than throwing where the clipboard is

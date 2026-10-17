@@ -1,3 +1,57 @@
+# Pulse OS — Mail, Projects and Schedule
+
+**Released 17 October 2026.** ·
+**[Read the full post](https://eeliya-hub.github.io/pulseOS/announcements.html#whats-new)** ·
+**[Watch the film](https://eeliya-hub.github.io/pulseOS/#new)**
+
+<p align="center">
+  <a href="https://eeliya-hub.github.io/pulseOS/#new"><img src="docs/update/update-poster.jpg" width="100%" alt="From the update film: the Gmail and Outlook logos joined by a heartbeat line, over the words 'Gmail and Outlook, side by side'"></a>
+</p>
+
+Your mail, your plans, your days — finally talking to each other.
+
+Mail and Projects have tabs of their own, and the calendar has been rebuilt
+around the month. None of that is the point by itself. The point is that they
+read each other: a meeting in an email arrives in your calendar, a line in one
+becomes a card on the right board, and Ask Pulse can tell you what is left on a
+project and move the card when it is done.
+
+**Projects** is a board now, not a list of to-dos: lists you name, cards you
+drag between them, and a last list that ticks a card off when it lands. A card
+holds labels, dates, a checklist, notes and a thread of notes to self, and the
+same cards sit on a timeline and in a table. A new install opens on Pulse OS's
+own board — three months of what shipped, what is being built, and what might
+come next.
+
+**Ask Pulse** can read a board and work on it: what is left, what is late, a
+card added, a card moved. A card already on the board is not added twice, a
+name that fits two cards moves nothing until you say which, and it cannot
+delete a card at all.
+
+**Mail** feeds both. Highlight a line and *Add to a project* turns it into a
+card, with the due date worked out from the email's own words and a note saying
+which email it came from. Writing with Pulse is a button now — Ask Pulse in the
+composer, or ⌘J — that writes into the draft and never sends.
+
+**Schedule** is what the Life Hub kept: the day, beside a month you can read.
+Up to three events are written into each day, the months either side stay in
+view in a greyer shade, and the day says what is on now. To-dos can come back
+daily, weekly, monthly or yearly — or every day until they are done — and a
+repeat is ticked off one day at a time.
+
+| | |
+|---|---|
+| **The film** | 2 min 12 s, 1920 × 1080, narrated, with English captions · [Watch](https://eeliya-hub.github.io/pulseOS/#new) · [Download, 54 MB](docs/update/pulseos-update.mp4) |
+| **The bar** | Home · Apps · Schedule · Projects · *Ask Pulse* · Mail · News · Travel · Music — yours to rearrange in Settings |
+| **Ask Pulse** | Three new tools, typed or spoken: `get_projects`, `add_project_card`, `move_project_card` |
+| **To-dos** | Once · Until done · Daily · Weekly · Monthly · Yearly |
+| **Fixed** | Older calendar events whose iCal properties carry parameters no longer crash the view · website icons no longer go blank for a day after one bad answer · no bright bar under the composer's head at dusk |
+
+Everything else that changed is on the
+**[updates page](https://eeliya-hub.github.io/pulseOS/updates.html)**.
+
+---
+
 # Pulse OS — Mail
 
 **Released 9 October 2026.** ·
@@ -22,7 +76,7 @@ misreading is visible as one.
 | | |
 |---|---|
 | **Providers** | Gmail (personal and Workspace), Outlook and Microsoft 365 |
-| **Where it lives** | The Life Hub, opened from its card — not a tab of its own |
+| **Where it lives** | The Life Hub, opened from its card — not a tab of its own. *Since 17 October, a tab of its own.* |
 | **Scopes** | `gmail.modify` · `gmail.send` · `gmail.compose` · `Mail.ReadWrite` · `Mail.Send` |
 | **Never** | Sends, deletes, archives or files anything without you. Permanent deletion is impossible — the permission is never requested. |
 | **Privacy** | OAuth only, no passwords. Bodies are never written to disk and never appear in an exported backup. The assistant is given one message, one thread or one search — never a mailbox. |

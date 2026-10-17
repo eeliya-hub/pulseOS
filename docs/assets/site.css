@@ -563,8 +563,11 @@ section { scroll-margin-top: 86px; }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* The kind of change it was. */
-.kind {
+/* The kind of change it was — and, as .badge, the word beside a feature's
+   name. `.badge` was in the markup from the site's first version and never had
+   a rule, so "New" beside Mail was a loose word in the margin. */
+.kind,
+.badge {
   justify-self: start;
   padding: 4px 10px;
   border-radius: 999px;
@@ -578,7 +581,8 @@ section { scroll-margin-top: 86px; }
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-.kind--feature { color: color-mix(in srgb, var(--accent) 85%, var(--moon)); background: color-mix(in srgb, var(--accent) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent); }
+.kind--feature,
+.badge--new { color: color-mix(in srgb, var(--accent) 85%, var(--moon)); background: color-mix(in srgb, var(--accent) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent); }
 
 /* ── Cards ──────────────────────────────────────────────────────────────── */
 .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 40px; }
@@ -870,3 +874,15 @@ code {
 @media (max-width: 760px) {
   .wires-hint { display: block; }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   What's new
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* The newest film, at the full measure of the page, under the words that say
+   what it is of. The hero keeps the launch film: someone arriving for the first
+   time needs the whole of Pulse before what changed in it. */
+.film-new { margin: clamp(32px, 5vh, 48px) 0 0; }
+
+/* The three it is about, each a way into its own section further down. */
+.band .cards { margin-top: clamp(26px, 4vh, 40px); }

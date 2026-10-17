@@ -4,26 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Announcements — Pulse OS</title>
-<meta name="description" content="The story behind each new part of Pulse OS: Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
+<meta name="description" content="The story behind each new part of Pulse OS: Projects, Schedule and the update film, Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
 <meta name="theme-color" content="#0a0d1c">
 <link rel="canonical" href="https://eeliya-hub.github.io/pulseOS/announcements.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Pulse OS">
 <meta property="og:title" content="Announcements — Pulse OS">
-<meta property="og:description" content="The story behind each new part of Pulse OS: Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
+<meta property="og:description" content="The story behind each new part of Pulse OS: Projects, Schedule and the update film, Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
 <meta property="og:url" content="https://eeliya-hub.github.io/pulseOS/announcements.html">
 <meta property="og:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Announcements — Pulse OS">
-<meta name="twitter:description" content="The story behind each new part of Pulse OS: Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
+<meta name="twitter:description" content="The story behind each new part of Pulse OS: Projects, Schedule and the update film, Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
 <meta name="twitter:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%230a0d1c'/%3E%3Cpath d='M5 25h9l2.6-5.5 4.2 11 3.8-14.5 3.2 9H39' fill='none' stroke='%23a9bbff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=202610100958">
+<link rel="stylesheet" href="assets/site.css?v=202610172130">
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
@@ -51,6 +51,133 @@
     <p class="lede">Every new part of Pulse, in full &mdash; what it does, how it was built, and where its limits are.</p>
   </section>
 
+  <!-- ══ What's new: Mail, Projects and Schedule ═════════════════════ -->
+  <article id="whats-new">
+    <div class="wrap post" style="padding-top:clamp(56px,9vh,96px)">
+      <p class="eyebrow">17 October 2026</p>
+      <h2 style="margin-top:12px;font-size:clamp(36px,5vw,58px)">Mail, Projects and Schedule, <em>talking to each other.</em></h2>
+      <div class="meta">
+        <span class="badge badge--new">New</span>
+        <span>Projects &middot; Schedule &middot; Mail</span>
+        <span class="dotsep">&middot;</span>
+        <span>With a film, 2 min 12 s</span>
+      </div>
+      <p>Mail and Projects have tabs of their own now, and the calendar has been rebuilt around the month. None of that is the point by itself. The point is that they read each other: a meeting in an email arrives in your calendar, a line in one becomes a card on the right board, and Ask Pulse can tell you what is left on a project and move the card when it is done.</p>
+    </div>
+
+    <div class="wrap post">
+      <figure class="frame frame--wide" style="margin:0">
+        <video controls playsinline preload="metadata" poster="update/update-poster.jpg" aria-label="The Pulse OS update film: Mail, Projects and Schedule">
+          <source src="update/pulseos-update.mp4" type="video/mp4">
+          <track kind="captions" src="update/pulseos-update.en.vtt" srclang="en" label="English">
+        </video>
+      </figure>
+    </div>
+
+    <div class="wrap post">
+      <h3>A board for every plan</h3>
+      <p>Projects used to be a column of the Life Hub: a name, and a list of to-dos under it. It is a board now. Lists you name and reorder, cards you drag between them, and a last list that ticks a card off when it lands there &mdash; drag it back out and it un-ticks. A card holds what a card needs: labels, a start and a due date, a checklist with its own progress bar, notes, and a thread of notes to self.</p>
+      <p>One set of cards, drawn three ways because they answer three different questions. <strong>The board</strong> is what is in flight. <strong>The timeline</strong> is when it lands, with today marked and the undated cards counted at the foot rather than quietly left out. <strong>The table</strong> is the whole lot at once, sortable by any column, with each card&rsquo;s list and dates editable where they stand.</p>
+    </div>
+
+    <div class="wrap post">
+      <figure class="shots"><img src="release/gallery/projects-board.jpg" alt="The Pulse OS board: Ideas, Up next, Building and Shipped, with labels, due dates and checklists on the cards" loading="lazy">
+        <figcaption><strong>The board is what is in flight.</strong> Labels say what kind of work a card is, a due date goes amber on the day and red after it, and the ring says how much of the project is done before you have counted.</figcaption>
+      </figure>
+    </div>
+
+    <div class="wrap post">
+      <h3>It starts on Pulse OS&rsquo;s own board</h3>
+      <p>A new install does not open on an empty board. It opens on this project&rsquo;s: three months of what shipped, dated as it shipped, from the first commit on 16 July to this week; what is being built now; what is up next; and a column of ideas for what could come after. It is the board doing what boards are for, which teaches the view better than four demonstration cards ever did. Projects you kept in the Life Hub come across as boards of their own, their to-dos as cards, and anything already there is left alone.</p>
+    </div>
+
+    <div class="wrap post">
+      <figure class="shots"><img src="release/gallery/projects-card.jpg" alt="A card opened: its labels, start and due dates, notes, a checklist five of seven done, and a note to self" loading="lazy">
+        <figcaption><strong>The detail lives on the card.</strong> Labels, the dates, the notes, a checklist with its own progress and a thread of notes to self.</figcaption>
+      </figure>
+      <figure class="shots"><img src="release/gallery/projects-timeline.jpg" alt="The timeline: each card a bar from its start to its due date, with today marked" loading="lazy">
+        <figcaption><strong>The same cards, against time.</strong> Three months of shipped work as bars, today marked, and the cards with no date counted at the foot rather than dropped.</figcaption>
+      </figure>
+      <figure class="shots"><img src="release/gallery/projects-table.jpg" alt="The table: every card with its list, labels, dates and checklist, sorted by due date" loading="lazy">
+        <figcaption><strong>Every card at once.</strong> Sorted here by due date, oldest first. Any column sorts, and a card&rsquo;s list or dates change where they stand.</figcaption>
+      </figure>
+    </div>
+
+    <div class="wrap post">
+      <h3>Ask Pulse, on the board</h3>
+      <p>The assistant can read a board and work on it. Ask <em>what is left on Pulse OS?</em> and it reads the board before answering &mdash; what is in each list, when each card is due, and what is already late. Ask it to add a card and the card lands in the first list that is not the finishing one, unless you name another; tell it something is done and it moves the card into the last list, which ticks it off.</p>
+      <p>It is careful where it matters. A card that is already on the board is not added twice. A name that fits two cards, or two lists, moves nothing &mdash; it asks which you meant. And it cannot delete a card at all; that is yours to do, on the board.</p>
+
+      <div class="pull">
+        <p>Your mail, your plans, your days. Finally talking to each other.</p>
+      </div>
+
+      <h3>From an email, onto a board</h3>
+      <p>Highlight a line in a message and the menu now has <strong>Add to a project</strong> in it. Pulse writes the task in the imperative, quotes the words the email used for its date and works the date out in code &mdash; the same way as everywhere else in Mail &mdash; and picks the project it thinks the work belongs to. It all arrives in a review card you can change, and nothing is added until you press the button. The card that lands on the board carries a note saying which email it came from, so it can always be traced back.</p>
+    </div>
+
+    <div class="wrap post">
+      <figure class="shots"><img src="release/gallery/mail-highlight.jpg" alt="A highlighted line in an email with a menu: explain, summarise, create a task, add to today, add to a project, add to calendar, draft a reply" loading="lazy">
+        <figcaption><strong>Highlight a line.</strong> Explain it, summarise it, or turn just that into a task, today&rsquo;s to-do, an event, a card on a project or a drafted reply.</figcaption>
+      </figure>
+      <figure class="shots"><img src="release/gallery/mail-project.jpg" alt="The review card for a project task found in an email: the task, its due date and the project, each editable" loading="lazy">
+        <figcaption><strong>Onto a board, with its date.</strong> &ldquo;Could you get me the Q4 deck before end of day Friday&rdquo; becomes <em>Send Priya the Q4 deck</em>, due Friday 23 October, on Pulse OS &mdash; each part of it yours to change first.</figcaption>
+      </figure>
+    </div>
+
+    <div class="wrap post">
+      <h3>Ask Pulse writes it, when you ask</h3>
+      <p>Writing with Pulse used to be a box open under every message, costing the draft a third of its height for something reached for on some emails and not most. It is a button now &mdash; <strong>Ask Pulse</strong> in the composer&rsquo;s footer, or <code>&#8984;J</code> &mdash; and a panel over the draft. Say what the email should say and Pulse writes it into the draft, then steps aside so you can edit. Or take what is already there and improve it, make it more professional or friendlier, shorten it, turn the gist into a proper email, or just fix the grammar. Send is still a button a person presses.</p>
+    </div>
+
+    <div class="wrap post">
+      <figure class="shots"><img src="release/gallery/mail-askpulse.jpg" alt="The Ask Pulse panel over a reply: a box saying what the reply should say, a Write it button, and rewrites below it" loading="lazy">
+        <figcaption><strong>It writes into the draft. It never sends.</strong> Enter to run, Escape to close, and the panel is gone the moment the words are in.</figcaption>
+      </figure>
+    </div>
+
+    <div class="wrap post">
+      <h3>Schedule, with room to breathe</h3>
+      <p>What was left of the Life Hub is the day, so it is called Schedule now, and the calendar is the screen. A cell per day fills the height it is given, with events written into the days rather than counted under them &mdash; up to three a day at any laptop size, and the count beside the date always covering the rest. The days either side of the month stay in view, quieter, their events in a greyer shade of each calendar&rsquo;s colour. The keyboard walks it: arrows by the day, Page Up and Page Down by the month, Home and End to its first and last day, and <code>T</code> back to today.</p>
+      <p>Beside it, the day. What is over steps back, what is on now is lit in its own calendar&rsquo;s colour, and the line under the date says it in a sentence &mdash; <em>3 events &middot; 2 to-dos &middot; On now: Gym</em>.</p>
+      <p>And to-dos get a frequency, chosen on the line you type them on: once, daily, weekly, monthly or yearly &mdash; or <strong>until done</strong>, which carries a to-do forward day after day until it is ticked, then leaves it on the day it was finished. A repeat is ticked off one day at a time, so Monday&rsquo;s bins say nothing about next Monday&rsquo;s, and Ask Pulse asks the same question of a day. Habits have gone from Schedule; they were not earning their place.</p>
+    </div>
+
+    <div class="wrap post">
+      <figure class="shots"><img src="release/gallery/schedule.jpg" alt="Schedule: the month, with each day&rsquo;s events written into it, beside today&rsquo;s events and to-dos" loading="lazy">
+        <figcaption><strong>The month at the size of a month.</strong> Gym is on now, so it is lit; the day&rsquo;s two earlier events have stepped back; and the first week of November is there at the foot, quieter, rather than missing.</figcaption>
+      </figure>
+    </div>
+
+    <div class="wrap post">
+      <h3>How they talk to each other</h3>
+      <ul>
+        <li><strong>Mail to Schedule.</strong> A meeting found in an email becomes an event in Google, iCloud or Pulse&rsquo;s own calendar, and is on the month the moment you add it.</li>
+        <li><strong>Mail to Projects.</strong> A line becomes a card on the board it belongs to, with its due date and the email it came from.</li>
+        <li><strong>Mail to your to-dos.</strong> A request becomes a task on the day it is due.</li>
+        <li><strong>Ask Pulse, across all of it.</strong> It reads the board, the calendar and the to-do list, and changes them when you ask &mdash; typed, or out loud in voice mode.</li>
+      </ul>
+
+      <h3>Fixed along the way</h3>
+      <ul>
+        <li><strong>An old event could take the calendar down.</strong> An iCalendar property with a parameter on it &mdash; a language tag on a title, say &mdash; comes out of the parser as an object rather than text, and the view cannot draw an object. Older events carry more of them, which is why it showed up on paging back through the months. The text is unwrapped where the feed is read now, and the calendar checks what it is given before drawing it.</li>
+        <li><strong>Website icons could go blank for a day.</strong> A site that refused to be read once &mdash; a 403 meant for robots, a slow reply &mdash; was remembered as having no icon until tomorrow. A poor answer is kept for five minutes now, and icons are ranked by the size they really are rather than the size a page claims.</li>
+        <li><strong>The composer&rsquo;s head</strong> no longer draws a bright bar under the horizon at dusk.</li>
+      </ul>
+
+      <h3>The film</h3>
+      <p>Two minutes and twelve seconds, in the launch film&rsquo;s style and built the same way: every frame is code &mdash; Pulse&rsquo;s own views rebuilt in Remotion from its components rather than recorded off a screen &mdash; with two voices, a narrator and Pulse itself, generated with Google&rsquo;s Gemini and cut to the word on a ninety-beat grid. It opens on the same line and the same five words, connects Gmail and Outlook with their own logos, fills a board and asks it a question, and ends with the three sections folding into the mark.</p>
+
+      <div class="pills" style="margin-top:32px">
+        <a class="pill" href="update/pulseos-update.mp4" download>Download the film, 54 MB</a>
+        <a class="pill" href="update/pulseos-update.en.vtt" download>Captions (.vtt)</a>
+        <a class="pill" href="updates.html">Every change, in the updates</a>
+      </div>
+    </div>
+  </article>
+
+  <div class="wrap horizon" aria-hidden="true" style="margin-top:clamp(70px,11vh,110px)"></div>
+
   <!-- ══ Mail ══════════════════════════════════════════════════════════ -->
   <article id="mail">
     <div class="wrap post" style="padding-top:clamp(56px,9vh,96px)">
@@ -62,6 +189,7 @@
         <span class="dotsep">&middot;</span>
         <span>Lives in the Life Hub</span>
       </div>
+      <div class="fineprint"><p><strong>Updated 17 October.</strong> Mail has a tab of its own now, rather than living in the Life Hub, and asking Pulse to write is a button in the composer instead of a box under every message. <a href="#whats-new">See what&rsquo;s new</a>.</p></div>
       <p>Gmail and Outlook now connect to Pulse OS. Not as another mail client bolted on the side &mdash; as a part of your day the rest of Pulse can read. An email that mentions Thursday at half two becomes something in your calendar. One that asks for the Q4 deck by Friday becomes a task with the right date on it. You see both before either happens.</p>
     </div>
 
@@ -347,7 +475,7 @@
     </div>
     <div>
       <h3>Sound and voice</h3>
-      <p>The launch film’s score was composed for it in code. The ad’s music is “Rising Forest” by Diego Nava, and its sound effects are from Mixkit, under the Mixkit free licences.</p>
+      <p>The launch film’s and the update film’s scores were composed for them in code. The ad’s music is “Rising Forest” by Diego Nava; its sound effects, and a handful in the update film, are from Mixkit, under the Mixkit free licences.</p>
       <p>The narration is AI-generated with Google Gemini (voices Charon and Puck) and carries Google’s SynthID watermark.</p>
       <h3 style="margin-top:18px">Trademarks</h3>
       <p>The Gmail, Outlook, Google Calendar, iCloud, Spotify and Gemini marks, and the club and league crests, belong to their owners and appear here only to show what Pulse connects to. No endorsement is implied, and Pulse OS is not affiliated with any of them.</p>
@@ -359,6 +487,6 @@
   </div>
 </footer>
 
-<script src="assets/site.js?v=202610100958" defer></script>
+<script src="assets/site.js?v=202610172130" defer></script>
 </body>
 </html>
