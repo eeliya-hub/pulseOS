@@ -5,6 +5,7 @@ import { mailboxMeta, providerMeta, summaryLine } from '../data/mailboxes.js';
 import { useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { CALENDARS, dateKey, useLifeData } from '../hooks/useLifeData.js';
 import { useMail } from '../hooks/useMail.js';
+import { useProjects } from '../hooks/useProjects.js';
 import { joinAddresses } from '../services/mail/addresses.js';
 import { mailAI, sourceOf } from '../services/mail/ai.js';
 import { registerComposer, takePendingDraft, takePendingOpen } from '../services/mail/tools.js';
@@ -45,6 +46,17 @@ export default function Mail({ initialMessage, onOpenSettings, onBack }) {
 
   const mail = useMail({ accountId, mailbox, category, query: searching });
   const life = useLifeData();
+  /*
+   * The boards, for "Add to a project". This read the Life Hub's old project
+   * lists until Projects became a tab of its own — after which a line of email
+   * "added to a project" went into a list nothing on screen showed any more.
+   * It reads, and writes to, the boards themselves now.
+   */
+  const boards = useProjects();
+  const projects = useMemo(
+    () => boards.projects.filter((p) => !p.archived).map((p) => ({ id: p.id, name: p.name })),
+    [boards.projects],
+  );
   const calendar = useCalendarEvents();
 
   /*
@@ -271,7 +283,7 @@ export default function Mail({ initialMessage, onOpenSettings, onBack }) {
       setThinking(kind);
       try {
         const shape = kind === 'event' ? 'event' : kind === 'project' ? 'project' : 'task';
-        const proposed = await mailAI.propose(shape, current, { selection: text, projects: life.projects });
+        const proposed = await mailAI.propose(shape, current, { selection: text, projects });
         if (shape === 'event' && !proposed.title) {
           setAnswer({ kind: 'event', text: proposed.note || 'I couldn’t find a date or a time in that, so there’s nothing to put in the calendar.' });
           return;
@@ -288,7 +300,7 @@ export default function Mail({ initialMessage, onOpenSettings, onBack }) {
         setThinking(null);
       }
     },
-    [current, life.projects],
+    [current, projects],
   );
 
   /** Drafting a reply about the highlighted line. */
@@ -323,10 +335,10 @@ export default function Mail({ initialMessage, onOpenSettings, onBack }) {
    * Committing a proposal — the one place in the mail feature that writes to
    * the rest of Pulse, reached only from the review card's button.
    *
-   * It uses the EXISTING stores: lifeActions for to-dos and projects, the
-   * calendar hook for events. There is no second task system and no second
-   * calendar, which is why a task made here shows up in the Life Hub like any
-   * other.
+   * It uses the EXISTING stores: lifeActions for to-dos, the project boards
+   * for a card, the calendar hook for events. There is no second task system,
+   * board or calendar, which is why what is made here shows up in Schedule or
+   * on the board like anything else.
    */
   const commit = useCallback(
     async (confirmed) => {
@@ -365,7 +377,12 @@ export default function Mail({ initialMessage, onOpenSettings, onBack }) {
       }
 
       if (kind === 'project' && projectId) {
-        life.addProjectTodo(projectId, title);
+        // A card on the board, in its first list, carrying where it came from
+        // so it can be traced back to the email.
+        boards.addCard(projectId, null, title, {
+          notes: [notes, trail].filter(Boolean).join('\n\n'),
+          ...(due ? { due } : {}),
+        });
         return;
       }
 
@@ -379,7 +396,7 @@ export default function Mail({ initialMessage, onOpenSettings, onBack }) {
         life.addTodo({ label: `${title} — ${notes}`, date: due || dateKey(new Date()), repeat: 'none' });
       }
     },
-    [calendar, life],
+    [calendar, life, boards],
   );
 
   /* ── What the sky says ─────────────────────────────────────────────────── */
@@ -563,7 +580,7 @@ export default function Mail({ initialMessage, onOpenSettings, onBack }) {
       {proposal ? (
         <MailProposal
           proposal={proposal}
-          projects={life.projects}
+          projects={projects}
           calendars={[...(calendar.writableCalendars ?? []), ...CALENDARS.map((c) => ({ id: c.id, name: c.name }))]}
           onConfirm={commit}
           onClose={() => setProposal(null)}

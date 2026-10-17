@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { providerMeta } from '../../data/mailboxes.js';
 import { splitAddresses } from '../../services/mail/addresses.js';
 import { formatBytes } from '../../utils/formatters.js';
@@ -51,9 +52,9 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
   const [error, setError] = useState(null);
   const [aiBusy, setAiBusy] = useState(null);
   const [instruction, setInstruction] = useState('');
+  const [asking, setAsking] = useState(false);
   const bodyRef = useRef(null);
   const firstField = useRef(null);
-  const promptRef = useRef(null);
 
   const accounts = mail.accounts ?? [];
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
@@ -73,6 +74,9 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
   // key press while it is being sent would be the worst moment for it.
   useEffect(() => {
     const onKey = (event) => {
+      // While Pulse is open over the draft it owns the keyboard: its own Escape
+      // closes it, and ⌘↵ there would send a message you are still writing.
+      if (asking) return;
       if (event.key === 'Escape' && !busy) {
         event.stopPropagation();
         onClose();
@@ -82,11 +86,15 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
         event.preventDefault();
         void send();
       }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'j' && !busy) {
+        event.preventDefault();
+        setAsking(true);
+      }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, to, cc, bcc, subject, text, files, accountId]);
+  }, [asking, busy, to, cc, bcc, subject, text, files, accountId]);
 
   const payload = useCallback(
     () => ({
@@ -161,7 +169,6 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
     const source = text.trim();
     if (request.kind === 'prompt' && !instruction.trim()) {
       setError('Tell Pulse what to write first.');
-      promptRef.current?.focus();
       return;
     }
     if (request.kind !== 'prompt' && request.kind !== 'draft-reply' && !source) {
@@ -183,6 +190,8 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
       // The instruction has been acted on; leaving it in the box invites a
       // second press that re-applies it to the answer it just produced.
       if (request.kind === 'prompt') setInstruction('');
+      // Out of the way, so what it wrote is the thing you are looking at.
+      if (next?.text) setAsking(false);
     } catch (err) {
       setError(err?.message ?? 'Pulse couldn’t help with that one.');
     } finally {
@@ -297,8 +306,8 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
           onChange={(event) => setText(event.target.value)}
           placeholder={
             isReply
-              ? 'Write your reply — or ask Pulse below and edit what it gives you.'
-              : 'Write your message — or ask Pulse below and edit what it gives you.'
+              ? 'Write your reply — or press Ask Pulse and edit what it gives you.'
+              : 'Write your message — or press Ask Pulse and edit what it gives you.'
           }
           disabled={working}
           className="mail-compose-body glass-scroll"
@@ -326,71 +335,23 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
       </div>
 
       {/* ── Asking Pulse for the words ─────────────────────────────────────
-          A box to say what the email should say, which is the thing the old
-          row of rewrite buttons could not do: every one of them needed you to
-          have written it already, so there was no way in from a blank page. */}
-      <section className="mail-write" aria-label="Ask Pulse to write this">
-        <label className="t-label mb-1.5 flex items-center gap-1.5 text-[0.6875rem]" htmlFor="mail-write-prompt">
-          <Sparkles className="h-3 w-3 shrink-0 text-accent" aria-hidden="true" />
-          Ask Pulse to write it
-          <span className="font-normal normal-case tracking-normal text-moon/30">— it writes, it never sends</span>
-        </label>
-        <div className="mail-write-row">
-          <textarea
-            id="mail-write-prompt"
-            ref={promptRef}
-            value={instruction}
-            onChange={(event) => setInstruction(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                void ai({ kind: 'prompt' });
-              }
-            }}
-            rows={2}
-            placeholder={
-              isReply
-                ? 'Say yes to Thursday, ask whether the room has a projector…'
-                : 'Ask Sam for the signed contract, mention the Friday deadline, keep it short…'
-            }
-            className="mail-write-prompt glass-scroll"
-          />
-          <button
-            type="button"
-            onClick={() => void ai({ kind: 'prompt' })}
-            disabled={working || Boolean(busy)}
-            className="pill pill-lit h-9 shrink-0 self-end px-3.5 disabled:opacity-40"
-          >
-            {aiBusy === 'prompt' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
-            )}
-            {text.trim() ? 'Rework' : 'Write it'}
-          </button>
-        </div>
-
-        {/* The rewrites, which act on what is in the box rather than on an
-            instruction — second, and quieter, because they are the follow-up. */}
-        {text.trim() || isReply ? (
-          <div className="mail-write-pills hide-scrollbar">
-            <span className="t-micro shrink-0 text-moon/35">or</span>
-            {(isReply ? REPLY_HELP : WRITE_HELP).map((option) => (
-              <button
-                key={option.kind}
-                type="button"
-                onClick={() => void ai({ kind: option.kind })}
-                disabled={working || Boolean(busy)}
-                title={option.hint}
-                className="pill h-7 shrink-0 px-2.5 text-[0.75rem] disabled:opacity-40"
-              >
-                {aiBusy === option.kind ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : null}
-                {option.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </section>
+          Behind a button, not down the side of the column. It sat open under
+          every draft and took a third of the room the message had to be
+          written in — which is a lot of screen for something you reach for on
+          some emails and not most. The button says it is there; the panel
+          arrives when it is wanted and goes when it is done. */}
+      {asking ? (
+        <AskPulsePanel
+          isReply={isReply}
+          busy={aiBusy}
+          disabled={working || Boolean(busy)}
+          hasText={Boolean(text.trim())}
+          instruction={instruction}
+          onInstruction={setInstruction}
+          onRun={(request) => void ai(request)}
+          onClose={() => setAsking(false)}
+        />
+      ) : null}
 
       {/* ── Sending it ─────────────────────────────────────────────────────── */}
       <footer className="mail-compose-foot">
@@ -407,6 +368,21 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
         <button type="button" onClick={saveDraft} disabled={Boolean(busy) || working} className="pill h-9 px-3.5 disabled:opacity-40">
           {busy === 'draft' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
           Save draft
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAsking(true)}
+          disabled={working || Boolean(busy)}
+          title="Ask Pulse to write this (⌘J)"
+          className="pill h-9 px-3.5 disabled:opacity-40"
+        >
+          {aiBusy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" aria-hidden="true" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+          )}
+          Ask Pulse
         </button>
 
         <label className="pill h-9 cursor-pointer px-3.5" title="Attach a file">
@@ -437,6 +413,141 @@ export default function MailCompose({ mail, draft, onClose, onAskWrite }) {
         {error ? <p className="w-full text-[0.8125rem] text-fall">{error}</p> : null}
       </footer>
     </div>
+  );
+}
+
+/**
+ * Ask Pulse, as a panel over the draft.
+ *
+ * Two ways in, and they are different questions. The box says what the email
+ * should SAY, which is the only way in from a blank page — the row of rewrite
+ * buttons under it all need something already written, which is why they could
+ * never be the whole of this. So the box is first and the rewrites are second,
+ * and they are only offered once there is something to rewrite.
+ *
+ * It closes itself the moment Pulse answers: the words land in the draft, and
+ * what you want next is to read them.
+ */
+function AskPulsePanel({ isReply, busy, disabled, hasText, instruction, onInstruction, onRun, onClose }) {
+  const promptRef = useRef(null);
+
+  useEffect(() => {
+    promptRef.current?.focus();
+    const onKey = (event) => {
+      if (event.key === 'Escape' && !busy) {
+        event.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [busy, onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+      role="presentation"
+    >
+      <div className="absolute inset-0 bg-[#070b18]/72 backdrop-blur-md" aria-hidden="true" />
+
+      <div
+        className="theme-card fade-in relative z-10 w-full max-w-xl overflow-hidden rounded-3xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ask Pulse to write this"
+      >
+        <div className="ask-pulse-wash" aria-hidden="true" />
+
+        <div className="relative flex items-start justify-between gap-3 px-6 pb-4 pt-5">
+          <div className="min-w-0">
+            <p className="t-label flex items-center gap-1.5 text-accent">
+              <Sparkles className="h-3 w-3 shrink-0" aria-hidden="true" />
+              Ask Pulse
+            </p>
+            <p className="display-type mt-1 text-2xl font-light leading-tight text-moon">
+              {hasText ? 'Rework this message' : isReply ? 'Write this reply' : 'Write this message'}
+            </p>
+            <p className="t-meta mt-1.5">It writes into the draft. It never sends.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={Boolean(busy)}
+            aria-label="Close"
+            className="pill h-8 w-8 shrink-0 px-0 text-moon/70 disabled:opacity-40"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="relative px-6 pb-5">
+          <textarea
+            ref={promptRef}
+            value={instruction}
+            onChange={(event) => onInstruction(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                onRun({ kind: 'prompt' });
+              }
+            }}
+            rows={3}
+            disabled={Boolean(busy)}
+            aria-label="What this email should say"
+            placeholder={
+              isReply
+                ? 'Say yes to Thursday, ask whether the room has a projector…'
+                : 'Ask Sam for the signed contract, mention the Friday deadline, keep it short…'
+            }
+            className="mail-write-prompt glass-scroll w-full"
+          />
+
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onRun({ kind: 'prompt' })}
+              disabled={disabled}
+              className="pill pill-lit h-9 px-4 disabled:opacity-40"
+            >
+              {busy === 'prompt' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {hasText ? 'Rework it' : 'Write it'}
+            </button>
+            <span className="t-micro">Enter to run · Esc to close</span>
+          </div>
+
+          {/* The rewrites, which act on what is in the box rather than on an
+              instruction — second, and quieter, because they are the follow-up. */}
+          {hasText || isReply ? (
+            <>
+              <p className="t-label mt-5 text-moon/40">Or take what is there and…</p>
+              <div className="mail-write-pills">
+                {(isReply ? REPLY_HELP : WRITE_HELP).map((option) => (
+                  <button
+                    key={option.kind}
+                    type="button"
+                    onClick={() => onRun({ kind: option.kind })}
+                    disabled={disabled}
+                    title={option.hint}
+                    className="pill h-8 px-3 text-[0.8125rem] disabled:opacity-40"
+                  >
+                    {busy === option.kind ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : null}
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

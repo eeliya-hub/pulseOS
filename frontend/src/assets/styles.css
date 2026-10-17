@@ -3110,12 +3110,30 @@ select.field {
  * The head's own tint is masked out before it reaches its edges, so it ends in
  * light rather than in a line.
  */
+/*
+ * It was masked on one axis and not the other, which is half a fix.
+ *
+ * The tint began 0.75rem above the head — a sixth of the way down the column's
+ * top padding — and a `180deg` gradient is at FULL strength on its first line.
+ * So it opened with a hard horizontal edge straight across the panel, a step of
+ * about 44 in luminance against the ground above it: a bright bar under the
+ * horizon, most obvious at dusk when the accent is orange.
+ *
+ * It now starts at the top of the column, where there is nothing above it to
+ * step away from, and fades up as well as across — so the head is lit from
+ * somewhere rather than painted on a rectangle.
+ */
 .mail-compose-head::before {
   content: '';
   position: absolute;
   z-index: -1;
-  inset: -0.75rem -1rem 0 -1.5rem;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 11%, transparent), transparent);
+  inset: -1.75rem -1rem 0 -1.5rem;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 13%, transparent) 55%,
+    transparent
+  );
   -webkit-mask-image: linear-gradient(90deg, #000 40%, transparent);
   mask-image: linear-gradient(90deg, #000 40%, transparent);
 }
@@ -3185,20 +3203,17 @@ select.field {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-/* ── Asking Pulse for the words ─────────────────────────────────────────── */
-.mail-write {
-  flex-shrink: 0;
-  padding: 0.625rem 0.75rem 0.75rem;
-  margin-top: 0.625rem;
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--accent) 7%, rgba(255, 255, 255, 0.035));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
-}
-
-.mail-write-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.5rem;
+/* ── Asking Pulse for the words ─────────────────────────────────────────────
+   A panel over the draft rather than a block beneath it. Open under every
+   message it cost the body a third of its height, for something reached for on
+   some emails and not most — so the composer keeps its room and this arrives
+   when it is asked for. */
+.ask-pulse-wash {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 9rem;
+  pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent 85%);
 }
 
 .mail-write-prompt {
