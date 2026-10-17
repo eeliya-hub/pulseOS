@@ -15,6 +15,7 @@ import {
   projectProgress,
   timelineOf,
 } from '../board.js';
+import { OLD_SEED_TITLES, SEED_VERSION, isDemoBoard, pulseProject, withPulseBoard } from '../pulseSeed.js';
 
 /** A board with three lanes and three cards in the first, in a known order. */
 function board() {
@@ -195,4 +196,84 @@ test('dates', () => {
   assert.equal(addDays('2026-10-31', 1), '2026-11-01');
   assert.equal(addDays(null, 1), null);
   assert.equal(dayKey(new Date('2026-10-13T23:30:00')), '2026-10-13', 'local, not UTC');
+});
+
+/* ── The Pulse OS board, and when it is allowed to replace what is stored ── */
+
+test('the seeded board is a board: lanes, labels, history and plans', () => {
+  const project = pulseProject();
+  const lanes = project.columns.map((c) => c.name);
+  assert.deepEqual(lanes, ['Ideas', 'Up next', 'Building', 'Shipped']);
+  assert.equal(project.columns.at(-1).done, true, 'the last lane ticks things off');
+
+  // Every card lands in a lane that exists and wears labels that exist.
+  const columnIds = new Set(project.columns.map((c) => c.id));
+  const labelIds = new Set(project.labels.map((l) => l.id));
+  for (const card of project.cards) {
+    assert.ok(columnIds.has(card.columnId), `${card.title} is in a real lane`);
+    for (const id of card.labels) assert.ok(labelIds.has(id), `${card.title} wears a real label`);
+    if (card.start && card.due) assert.ok(card.start <= card.due, `${card.title} does not end before it starts`);
+  }
+
+  const shipped = cardsIn(project, project.columns.at(-1).id);
+  assert.ok(shipped.length >= 15, 'three months of it');
+  assert.ok(shipped.every((c) => c.done), 'everything in the finishing lane is done');
+  // History is dated where it happened; nothing shipped is dated in the future.
+  const today = new Date().toISOString().slice(0, 10);
+  assert.ok(shipped.every((c) => !c.due || c.due <= today), 'nothing shipped from the future');
+
+  const ideas = cardsIn(project, project.columns[0].id);
+  assert.ok(ideas.length >= 6, 'and somewhere to go next');
+  assert.ok(ideas.every((c) => !c.done), 'an idea is not done');
+});
+
+test('plans are dated against the day you read them, so none opens overdue', () => {
+  const project = pulseProject();
+  const planning = [...cardsIn(project, project.columns[1].id), ...cardsIn(project, project.columns[2].id)];
+  assert.ok(planning.length >= 6);
+  for (const card of planning) {
+    if (card.due) assert.notEqual(dueState(card), 'overdue', `${card.title} should not open overdue`);
+  }
+});
+
+test('the demonstration board is recognised; anybody\'s work is not', () => {
+  // The four cards the old seed handed out, and nothing else.
+  const demo = emptyProject({ name: 'Pulse OS' });
+  demo.cards = [...OLD_SEED_TITLES].map((title) => emptyCard({ title, columnId: demo.columns[0].id }));
+  assert.equal(isDemoBoard(demo), true);
+
+  // One card of your own, and it is yours.
+  assert.equal(isDemoBoard({ ...demo, cards: [...demo.cards, emptyCard({ title: 'Buy a plant' })] }), false);
+  // A card renamed is a card touched.
+  assert.equal(isDemoBoard({ ...demo, cards: [emptyCard({ title: 'Projects, as kanban' })] }), false);
+  // A project of another name is not it at all.
+  assert.equal(isDemoBoard({ ...demo, name: 'Dissertation' }), false);
+  // And the real board is never mistaken for the demonstration one.
+  assert.equal(isDemoBoard(pulseProject()), false);
+  assert.equal(isDemoBoard(null), false);
+});
+
+test('the board is added to what is there, not swapped for it', () => {
+  const mine = emptyProject({ name: 'Dissertation' });
+  mine.cards = [emptyCard({ title: 'Read the Kaplan paper', columnId: mine.columns[0].id })];
+  const demo = emptyProject({ name: 'Pulse OS' });
+  demo.cards = [...OLD_SEED_TITLES].map((title) => emptyCard({ title, columnId: demo.columns[0].id }));
+
+  const next = withPulseBoard([demo, mine]);
+  assert.equal(next.seeded, SEED_VERSION);
+  // Pulse OS first and open, the demonstration board gone, the work untouched.
+  assert.deepEqual(next.projects.map((p) => p.name), ['Pulse OS', 'Dissertation']);
+  assert.equal(next.projects[0].cards.length, pulseProject().cards.length);
+  assert.equal(next.activeId, next.projects[0].id);
+  assert.deepEqual(next.projects[1], mine);
+
+  // A board of their own sharing the name keeps everything but the ambiguity.
+  const theirs = { ...emptyProject({ name: 'Pulse OS' }), cards: [emptyCard({ title: 'My own card' })] };
+  const named = withPulseBoard([theirs]);
+  assert.deepEqual(named.projects.map((p) => p.name), ['Pulse OS', 'Pulse OS (yours)']);
+  assert.deepEqual(named.projects[1].cards, theirs.cards, 'renamed, and nothing else');
+
+  // Nothing stored at all is just the board.
+  assert.deepEqual(withPulseBoard([]).projects.map((p) => p.name), ['Pulse OS']);
+  assert.deepEqual(withPulseBoard(undefined).projects.map((p) => p.name), ['Pulse OS']);
 });

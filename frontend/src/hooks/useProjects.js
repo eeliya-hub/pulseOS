@@ -7,6 +7,8 @@ import {
   moveColumn,
   uid,
 } from '../services/projects/board.js';
+import { landingColumn } from '../services/projects/assistant.js';
+import { SEED_VERSION, withPulseBoard } from '../services/projects/pulseSeed.js';
 
 /**
  * Projects, as boards.
@@ -26,43 +28,13 @@ const KEY = 'pulse.projects.v1';
 /* Where the Life Hub used to keep them, read once so nothing is left behind. */
 const LIFE_KEY = 'pulse.life.v1';
 
-function seed() {
-  /*
-   * A board that is already a board. An empty one teaches nothing, and the
-   * first thing anybody does with a Trello-shaped thing is look for what the
-   * columns are for — so the seed shows a card with a checklist, a label, a
-   * date and a note, rather than three empty lanes.
-   */
-  const project = emptyProject({ name: 'Pulse OS', description: 'The dashboard, and everything still to do in it.' });
-  const [todo, doing, done] = project.columns.map((c) => c.id);
-  const [design, bug, idea] = project.labels.map((l) => l.id);
-  const today = new Date();
-  const day = (n) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
-
-  project.cards = [
-    emptyCard({
-      title: 'Projects, as boards',
-      columnId: doing,
-      labels: [design],
-      start: day(-2),
-      due: day(3),
-      notes: 'Board, timeline and table over one set of cards. Drag between lanes; the last lane ticks things off.',
-      checklist: [
-        { id: uid('chk'), label: 'Board view', done: true },
-        { id: uid('chk'), label: 'Timeline', done: true },
-        { id: uid('chk'), label: 'Card detail', done: false },
-      ],
-    }),
-    emptyCard({ title: 'Mail gets its own tab', columnId: done, done: true, labels: [idea] }),
-    emptyCard({ title: 'Life Hub keeps the day', columnId: todo, labels: [idea], due: day(6) }),
-    emptyCard({ title: 'Timeline bars read badly on a short span', columnId: todo, labels: [bug] }),
-  ];
-  return { projects: [project], activeId: project.id };
-}
+/*
+ * A board that is already a board. An empty one teaches nothing, and the first
+ * thing anybody does with a Trello-shaped thing is look for what the columns
+ * are for — so what is seeded is the project's own three months, everything it
+ * is in the middle of, and everything it might be next.
+ */
+const seed = () => withPulseBoard([]);
 
 /**
  * What is on disk, or what the Life Hub had, or a seed — in that order.
@@ -73,19 +45,31 @@ function seed() {
  */
 function load() {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const projects = (parsed?.projects ?? []).map(normalise).filter(Boolean);
-      if (projects.length) {
-        const activeId = projects.some((p) => p.id === parsed.activeId) ? parsed.activeId : projects[0].id;
-        return { projects, activeId };
-      }
+    const parsed = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const stored = (parsed?.projects ?? []).map(normalise).filter(Boolean);
+
+    // The ordinary case: this browser already has the board it was given.
+    if (parsed?.seeded === SEED_VERSION && stored.length) {
+      const activeId = stored.some((p) => p.id === parsed.activeId) ? parsed.activeId : stored[0].id;
+      return { ...parsed, projects: stored, activeId };
     }
 
+    /*
+     * Once: the Pulse OS board arrives, beside whatever is already here.
+     *
+     * Written straight back, so the one time really is one time. Without that
+     * the migration runs again on every load until something else happens to
+     * save, which is the same trap the tab arrangement fell into.
+     */
     const life = JSON.parse(localStorage.getItem(LIFE_KEY) || 'null');
-    const carried = fromLifeProjects(life?.projects ?? []);
-    if (carried.length) return { projects: carried, activeId: carried[0].id };
+    const carried = stored.length ? stored : fromLifeProjects(life?.projects ?? []);
+    const next = withPulseBoard(carried);
+    try {
+      localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {
+      /* storage disabled or full — the board is still right for this session */
+    }
+    return next;
   } catch {
     /* unreadable — a fresh board beats a crashed view */
   }
@@ -218,8 +202,17 @@ export const projectActions = {
   },
 
   /* ── Cards ────────────────────────────────────────────────────────────── */
-  addCard(projectId, columnId, title) {
-    const card = emptyCard({ title, columnId });
+  /**
+   * A new card. With no list named it lands in the first one that is not the
+   * finishing list, which is where anything arriving from elsewhere in Pulse —
+   * an email, the assistant — belongs: on the board, not already ticked off.
+   * `extra` carries whatever else it arrives with: notes, a date, labels.
+   */
+  addCard(projectId, columnId, title, extra = {}) {
+    const project = state.projects.find((p) => p.id === projectId);
+    if (!project) return null;
+    const lane = columnId ?? landingColumn(project)?.id ?? null;
+    const card = emptyCard({ ...extra, title, columnId: lane });
     patch(onProject(projectId, (p) => ({ ...p, cards: [...p.cards, card] })));
     return card;
   },

@@ -372,13 +372,13 @@ export const TOOLS = [
   {
     name: 'open_view',
     description:
-      "Switch the dashboard to one of its views: home, launchpad, life hub (calendar, tasks, habits), markets and news, music, travel, or the assistant. In voice mode the view changes behind the voice screen, ready for when it closes.",
+      "Switch the dashboard to one of its views: home, launchpad, schedule (the calendar and to-dos), projects (the boards), mail, news (markets and news), music, travel, or the assistant. In voice mode the view changes behind the voice screen, ready for when it closes.",
     parameters: {
       type: 'object',
       properties: {
         view: {
           type: 'string',
-          enum: ['home', 'launchpad', 'life hub', 'markets', 'news', 'music', 'travel', 'assistant'],
+          enum: ['home', 'launchpad', 'schedule', 'projects', 'mail', 'markets', 'news', 'music', 'travel', 'assistant'],
         },
       },
       required: ['view'],
@@ -469,6 +469,47 @@ export const TOOLS = [
     },
   },
   {
+    name: 'get_projects',
+    description:
+      "The user's projects — Trello-style boards of cards in lists (for example Ideas, Up next, Building, Shipped). Without `project`, every project in a line plus the one open on screen read out in full; with it, that board: each list and its cards, due dates, checklists, and which cards are overdue. Read this before answering anything about their projects, work or what is left to do.",
+    parameters: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Which project, by name. Omit for all of them.' },
+      },
+    },
+  },
+  {
+    name: 'add_project_card',
+    description:
+      "Add ONE card to a project's board. It lands in the first list that is not the finishing one unless `list` says otherwise. When the work comes from an email, say which email in `notes` so it can be traced back. For several cards, call once per card, in the same turn.",
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'What the card is.' },
+        project: { type: 'string', description: 'Which project. Defaults to the one open on screen.' },
+        list: { type: 'string', description: 'Which list to put it in, by name.' },
+        due: { type: 'string', description: 'Optional YYYY-MM-DD.' },
+        notes: { type: 'string', description: 'Optional detail for the card.' },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'move_project_card',
+    description:
+      "Move a card to another list on its board, matched by its title. Moving it into the finishing list — say \"done\" — ticks it off; moving it out un-ticks it. If more than one card or list fits, nothing moves and you get the candidates back: ask which.",
+    parameters: {
+      type: 'object',
+      properties: {
+        card: { type: 'string', description: 'The card, by its title.' },
+        to: { type: 'string', description: 'The list to move it to, by name, or "done".' },
+        project: { type: 'string', description: 'Which project. Defaults to the one open on screen.' },
+      },
+      required: ['card', 'to'],
+    },
+  },
+  {
     name: 'open_mail',
     description:
       "Take the user to their Mail view, optionally with one message open. Use it when they ask to see or open their email, or after you have found something they will want to look at.",
@@ -518,7 +559,7 @@ export function systemPrompt(userName = 'the user', instructions = '', options =
     'When something you are reporting sits on a calendar that is hidden in the app, still include it, and mention which calendar it came from so they know why they cannot see it. If their own instructions below tell you to ignore or focus on particular calendars, follow that instead — their instructions win.',
     'You can also change the calendar: create_calendar_event to add (pass `calendar` to choose which one — call list_calendars if unsure of the name), update_calendar_event to move, retime, rename or relocate one, delete_calendar_event to remove it.',
     'When a change or a removal comes back with `matches`, more than one event fitted and nothing was touched: ask which they mean. When they ask to get rid of duplicates or copies, use delete_calendar_event with `keep_one`.',
-    'Their to-do list, habits, watchlist, trips and music are yours to change too: get_tasks, add_task, complete_task, remove_task; add_habit, log_habit, remove_habit; add_stock, remove_stock; add_packing_item, check_packing_item; play_on_device to move the music; open_view to take them to a part of the dashboard.',
+    'Their to-do list, project boards, habits, watchlist, trips and music are yours to change too: get_tasks, add_task, complete_task, remove_task; get_projects, add_project_card, move_project_card; add_habit, log_habit, remove_habit; add_stock, remove_stock; add_packing_item, check_packing_item; play_on_device to move the music; open_view to take them to a part of the dashboard.',
     `${rule}`,
     'BEFORE you create or change an event, apply what you know about them from the context above. If they have said which calendar a kind of event belongs on, put it there. If they have said what the location should be, set it. If they have said how long that kind of event runs, work out the end time and pass it. Fill those in silently rather than leaving a default or asking — they have already told you once.',
     '',
@@ -528,7 +569,11 @@ export function systemPrompt(userName = 'the user', instructions = '', options =
     'Read before you write. A reply drafted without reading the thread gets the facts and the names wrong, and they will notice before the recipient does.',
     'You also cannot archive, bin or mark their mail — those are theirs to do from the message itself. Say so plainly if they ask.',
     'The signals on a message — asks, deadline, meeting, bulk — are Pulse\'s own reading of the subject and the preview, not certainties. Treat them as a hint about what to read first, and check the message itself before telling them something is due.',
-    'When mail turns into a task, an event or something on a project, use the ordinary tools for those (add_task, create_calendar_event) and say which email it came from, so it can be traced back.',
+    'When mail turns into a task, an event or something on a project, use the ordinary tools for those (add_task, create_calendar_event, add_project_card) and say which email it came from, so it can be traced back — in the card\'s notes, for a project.',
+    '',
+    'PROJECTS',
+    'Their projects are boards: lists of cards, Trello-style, the last list being where finished work goes. get_projects reads them — call it before saying anything about a project, what is left, or what is late. add_project_card adds a card; move_project_card moves one between lists, and moving into the finishing list ticks it off.',
+    'Name the project and the list when you confirm a change. When a card or list name fits more than one, nothing has moved: ask which. You cannot delete cards — that is theirs to do on the board.',
     '',
     'THE INTERNET',
     'search_web runs a real web search and reads the pages it finds. Use it for ANYTHING you cannot answer for certain: facts, prices, opening times, how-to questions, products, people, places, anything after your training cutoff, or checking a claim. Reach for it early rather than apologising or guessing.',
@@ -580,7 +625,7 @@ export function systemPrompt(userName = 'the user', instructions = '', options =
       'If a change or removal comes back with matches, several events fitted and nothing was touched — ask which one. To clear out duplicate copies, use delete_calendar_event with keep_one.',
       'Their email you can read and draft, never send. get_mail_summary for how the inbox stands, list_unread_mail for what is waiting, search_mail to find one, read_mail to read it out. draft_email puts your words in their composer for THEM to send — so never say you have sent or replied to anything, say it is drafted and waiting for them.',
       'Read the thread before drafting a reply to it. And you cannot archive, bin or mark mail — tell them that is theirs to do.',
-      'You can also run their to-do list, habits, watchlist, packing list and music: get_tasks, complete_task, remove_task, log_habit, remove_stock, add_packing_item, check_packing_item, play_on_device, and open_view to take them to part of the dashboard.',
+      'You can also run their to-do list, project boards, habits, watchlist, packing list and music: get_tasks, complete_task, remove_task, get_projects, add_project_card, move_project_card, log_habit, remove_stock, add_packing_item, check_packing_item, play_on_device, and open_view to take them to part of the dashboard. Read a board with get_projects before saying what is on it or what is late.',
       // The text prompt has this rule; without it here, spoken requests were
       // getting the title and time right and defaulting everything else.
       'BEFORE you add or change an event, apply what you know about them from above. If they have said which calendar that kind of event belongs on, put it there. If they have said what the location should be, set it. If they have said how long that kind of event runs, work out the end time and pass it. Fill those in silently — they have already told you once, so do not ask again and do not fall back to a default.',

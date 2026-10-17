@@ -25,6 +25,10 @@ export const TOOL_LABELS = {
   add_habit: 'Adding your habit',
   log_habit: 'Logging your habit',
   remove_habit: 'Removing that habit',
+  // Projects
+  get_projects: 'Reading your board',
+  add_project_card: 'Adding a card',
+  move_project_card: 'Moving that card',
   // The world
   get_weather: 'Checking the weather',
   get_news: 'Reading the news',
@@ -93,6 +97,12 @@ export function toolCaption(name, args = {}) {
       return args?.title ? `Adding ${quote(args.title, 32)}` : base;
     case 'add_task':
       return args?.text ? `Adding ${quote(args.text, 32)}` : base;
+    case 'get_projects':
+      return args?.project ? `Reading ${args.project}` : base;
+    case 'add_project_card':
+      return args?.title ? `Adding ${quote(args.title, 32)}${args?.project ? ` to ${args.project}` : ''}` : base;
+    case 'move_project_card':
+      return args?.card && args?.to ? `Moving ${quote(args.card, 28)} to ${args.to}` : base;
     default:
       return base;
   }
@@ -112,6 +122,8 @@ const PLURAL = {
   remember: (n) => `Noting ${n} things`,
   search_web: (n) => `Running ${n} searches`,
   add_packing_item: (n) => `Adding ${n} things to pack`,
+  add_project_card: (n) => `Adding ${n} cards`,
+  move_project_card: (n) => `Moving ${n} cards`,
 };
 
 const isRead = (name) => /^(get|find|list|search)_/.test(name);

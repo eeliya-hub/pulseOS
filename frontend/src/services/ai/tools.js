@@ -18,6 +18,7 @@ import { afterSpeech, endSessionAfterSpeech } from '../ui/afterSpeech.js';
 import { spotifyPlayer } from '../../hooks/useSpotifyPlayer.js';
 import { api } from '../api/backendClient.js';
 import { mailTools } from '../mail/tools.js';
+import { projectTools } from '../projects/tools.js';
 import { getWeatherSummary } from '../api/weather.js';
 
 const firstTime = (t) => (t || '').match(/\d{1,2}:\d{2}/)?.[0] || '';
@@ -325,10 +326,15 @@ const VIEW_IDS = {
   inbox: 'mail',
   'life hub': 'life',
   lifehub: 'life',
+  schedule: 'life',
   calendar: 'life',
   planner: 'life',
   tasks: 'life',
   habits: 'life',
+  projects: 'projects',
+  project: 'projects',
+  boards: 'projects',
+  board: 'projects',
   markets: 'markets',
   'markets and news': 'markets',
   news: 'markets',
@@ -466,6 +472,9 @@ export function createToolExecutor(readHooks) {
      * what any one call can return.
      */
     ...mailTools,
+
+    // Projects: read a board, add a card, move one — see services/projects/tools.js.
+    ...projectTools,
 
     async get_upcoming_events({ days, from, to } = {}) {
       const { life, settings, calendar } = getData();
@@ -1058,7 +1067,7 @@ export function createToolExecutor(readHooks) {
     // ── Around the app ───────────────────────────────────────────────────
     async open_view({ view } = {}) {
       const id = VIEW_IDS[String(view ?? '').trim().toLowerCase()];
-      if (!id) return { error: `No view called "${view}". You can open: home, launchpad, life hub, markets and news, music, travel, assistant.` };
+      if (!id) return { error: `No view called "${view}". You can open: home, launchpad, schedule, projects, mail, news, music, travel, assistant.` };
       goToView(id);
       return { opened: id };
     },

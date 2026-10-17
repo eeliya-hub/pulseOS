@@ -3647,17 +3647,46 @@ select.field {
 
 .proj-bar:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--bar) 38%, transparent); z-index: 2; }
 
-/* Too narrow to hold its own name: the name goes outside, to the right. */
+/*
+ * Too narrow to hold its own name: the name goes outside, to the right.
+ *
+ * And it has to carry its own surface when it gets there. Outside the bar it
+ * is over the week lines and the today line, and a run of three months of a
+ * real project puts most of the chart in that state — which was a column of
+ * titles with a vertical rule drawn through the middle of them.
+ */
 .proj-bar.is-short { overflow: visible; padding: 0; }
 .proj-bar.is-short > span {
   position: absolute;
-  left: calc(100% + 0.5rem);
+  left: calc(100% + 0.4375rem);
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.375rem;
   white-space: nowrap;
   color: var(--haze);
+  background: color-mix(in srgb, var(--ink) 82%, transparent);
+  backdrop-filter: blur(3px);
 }
+.proj-bar.is-short:hover > span { color: var(--moon); }
 .proj-bar--overdue { box-shadow: inset 0 0 0 1px var(--fall); }
-.proj-bar.is-done { opacity: 0.55; }
-.proj-bar.is-done span { text-decoration: line-through; }
+
+/*
+ * Done, and still legible. A line through it was fine over four demonstration
+ * cards and unreadable over twenty shipped ones — on a timeline the strike runs
+ * the same direction as the chart, so a finished project read as damaged text.
+ * The tick at the end says it instead.
+ */
+.proj-bar.is-done { opacity: 0.62; }
+.proj-bar.is-done > span { color: color-mix(in srgb, var(--moon) 60%, transparent); }
+.proj-bar.is-done::after {
+  content: '';
+  position: absolute;
+  right: 0.375rem;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bar) 75%, var(--moon));
+}
+.proj-bar.is-done.is-short::after { right: -0.1875rem; }
 
 .proj-tl-foot { padding: 0.75rem 0 0; font-size: 0.8125rem; color: var(--dim); }
 
