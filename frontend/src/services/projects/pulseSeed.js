@@ -65,6 +65,36 @@ export function pulseProject() {
       checklist: [check('Read the board'), check('Add and move cards'), check('Say what is overdue'), check('From an email, onto a board')],
     }),
     emptyCard({
+      title: 'Schedule: a day that reads at a glance, and to-dos that come back',
+      columnId: shipped,
+      done: true,
+      labels: [design],
+      start: '2026-10-15',
+      due: '2026-10-17',
+      notes:
+        'What is over steps back, what is on now is lit in its own calendar\'s colour, and the month shows up to three '
+        + 'events a day at any size, the months either side quieter but still there. Habits went; they were not earning '
+        + 'their place. A to-do can come back daily, weekly, monthly or yearly — or every day until it is done.',
+      checklist: [
+        check('Habits retired'),
+        check('Past events step back, in colour'),
+        check('On now, lit'),
+        check('A frequency on a to-do, Until done among them'),
+        check('Three events a day in the month, at any size'),
+      ],
+    }),
+    emptyCard({
+      title: 'Timeline bars read badly on a short span',
+      columnId: shipped,
+      done: true,
+      labels: [bug],
+      start: '2026-10-17',
+      due: '2026-10-17',
+      notes:
+        'Under about a hundred pixels the title fell out of the bar and ran through the week lines. It sits beside the '
+        + 'bar now, on a chip of its own, and a finished bar ends in a dot rather than a line through its name.',
+    }),
+    emptyCard({
       title: 'Schedule leads with the calendar',
       columnId: shipped,
       done: true,
@@ -325,17 +355,6 @@ export function pulseProject() {
       comments: [said('Trello, but it belongs to this app and lives in this browser.', 1)],
     }),
     emptyCard({
-      title: 'The day, with its gaps drawn',
-      columnId: building,
-      labels: [design],
-      start: day(0),
-      due: day(2),
-      notes:
-        'A list of events says what is on. It does not say that the afternoon is free, which is the question. '
-        + 'So the space between two events is drawn as space, and the clock is a line through it.',
-      checklist: [check('Gaps, worth an hour or more'), check('A now line'), check('What is on now, lit'), check('Free time in the sky line', false)],
-    }),
-    emptyCard({
       title: 'Spotify is still in development mode',
       columnId: building,
       labels: [bug, backend],
@@ -370,14 +389,6 @@ export function pulseProject() {
       due: day(21),
       notes: 'A link and a picture. Anything heavier belongs somewhere that is not a browser\'s local storage.',
     }),
-    emptyCard({
-      title: 'Timeline bars read badly on a short span',
-      columnId: next,
-      labels: [bug],
-      due: day(7),
-      notes: 'Under about a hundred pixels the title falls out of the bar and the bar stops meaning anything. It should sit beside it instead.',
-    }),
-
     /* ── Ideas ────────────────────────────────────────────────────────── */
     emptyCard({
       title: 'Pulse on the wall',

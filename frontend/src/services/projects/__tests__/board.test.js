@@ -230,7 +230,7 @@ test('the seeded board is a board: lanes, labels, history and plans', () => {
 test('plans are dated against the day you read them, so none opens overdue', () => {
   const project = pulseProject();
   const planning = [...cardsIn(project, project.columns[1].id), ...cardsIn(project, project.columns[2].id)];
-  assert.ok(planning.length >= 6);
+  assert.ok(planning.length >= 5);
   for (const card of planning) {
     if (card.due) assert.notEqual(dueState(card), 'overdue', `${card.title} should not open overdue`);
   }
