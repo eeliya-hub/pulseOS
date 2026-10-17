@@ -18,6 +18,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ColumnHead, Ground, SkyZone } from '../components/Stage.jsx';
 import MonthGrid from './schedule/MonthGrid.jsx';
+import { dayShape } from '../services/schedule/day.js';
+import { TODO_REPEAT, repeatBlurb, repeatNote, todoDoneOn, todoOccursOn } from '../services/schedule/todos.js';
 import { SOURCE_META, useCalendarEvents } from '../hooks/useCalendarEvents.js';
 import { api } from '../services/api/backendClient.js';
 import {
@@ -67,18 +69,19 @@ const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 /**
  * The day in one place.
  *
- * The sky holds the day you're reading and the month you pick it from — the
- * calendar itself is the picker, so any day is one tap away. The ground carries
- * that day's schedule, its to-dos and habits, and the projects they belong to.
+ * The sky holds the day you are reading and what it amounts to. The ground is
+ * the month, at the size of a month, with the day you picked out of it read
+ * down the side: its events with their gaps drawn between them, and the to-dos
+ * that belong to it.
  */
 export default function LifeHub() {
   const life = useLifeData();
   const calendar = useCalendarEvents();
   /*
-   * Not read directly — it is what keeps this view on the right day. Several
-   * things below work out "today" during render (the habit log, the highlighted
-   * date in the picker), and without a tick they would still be on yesterday
-   * for a Pulse left open overnight.
+   * The minute, which is what keeps this view honest. Today, what is on now,
+   * and where the clock falls in the day are all worked out during render —
+   * without a tick they would all still be on the minute the tab was opened,
+   * and on yesterday for a Pulse left running overnight.
    */
   useMinute();
 
@@ -104,9 +107,19 @@ export default function LifeHub() {
   const events = allEvents
     .filter((event) => occursOn(event, selectedKey))
     .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-  const todos = life.todos.filter((todo) => occursOn(todo, selectedKey));
-  const doneToday = life.habitLog[dateKey(new Date())] ?? [];
-  const habitsDone = life.habits.filter((habit) => doneToday.includes(habit.id)).length;
+  const todos = life.todos.filter((todo) => todoOccursOn(todo, selectedKey));
+  const todosLeft = todos.filter((todo) => !todoDoneOn(todo, selectedKey)).length;
+
+  /*
+   * The day's shape — its gaps and where the clock is in it — which only means
+   * anything on today. On any other date `now` is null and the agenda is a
+   * plain reading of it, because a line saying "you are here" through next
+   * Tuesday is a line saying nothing.
+   */
+  const clock = new Date();
+  const shape = dayShape(events, {
+    now: selectedKey === dateKey(clock) ? clock.getHours() * 60 + clock.getMinutes() : null,
+  });
 
   const pick = (key) => {
     setSelectedKey(key);
@@ -124,9 +137,29 @@ export default function LifeHub() {
           <h1 className="t-hero mt-3 truncate">
             {keyToDate(selectedKey).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
           </h1>
+          {/* What the day amounts to, and then the one thing about it worth
+              knowing before you read it: what you are in, or what is coming. */}
           <p className="t-lede mt-3">
-            {plural(events.length, 'event')}, {plural(todos.length, 'to-do')}, {habitsDone} of{' '}
-            {plural(life.habits.length, 'habit')} done
+            {events.length || todos.length ? (
+              <>
+                {plural(events.length, 'event')} · {plural(todos.length, 'to-do')}
+                {shape.onNow ? (
+                  <>
+                    {' · '}
+                    <span className="text-moon">On now: {shape.onNow.title}</span>
+                  </>
+                ) : shape.next ? (
+                  <>
+                    {' · '}
+                    <span className="text-moon">
+                      {shape.next.title} at {(shape.next.time || '').split(/\s*[–—-]\s*/)[0]}
+                    </span>
+                  </>
+                ) : null}
+              </>
+            ) : (
+              'Nothing planned'
+            )}
           </p>
           <div className="mt-6 flex items-center gap-2">
             <button type="button" onClick={() => setEditing('new')} aria-label="Add" className="pill pill-lit h-10 px-4">
@@ -172,23 +205,37 @@ export default function LifeHub() {
 
         {/* The chosen day, and the things that belong to it rather than to a
             date — stacked, because they are one reading rather than three. */}
-        <div className="ground-rule glass-scroll flex min-h-0 flex-col gap-6 overflow-y-auto pl-8 pr-1 pt-6">
+        <div className="ground-rule glass-scroll flex min-h-0 flex-col gap-7 overflow-y-auto pl-8 pr-1 pt-6">
           <section>
             <ColumnHead
               label={relativeDayLabel(selectedKey)}
-              action={calendar?.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-accent/70" aria-hidden="true" /> : null}
+              action={
+                calendar?.loading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-accent/70" aria-hidden="true" />
+                ) : null
+              }
             />
             <div className="cascade mt-1">
               {events.length === 0 ? (
                 <EmptyLine>{calendar?.loading ? 'Syncing calendars…' : 'Nothing planned'}</EmptyLine>
               ) : (
-                events.map((event) => <EventRow key={event.id} event={event} onClick={() => setViewing(event)} />)
+                shape.rows.map((row) => (
+                  <EventRow
+                    key={row.event.id}
+                    event={row.event}
+                    state={row.state}
+                    onClick={() => setViewing(row.event)}
+                  />
+                ))
               )}
             </div>
           </section>
 
-          <section>
-            <ColumnHead label="To-do" />
+          <section className="pb-5">
+            <ColumnHead
+              label="To-do"
+              action={todosLeft ? <span className="t-meta">{todosLeft} left</span> : null}
+            />
             {todos.length === 0 ? (
               <EmptyLine>Nothing to do</EmptyLine>
             ) : (
@@ -197,16 +244,20 @@ export default function LifeHub() {
                   <TodoRow
                     key={todo.id}
                     todo={todo}
-                    onToggle={() => life.toggleTodo(todo.id)}
+                    done={todoDoneOn(todo, selectedKey)}
+                    onToggle={() => life.toggleTodo(todo.id, selectedKey)}
                     onRemove={() => life.removeTodo(todo.id)}
                   />
                 ))}
               </div>
             )}
-          </section>
-
-          <section className="pb-4">
-            <HabitsBlock life={life} />
+            {/* Adding one takes a line, not a dialogue — including how often
+                it should come back, which is the whole of what the popup was
+                needed for. */}
+            <InlineAdd
+              label="Add a to-do"
+              onAdd={(text, repeat) => life.addTodo({ label: text, date: selectedKey, repeat })}
+            />
           </section>
         </div>
       </Ground>
@@ -845,23 +896,35 @@ function ConnectedEventEditor({ calendar, selectedKey, event, onClose }) {
   );
 }
 
-function EventRow({ event, onClick }) {
+/**
+ * One event in the day.
+ *
+ * `state` is where the clock stands against it — 'now' for the one you are in,
+ * 'next' for the one coming, 'past' for the ones gone, 'plain' on any day that
+ * is not today. What is over steps back rather than disappearing, because a
+ * day you can no longer see the morning of reads as a day with no morning.
+ */
+function EventRow({ event, state = 'plain', onClick }) {
   const recurring = event.repeat !== 'none' || event.recurring;
   const [start, end] = (event.time || '').split(/\s*[–-]\s*/);
+  const tint = event.color || calendarColor(event.calendar);
   return (
     <button
       type="button"
       onClick={onClick}
-      className="ground-row group grid w-full grid-cols-[4.25rem_3px_minmax(0,1fr)_auto] items-stretch gap-4 px-2 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+      className={`ground-row day-row day-row--${state} group grid w-full grid-cols-[4.25rem_3px_minmax(0,1fr)_auto] items-stretch gap-4 px-2 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60`}
+      style={{ '--tint': tint }}
     >
       <span className="pt-1 text-right leading-tight">
         <span className="clock-figures block text-[1rem] font-medium text-moon">{start || 'All day'}</span>
         {end ? <span className="clock-figures mt-0.5 block text-[0.8125rem] text-dim">{end}</span> : null}
       </span>
-      <span className="rounded-full" style={{ backgroundColor: event.color || calendarColor(event.calendar) }} />
+      <span className="day-row-spine rounded-full" style={{ backgroundColor: tint }} />
       <span className="min-w-0">
         <span className="display-type block truncate text-[1.375rem] leading-tight text-moon">{event.title}</span>
         <span className="mt-1 flex items-center gap-2 text-[0.8125rem] text-dim">
+          {state === 'now' ? <span className="day-badge">On now</span> : null}
+          {state === 'next' ? <span className="day-badge day-badge--quiet">Next</span> : null}
           {event.place ? <span className="truncate">{event.place}</span> : null}
           {recurring ? <Repeat className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
         </span>
@@ -876,6 +939,74 @@ function EventRow({ event, onClick }) {
         )}
       </span>
     </button>
+  );
+}
+
+/**
+ * Add one, on one line.
+ *
+ * It opens as a word and becomes a field when you reach for it, so the column
+ * does not carry an empty input down the screen for the ninety per cent of the
+ * time nobody is typing into it. How often it should come back is part of the
+ * same line, because a to-do you have to open a dialogue to repeat is a to-do
+ * nobody repeats.
+ */
+function InlineAdd({ label, onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [repeat, setRepeat] = useState('none');
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="day-add">
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="mt-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const value = text.trim();
+        if (value) onAdd(value, repeat);
+        setText('');
+        // Left open, and on the same frequency: adding one thing is usually
+        // adding three, and three of the same kind.
+      }}
+    >
+      <input
+        autoFocus
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') setOpen(false);
+        }}
+        onBlur={(event) => {
+          // Not when the blur is somebody reaching for the frequency beside it.
+          if (!text.trim() && !event.currentTarget.form?.contains(event.relatedTarget)) setOpen(false);
+        }}
+        placeholder={label}
+        aria-label={label}
+        className={inputClass}
+      />
+      <div className="day-repeat">
+        {TODO_REPEAT.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setRepeat(option.value)}
+            aria-pressed={repeat === option.value}
+            className={`day-repeat-chip ${repeat === option.value ? 'is-on' : ''}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {repeat !== 'none' ? <p className="day-repeat-note">{repeatBlurb(repeat)}</p> : null}
+    </form>
   );
 }
 
@@ -1021,15 +1152,16 @@ function TaskForm({ onSave, onCancel }) {
           className="display-type w-full border-b border-white/12 bg-transparent pb-2 text-[1.75rem] font-light leading-tight text-moon outline-none transition placeholder:text-moon/25 focus:border-white/35 focus-visible:outline-none"
         />
         <section>
-          <p className="t-label text-moon/45">Repeats</p>
+          <p className="t-label text-moon/45">Comes back</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {REPEAT_OPTIONS.map((option) => (
+            {TODO_REPEAT.map((option) => (
               <Chip key={option.value} on={repeat === option.value} onClick={() => setRepeat(option.value)}>
                 {option.value === 'none' ? null : <Repeat className="h-3 w-3" aria-hidden="true" />}
                 {option.label}
               </Chip>
             ))}
           </div>
+          <p className="t-meta mt-2">{repeatBlurb(repeat)}</p>
         </section>
       </div>
       <div className="relative flex shrink-0 items-center gap-2 border-t border-white/10 px-6 py-3">
@@ -1213,21 +1345,36 @@ function Chip({ on, onClick, children }) {
 /* ------------------------------------------------------------------ */
 
 
-function TodoRow({ todo, onToggle, onRemove, compact }) {
+/**
+ * One to-do.
+ *
+ * `done` is passed in rather than read off the to-do, because for a repeat it
+ * is a property of the DAY — Monday's bins being out says nothing about next
+ * Monday's. Only the caller knows which day this row is being read on.
+ */
+function TodoRow({ todo, done, onToggle, onRemove, compact }) {
+  const repeats = todo.repeat && todo.repeat !== 'none';
+  const ticked = done ?? todo.done;
   return (
     <div className="ground-row group flex items-center gap-3 px-1.5 py-1.5">
       <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none">
-        <CheckMark done={todo.done} />
-        <span
-          className={[
-            compact ? 'text-[0.875rem]' : 'text-[0.9375rem]',
-            'truncate transition-colors',
-            todo.done ? 'text-moon/35 line-through' : 'text-moon/85',
-          ].join(' ')}
-        >
-          {todo.label}
+        <CheckMark done={ticked} />
+        <span className="min-w-0 flex-1">
+          <span
+            className={[
+              compact ? 'text-[0.875rem]' : 'text-[0.9375rem]',
+              'block truncate transition-colors',
+              ticked ? 'text-moon/35 line-through' : 'text-moon/85',
+            ].join(' ')}
+          >
+            {todo.label}
+          </span>
+          {/* Said in words rather than left to an icon: "every day until you
+              tick it off" is a promise about tomorrow, and a small circular
+              arrow does not make that promise. */}
+          {repeats && !ticked ? <span className="day-todo-note">{repeatNote(todo.repeat)}</span> : null}
         </span>
-        {todo.repeat && todo.repeat !== 'none' && <Repeat className="h-3 w-3 shrink-0 text-moon/30" aria-hidden="true" />}
+        {repeats ? <Repeat className="h-3 w-3 shrink-0 self-start text-moon/30" aria-hidden="true" /> : null}
       </button>
       {onRemove && <RemoveButton onClick={onRemove} />}
     </div>
@@ -1271,76 +1418,6 @@ function IconButton({ onClick, active, label, children }) {
 
 function SectionLabel({ children }) {
   return <p className="t-label">{children}</p>;
-}
-
-function HabitsBlock({ life }) {
-  const todayKey = dateKey(new Date());
-  const doneToday = life.habitLog[todayKey] ?? [];
-  const [adding, setAdding] = useState(false);
-  const [text, setText] = useState('');
-  const doneCount = life.habits.filter((habit) => doneToday.includes(habit.id)).length;
-
-  const submit = (e) => {
-    e.preventDefault();
-    const value = text.trim();
-    if (!value) return;
-    life.addHabit(value);
-    setText('');
-    setAdding(false);
-  };
-
-  return (
-    <div>
-      <ColumnHead
-        label="Habits today"
-        action={
-          <div className="flex items-center gap-2">
-          <span className="clock-figures text-[0.8125rem] text-dim">
-            {doneCount} of {life.habits.length}
-          </span>
-          <button
-            type="button"
-            onClick={() => setAdding((v) => !v)}
-            aria-pressed={adding}
-            aria-label="Add habit"
-            className="pill h-7 w-7 px-0 text-moon/75"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-          </div>
-        }
-      />
-
-      {adding && (
-        <form onSubmit={submit} className="mt-2">
-          <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="New habit" className={inputClass} />
-        </form>
-      )}
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {life.habits.map((habit) => {
-          const done = doneToday.includes(habit.id);
-          return (
-            <span key={habit.id} className="group relative inline-flex">
-              <button
-                type="button"
-                onClick={() => life.toggleHabit(habit.id, todayKey)}
-                aria-pressed={done}
-                className="pill h-10 px-4 text-[0.875rem]"
-              >
-                {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                {habit.label}
-              </button>
-              <span className="absolute -right-1 -top-1">
-                <RemoveButton onClick={() => life.removeHabit(habit.id)} />
-              </span>
-            </span>
-          );
-        })}
-      </div>
-      {life.habits.length === 0 && <EmptyLine>Add your first habit</EmptyLine>}
-    </div>
-  );
 }
 
 function EmptyLine({ children }) {

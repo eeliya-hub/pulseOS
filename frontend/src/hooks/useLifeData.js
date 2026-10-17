@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { dateKey, keyToDate } from '../services/schedule/dates.js';
+import { tickTodo } from '../services/schedule/todos.js';
 
 // Local, persistent planner state for the Life Hub. There's no backend, so
 // everything lives in localStorage. Events and todos are date-anchored and can
@@ -31,12 +33,9 @@ export const calendarColor = (id) =>
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 // --- date helpers (local time, no timezone drift) ---------------------------
-export function dateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
+// Both live in services/schedule/dates.js now and are re-exported here, so
+// every caller keeps the import it already had. See that file for why.
+export { dateKey, keyToDate };
 
 // The day an all-day event falls on, as a `YYYY-MM-DD` key. The backend sends
 // all-day starts as bare days, but a stale cache (or a provider quirk) can hand
@@ -54,11 +53,6 @@ export function allDayKey(value) {
   return atUtcMidnight
     ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
     : dateKey(d);
-}
-
-export function keyToDate(key) {
-  const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d);
 }
 
 // Does a date-anchored, possibly-recurring item land on the target day?
@@ -204,18 +198,25 @@ export const lifeActions = {
   },
 
   addTodo({ label, date, repeat }) {
-    const todo = { id: uid(), label, date, repeat: repeat || 'none', done: false };
+    const todo = { id: uid(), label, date, repeat: repeat || 'none', done: false, doneOn: null, doneDays: [] };
     patch((c) => ({ todos: [...c.todos, todo] }));
     return todo;
   },
 
-  toggleTodo(id) {
-    patch((c) => ({ todos: c.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) }));
+  /**
+   * Tick it, on a day.
+   *
+   * Which day is not a detail: a repeat is ticked off per day, and an
+   * until-done to-do has to remember where it was finished. `tickTodo` in
+   * services/schedule/todos.js knows which of those this to-do is.
+   */
+  toggleTodo(id, dayKey) {
+    patch((c) => ({ todos: c.todos.map((t) => (t.id === id ? tickTodo(t, dayKey) : t)) }));
   },
 
   /** Set rather than flip — "mark it done" must not undo one that already is. */
-  setTodoDone(id, done) {
-    patch((c) => ({ todos: c.todos.map((t) => (t.id === id ? { ...t, done } : t)) }));
+  setTodoDone(id, done, dayKey) {
+    patch((c) => ({ todos: c.todos.map((t) => (t.id === id ? tickTodo(t, dayKey, done) : t)) }));
   },
 
   removeTodo(id) {

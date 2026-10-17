@@ -1,4 +1,5 @@
 import { allDayKey, dateKey, getLifeData, keyToDate, lifeActions, occursOn } from '../../hooks/useLifeData.js';
+import { todoDoneOn, todoOccursOn } from '../schedule/todos.js';
 import { getSettings } from '../../hooks/useSettings.js';
 import { addPackingItem, getTravelState, setPackingDone } from '../../hooks/useTravelStore.js';
 import {
@@ -364,7 +365,12 @@ function pickTodo(todos, text, { date, includeDone = false } = {}) {
   const needle = titleKey(text);
   if (!needle) return { error: 'Say which task.' };
   const day = date ? normalizeDate(date) : null;
-  const pool = (todos ?? []).filter((t) => (includeDone || !t.done) && (!day || occursOn(t, day)));
+  // Done is asked about a day, because for a repeat that is the only way the
+  // question has an answer: Monday's bins say nothing about next Monday's.
+  const on = day ?? dateKey(new Date());
+  const pool = (todos ?? []).filter(
+    (t) => (includeDone || !todoDoneOn(t, on)) && (!day || todoOccursOn(t, day)),
+  );
   const exact = pool.filter((t) => titleKey(t.label) === needle);
   if (exact.length) return { todo: exact[0] };
   const partial = pool.filter((t) => titleKey(t.label).includes(needle) || needle.includes(titleKey(t.label)));
@@ -504,7 +510,9 @@ export function createToolExecutor(readHooks) {
       // Fetched fresh across every calendar — the dashboard's cached list leaves
       // out calendars the user has hidden, and "what's on today" must not.
       const events = (await fetchRange(life, settings, start, end)).map((e) => describeEvent(e, { hiddenIds }));
-      const todos = life.todos.filter((t) => occursOn(t, key)).map((t) => ({ text: t.label, done: t.done }));
+      const todos = life.todos
+        .filter((t) => todoOccursOn(t, key))
+        .map((t) => ({ text: t.label, done: todoDoneOn(t, key) }));
       return { date: key, day: fullDay(key), now: clockTime(now), count: events.length, events, todos };
     },
 
@@ -906,15 +914,16 @@ export function createToolExecutor(readHooks) {
       const { life } = getData();
       const day = date ? normalizeDate(date) : null;
       if (date && !day) return { error: `"${date}" is not a date — use YYYY-MM-DD.` };
+      const on = day ?? dateKey(new Date());
       const tasks = (life.todos ?? [])
-        .filter((t) => (day ? occursOn(t, day) : true))
-        .filter((t) => include_done || !t.done)
+        .filter((t) => (day ? todoOccursOn(t, day) : true))
+        .filter((t) => include_done || !todoDoneOn(t, on))
         .slice(0, 80)
         .map((t) => ({
           text: t.label,
           date: t.date ?? null,
           repeat: t.repeat && t.repeat !== 'none' ? t.repeat : undefined,
-          done: Boolean(t.done),
+          done: todoDoneOn(t, on),
         }));
       return { date: day ?? undefined, count: tasks.length, tasks };
     },
@@ -933,9 +942,11 @@ export function createToolExecutor(readHooks) {
       const { life } = getData();
       const found = pickTodo(life.todos, text, { date });
       if (found.error) return { ...found, text };
-      if (found.todo.done) return { completed: true, already: true, text: found.todo.label };
-      life.setTodoDone(found.todo.id, true);
-      return { completed: true, text: found.todo.label };
+      // Ticked off on a day — today's, unless one was named.
+      const on = (date ? normalizeDate(date) : null) ?? dateKey(new Date());
+      if (todoDoneOn(found.todo, on)) return { completed: true, already: true, text: found.todo.label };
+      life.setTodoDone(found.todo.id, true, on);
+      return { completed: true, text: found.todo.label, date: on };
     },
 
     async remove_task({ text, date } = {}) {
