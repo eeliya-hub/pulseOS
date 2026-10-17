@@ -18,8 +18,24 @@ const UA =
 const TIMEOUT_MS = 7000;
 
 // Icons are worth holding: a site changes its logo about as often as its name.
-const cache = new Map(); // origin → { at, icons }
+const cache = new Map(); // origin → { at, until, icons }
 const TTL_MS = 24 * 60 * 60 * 1000;
+
+/*
+ * A disappointment, though, is worth almost nothing.
+ *
+ * Reading a site is not reliable: Cloudflare answers a server with a 403 it
+ * would never show a browser, WhatsApp's web app replies 400 to a plain GET,
+ * Amazon returns an empty 202. Any of those leaves us with no declared icons
+ * and nothing but Google's 16px favicon upscaled — and holding THAT for a day
+ * meant one unlucky moment froze a grey globe onto the tile until tomorrow. It
+ * was exactly the case: all three of those sites had real icons available and
+ * all three were showing nothing, from a cache entry hours old.
+ *
+ * So a poor answer is kept only long enough to stop a grid of tiles asking
+ * twenty times over, and the next look tries again.
+ */
+const THIN_TTL_MS = 5 * 60 * 1000;
 
 // Every icon address resolve() has handed out. The proxy below will only fetch
 // from this set, so it is a way to reach icons we found rather than a way to
@@ -32,35 +48,86 @@ const sizeOf = (spec) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/** A PNG's real dimensions, out of the 24 bytes that carry them. */
+function pngSize(head) {
+  if (head.length < 24) return 0;
+  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (sig.some((byte, i) => head[i] !== byte)) return 0;
+  const view = new DataView(head.buffer, head.byteOffset, head.byteLength);
+  return Math.min(view.getUint32(16), view.getUint32(20));
+}
+
+/** The first chunk of a response, which for any real image is its header. */
+async function firstBytes(res, wanted = 24) {
+  const reader = res.body?.getReader();
+  if (!reader) return new Uint8Array();
+  try {
+    const parts = [];
+    let total = 0;
+    while (total < wanted) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      parts.push(value);
+      total += value.length;
+    }
+    const out = new Uint8Array(total);
+    let at = 0;
+    for (const part of parts) {
+      out.set(part, at);
+      at += part.length;
+    }
+    return out;
+  } catch {
+    return new Uint8Array();
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+}
+
 /**
- * Whether a URL actually serves an image.
+ * Whether a URL actually serves an image, and how big it really is.
  *
- * Every icon here is a claim: a site declares icons it stopped serving years
- * ago, and /apple-touch-icon.png is a convention rather than a promise —
- * google.com, mail.google.com and amazon.co.uk all 404 on it. Recommending an
- * address without checking is how a tile ends up with a broken-image glyph or a
- * grey globe when a perfectly good favicon was available all along. A HEAD is
- * cheap, and a 200 that serves HTML is a soft 404, so the type is checked too.
+ * Every icon here is a claim, twice over. A site declares icons it stopped
+ * serving years ago, and /apple-touch-icon.png is a convention rather than a
+ * promise — google.com, mail.google.com and amazon.co.uk all 404 on it.
+ * Recommending an address without checking is how a tile ends up with a
+ * broken-image glyph or a grey globe when a perfectly good favicon was
+ * available all along.
+ *
+ * And the sizes are claims too: reddit.com declares an apple-touch-icon and
+ * serves 57 pixels under it, while the 64px one it also declares is sharper. So
+ * where the bytes say outright how big they are — which a PNG does, in its
+ * first 24 — the bytes are believed over the markup.
+ *
+ * @returns {Promise<{ok: boolean, size: number}>} size 0 meaning "can't tell"
  */
 async function serves(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4000);
   try {
-    // A one-byte ranged GET rather than a HEAD: plenty of servers answer HEAD
-    // with something other than what a GET would return, and asking for a byte
-    // costs the same as asking for none.
+    /*
+     * A GET rather than a HEAD, because plenty of servers answer HEAD with
+     * something other than what a GET would return — and a plain GET rather
+     * than the one-byte ranged GET this used to send, because a Range header is
+     * its own kind of unreliable. web.whatsapp.com answers `Range: bytes=0-0`
+     * with a 400 and the same URL without it with a perfectly good PNG, which
+     * is why WhatsApp's tile was wearing a grey globe.
+     */
     const res = await fetch(url, {
-      headers: { 'user-agent': UA, range: 'bytes=0-0' },
+      headers: { 'user-agent': UA },
       signal: controller.signal,
       redirect: 'follow',
     });
-    if (!res.ok && res.status !== 206) return false;
     const type = res.headers.get('content-type') ?? '';
     // Some CDNs answer with no type at all; that is not a reason to discard an
     // icon that answered at all. An HTML body, though, is a soft 404.
-    return !type || type.startsWith('image/');
+    if (!res.ok || (type && !type.startsWith('image/'))) {
+      res.body?.cancel().catch(() => {});
+      return { ok: false, size: 0 };
+    }
+    return { ok: true, size: pngSize(await firstBytes(res)) };
   } catch {
-    return false;
+    return { ok: false, size: 0 };
   } finally {
     clearTimeout(timer);
   }
@@ -139,7 +206,13 @@ export const siteIconService = {
     }
 
     const hit = cache.get(origin);
-    if (hit && Date.now() - hit.at < TTL_MS) return hit.icons;
+    if (hit && Date.now() < hit.until) {
+      // `known` is the proxy's allow-list, and a cache hit still has to be
+      // reachable through it — otherwise the second visit to a site serves an
+      // address the image route then refuses as unknown.
+      for (const icon of hit.icons.icons) known.add(icon.url);
+      return hit.icons;
+    }
 
     const html = await text(origin);
     const found = [];
@@ -150,7 +223,13 @@ export const siteIconService = {
     // look, and plenty of sites have one without ever mentioning it.
     found.push({ url: `${origin}/apple-touch-icon.png`, size: 180 });
     const host = new URL(origin).hostname;
-    found.push({ url: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=256`, size: 1 });
+    found.push({
+      url: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=256`,
+      // Unsized until it is measured, and marked, because an answer made only
+      // of this one is an answer worth asking about again soon.
+      size: 1,
+      fallback: true,
+    });
 
     // Biggest first, and one entry per URL.
     const seen = new Set();
@@ -159,15 +238,28 @@ export const siteIconService = {
       .sort((a, b) => b.size - a.size)
       .slice(0, 8);
 
-    // Checked together rather than in turn: eight HEADs at once is one round
+    // Checked together rather than in turn: eight requests at once is one round
     // trip, and the caller wants every working candidate anyway so it can offer
     // a choice rather than just the winner.
     const live = await Promise.all(ranked.map((i) => serves(i.url)));
-    const icons = ranked.filter((_, n) => live[n]);
+    const icons = ranked
+      // A measured size replaces the claimed one, so the order below is what
+      // the bytes are rather than what the markup said they would be.
+      .map((icon, n) => (live[n].size ? { ...icon, size: live[n].size } : icon))
+      .filter((_, n) => live[n].ok)
+      // Biggest wins, whoever is serving it. Google's render is last resort by
+      // standing, not by quality: google.com's own favicon is 32px and the one
+      // Google holds for it is 144, and a tile would rather have the 144. At
+      // the same size the site's own is preferred, because it is the site's own.
+      .sort((a, b) => b.size - a.size || (a.fallback ? 1 : b.fallback ? -1 : 0));
 
     const result = { icons, best: icons[0]?.url ?? null };
     for (const icon of icons) known.add(icon.url);
-    cache.set(origin, { at: Date.now(), icons: result });
+    // Thin: nothing at all, or nothing but the last resort — which is what a
+    // blocked or sulking page leaves behind, and not worth holding for a day.
+    const thin = !icons.length || icons.every((i) => i.fallback);
+    const now = Date.now();
+    cache.set(origin, { at: now, until: now + (thin ? THIN_TTL_MS : TTL_MS), icons: result });
     return result;
   },
 

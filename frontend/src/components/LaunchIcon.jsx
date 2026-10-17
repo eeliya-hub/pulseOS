@@ -111,7 +111,12 @@ function useSiteIcon(item) {
     }
     let alive = true;
     resolveSiteIcon(url).then((found) => {
-      resolved.set(url, found);
+      // Only a success is remembered. A site can refuse to be read for a
+      // moment — a 403 meant for robots, a slow reply — and remembering that
+      // for the session kept the favicon on the tile until the app was
+      // reloaded, even though coming back to this tab would have found the
+      // real icon.
+      if (found) resolved.set(url, found);
       if (alive) setBest(found);
     });
     return () => {
