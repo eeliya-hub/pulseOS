@@ -15,6 +15,13 @@
   --rule: rgba(255, 255, 255, 0.08);
   --accent: #a9bbff;
 
+  /* Raised surfaces. The page is one dark field, so sections that are OBJECTS
+     — the news, what it plugs into, a view in the tour — are lifted onto these
+     rather than separated by nothing but space. */
+  --panel: rgba(255, 255, 255, 0.045);
+  --panel-lit: rgba(255, 255, 255, 0.07);
+  --edge: rgba(255, 255, 255, 0.085);
+
   /* The hour's own light. Set on <html data-sky> by site.js, so the page a
      visitor opens at dusk is lit the way the app would be at dusk. */
   --sky-a: #171b45;
@@ -142,21 +149,6 @@ body.is-scrolled .top { padding-block: 13px; }
 .brand svg { width: 44px; height: 18px; color: var(--accent); }
 .brand span { font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: -0.01em; }
 
-.nav { display: flex; align-items: center; gap: 4px; }
-
-.nav a {
-  padding: 8px 13px;
-  border-radius: 999px;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: var(--haze);
-  text-decoration: none;
-  transition: color 200ms ease, background 200ms ease;
-}
-
-.nav a:hover { color: var(--moon); background: rgba(255, 255, 255, 0.06); }
-.nav a[aria-current='page'] { color: var(--moon); }
-
 .pills { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .pill {
@@ -225,8 +217,38 @@ section { scroll-margin-top: 86px; }
 .reveal[data-delay='2'] { transition-delay: 180ms; }
 .reveal[data-delay='3'] { transition-delay: 270ms; }
 
-/* ── The hero ───────────────────────────────────────────────────────────── */
+/* ── The hero ─────────────────────────────────────────────────────────────
+   The promise on the left, the thing itself on the right. Text alone left the
+   right half of a wide screen empty, and a page selling one calm screen ought
+   to show it before it describes it. */
 .hero { padding-top: clamp(20px, 3vh, 44px); }
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6.5fr);
+  gap: clamp(30px, 4vw, 70px);
+  align-items: center;
+}
+
+.hero-shot {
+  margin: 0;
+  border-radius: clamp(12px, 1.2vw, 18px);
+  overflow: hidden;
+  background: #05070f;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.11),
+    0 60px 130px -60px rgba(0, 0, 0, 0.95),
+    0 0 130px -50px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.hero-shot img { width: 100%; height: auto; }
+
+/* Under a laptop the picture goes below the words rather than beside them, and
+   the words keep their own measure. */
+@media (max-width: 1080px) {
+  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: clamp(28px, 5vh, 44px); }
+  .hero-shot { max-width: 760px; }
+}
 .hero .lede { font-size: clamp(18px, 1.8vw, 21px); }
 .hero .pills { margin-top: 34px; }
 
@@ -302,10 +324,6 @@ section { scroll-margin-top: 86px; }
 .caption .facts { display: flex; flex-wrap: wrap; gap: 6px 22px; }
 
 /* ── Section heads ──────────────────────────────────────────────────────── */
-.band { padding-top: clamp(84px, 13vh, 140px); }
-.band > .eyebrow + h2 { margin-top: 12px; }
-.head-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px; }
-
 /* ── The tab bar ────────────────────────────────────────────────────────────
    Three places, the way the app has a dock: where you are is lit, and the
    others are one press away. */
@@ -356,63 +374,6 @@ section { scroll-margin-top: 86px; }
 .logo.is-new { color: var(--moon); background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
 .logos-note { margin: 16px 0 0; font-size: 14.5px; color: var(--dim); max-width: 46rem; }
 
-/* ── A feature, folded ──────────────────────────────────────────────────────
-   Eight views as eight full sections meant scrolling past seven to reach the
-   one you wanted. They fold now: the list is the contents page, and you open
-   what you came for. */
-.features { margin-top: 38px; border-top: 1px solid var(--rule); }
-
-.feature { border-bottom: 1px solid var(--rule); }
-
-.feature > summary {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: 4px 18px;
-  align-items: center;
-  padding: 22px 6px;
-  cursor: pointer;
-  list-style: none;
-  transition: background 200ms ease, padding 200ms var(--ease);
-}
-
-.feature > summary::-webkit-details-marker { display: none; }
-.feature > summary:hover { background: rgba(255, 255, 255, 0.035); padding-inline: 14px; }
-.feature[open] > summary { background: rgba(255, 255, 255, 0.03); }
-
-.feature > summary h2 {
-  font-size: clamp(24px, 2.8vw, 32px);
-  line-height: 1.15;
-  margin: 0;
-}
-
-.feature .teaser {
-  grid-column: 2;
-  font-size: 15px;
-  color: var(--dim);
-}
-
-.feature .chev { width: 16px; height: 16px; color: var(--dim); transition: transform 260ms var(--ease); }
-.feature[open] > summary .chev { transform: rotate(180deg); }
-
-/* The mark beside a view's name, in the accent. */
-.feature .mark {
-  display: grid;
-  place-items: center;
-  grid-row: 1 / 3;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 13%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.feature .mark svg { width: 19px; height: 19px; }
-
-.feature-body { padding: 6px 6px 40px; animation: fade-up 420ms var(--ease) both; }
-.feature-body .body { max-width: 50rem; margin: 0; font-size: 17px; }
-
-/* What a feature plugs into. */
 .plugs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 
 .plug {
@@ -430,10 +391,9 @@ section { scroll-margin-top: 86px; }
 .plug svg { width: 15px; height: 15px; flex: none; }
 
 /* ── The two films, together ────────────────────────────────────────────────
-   The wide one and the phone-shaped one beside each other, so the page opens
-   on the product moving rather than on a still of it. The tall one is given a
-   fixed share rather than half, because a 9:16 video half a page wide is
-   taller than the screen. */
+   The wide one and the phone-shaped one beside each other. The tall one is
+   given a fixed share rather than half, because a 9:16 video half a page wide
+   is taller than the screen. */
 .films {
   display: grid;
   /*
@@ -478,10 +438,6 @@ section { scroll-margin-top: 86px; }
 .shots figcaption { margin-top: 12px; font-size: 15px; color: var(--dim); max-width: 44rem; }
 .shots strong { color: var(--moon); font-weight: 500; }
 
-/* Two across only where there is genuinely room for both to stay legible. */
-@media (min-width: 1000px) {
-  .shots--pair { grid-template-columns: 1fr 1fr; }
-}
 
 /* ── Updates, as an accordion ───────────────────────────────────────────────
    Grouped by month, so a run of entries from the same week stops repeating
@@ -584,48 +540,6 @@ section { scroll-margin-top: 86px; }
 .kind--feature,
 .badge--new { color: color-mix(in srgb, var(--accent) 85%, var(--moon)); background: color-mix(in srgb, var(--accent) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent); }
 
-/* ── Cards ──────────────────────────────────────────────────────────────── */
-.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 40px; }
-
-.card {
-  position: relative;
-  overflow: hidden;
-  padding: 24px 24px 26px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transition: transform 420ms var(--ease), box-shadow 420ms var(--ease);
-}
-
-a.card { text-decoration: none; display: block; }
-a.card:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 30px 60px -40px rgba(0, 0, 0, 0.9); }
-
-.card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, #fff) 45%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
-}
-
-.card h3 { font-size: 22px; line-height: 1.2; margin-top: 14px; }
-.card p { margin: 10px 0 0; font-size: 15.5px; color: var(--haze); }
-
-.card .mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.card .mark svg { width: 18px; height: 18px; }
-
 /* ── The sign-off ───────────────────────────────────────────────────────── */
 .cta { position: relative; text-align: center; padding: clamp(110px, 17vh, 180px) 0 clamp(80px, 12vh, 120px); }
 
@@ -663,15 +577,9 @@ footer h3 { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .cards { grid-template-columns: 1fr; }
   .update > summary { grid-template-columns: 2rem minmax(0, 1fr) auto; }
   .update > summary .chev { display: none; }
   .update-body { padding-left: calc(2rem + 22px); }
-  .feature > summary { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .feature .teaser { grid-column: 2 / -1; }
-  .panel { grid-template-columns: 1fr; }
-  .entry { grid-template-columns: 1fr; gap: 6px; }
-  .entry .badge { justify-self: start; }
   .credits { grid-template-columns: 1fr; }
 }
 
@@ -818,8 +726,8 @@ footer h3 { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-
 .post li { position: relative; margin-top: 12px; padding-left: 22px; color: var(--haze); }
 .post li::before { content: ''; position: absolute; left: 2px; top: 11px; width: 6px; height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 70%, transparent); }
 .post li strong { color: var(--moon); font-weight: 500; }
-.post a:not(.pill):not(.card) { color: color-mix(in srgb, var(--accent) 85%, var(--moon)); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
-.post a:not(.pill):not(.card):hover { border-bottom-color: var(--accent); }
+.post a:not(.pill) { color: color-mix(in srgb, var(--accent) 85%, var(--moon)); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.post a:not(.pill):hover { border-bottom-color: var(--accent); }
 
 /* A picture in an article: the full column, starting where the words do. */
 .post > figure, .post > .wires { margin: clamp(30px, 4vh, 44px) 0 0; }
@@ -876,13 +784,351 @@ code {
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   What's new
+   Sections, and the surfaces that separate them
+
+   The page had become one continuous column: every band opened with the same
+   small eyebrow over the same large italic heading over the same grey
+   paragraph, on the same flat field, and the eye had nothing to catch on. Two
+   things fix it — a head that says WHERE you are, and a surface that says a
+   section is a thing rather than more of the last one.
    ─────────────────────────────────────────────────────────────────────────── */
 
-/* The newest film, at the full measure of the page, under the words that say
-   what it is of. The hero keeps the launch film: someone arriving for the first
-   time needs the whole of Pulse before what changed in it. */
-.film-new { margin: clamp(32px, 5vh, 48px) 0 0; }
+.sec { padding-top: clamp(84px, 13vh, 150px); }
 
-/* The three it is about, each a way into its own section further down. */
-.band .cards { margin-top: clamp(26px, 4vh, 40px); }
+/* The head of a section: its number, its name, the line it makes, and the one
+   sentence underneath. Held to a measure so it never runs the full 1440px. */
+.sec-head { max-width: 54rem; }
+.sec-head h2 { margin-top: 16px; }
+.sec-head .lede { margin-top: 18px; }
+
+.eyebrow--num {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.eyebrow--num b {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  padding: 4px 9px;
+  border-radius: 7px;
+  color: color-mix(in srgb, var(--accent) 92%, var(--moon));
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.eyebrow--num::after {
+  content: '';
+  flex: 1;
+  max-width: 220px;
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent), transparent);
+}
+
+/* A raised panel. The hairline along its top edge is the same device the app
+   uses on a glass card, so a section here reads as the app's own surface. */
+.slab {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(24px, 3.2vw, 52px);
+  border-radius: clamp(20px, 2vw, 30px);
+  background: linear-gradient(180deg, var(--panel), rgba(255, 255, 255, 0.015));
+  box-shadow: inset 0 0 0 1px var(--edge), 0 50px 120px -70px rgba(0, 0, 0, 0.95);
+}
+
+.slab::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 70%, #fff) 45%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+}
+
+.slab > .sec-head { margin-bottom: clamp(26px, 4vh, 44px); }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   The tour
+
+   Eight views as eight folded rows was a contents page with the contents left
+   out: every picture of the product was behind a click, so the page that is
+   meant to sell the app showed none of it. One view at a time instead — the
+   list stays as the way in, and the thing itself is on screen beside it.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.tour {
+  display: grid;
+  grid-template-columns: minmax(220px, 290px) minmax(0, 1fr);
+  gap: clamp(18px, 2.4vw, 38px);
+  align-items: start;
+  margin-top: clamp(30px, 4.5vh, 50px);
+}
+
+/* The rail follows you down the panel, because the panels are tall and the
+   way to the next view should not be a scroll back up. */
+.tour-rail {
+  position: sticky;
+  top: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tour-tab {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 13px;
+  width: 100%;
+  padding: 11px 13px;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--haze);
+  font-family: inherit;
+  font-size: 16.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease;
+}
+
+.tour-tab .mark {
+  display: grid;
+  place-items: center;
+  grid-row: 1 / 3;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+
+.tour-tab .mark svg { width: 17px; height: 17px; }
+.tour-tab .teaser { grid-column: 2 / -1; font-size: 13.5px; color: var(--dim); }
+.tour-tab:hover { background: rgba(255, 255, 255, 0.05); color: var(--moon); }
+
+.tour-tab[aria-selected='true'] {
+  color: var(--moon);
+  background: var(--panel-lit);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+.tour-tab[aria-selected='true'] .mark {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.tour-panel { animation: fade-up 420ms var(--ease) both; border-radius: clamp(14px, 1.3vw, 20px); }
+.tour-panel:focus-visible { outline-offset: 6px; }
+.tour-panel[hidden] { display: none; }
+
+/* The picture first, at the full width of the panel, then what it is. */
+.tour-shot {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(14px, 1.3vw, 20px);
+  background: #05070f;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 40px 90px -55px rgba(0, 0, 0, 0.95);
+}
+
+.tour-shot img { width: 100%; height: auto; }
+
+.tour-copy { margin-top: clamp(22px, 3vh, 32px); }
+.tour-copy h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: clamp(26px, 2.8vw, 34px); }
+.tour-copy .body { margin: 16px 0 0; font-size: 17px; max-width: 46rem; }
+.tour-copy .pills { margin-top: 22px; }
+
+/* Phones and narrow laptops: the rail becomes a row of chips above the panel,
+   which keeps one view on screen at a time rather than stacking all nine. */
+@media (max-width: 1000px) {
+  .tour { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .tour-rail {
+    position: static;
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .tour-rail::-webkit-scrollbar { display: none; }
+  .tour-tab {
+    flex: none;
+    width: auto;
+    grid-template-columns: auto auto;
+    padding: 8px 15px;
+    border-radius: 999px;
+    font-size: 15px;
+    box-shadow: inset 0 0 0 1px var(--rule);
+  }
+  .tour-tab .mark, .tour-tab .teaser { display: none; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   What's new, as three ways in
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.news {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 1.4vw, 20px);
+  margin-top: clamp(26px, 4vh, 40px);
+}
+
+.news a {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 18px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  transition: transform 420ms var(--ease), box-shadow 420ms var(--ease), background 420ms var(--ease);
+}
+
+.news a:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent), 0 30px 60px -40px rgba(0, 0, 0, 0.9);
+}
+
+/* The top-left corner of the real screenshot, which is where each of these
+   views says what it is. */
+.news img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: top left;
+  border-bottom: 1px solid var(--rule);
+}
+
+.news .news-body { padding: 18px 20px 22px; }
+.news h3 { display: flex; align-items: center; gap: 10px; font-size: 21px; }
+.news p { margin: 9px 0 0; font-size: 15px; color: var(--haze); }
+
+@media (max-width: 860px) {
+  .news { grid-template-columns: 1fr; }
+  .news img { aspect-ratio: 16 / 7; }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   What it plugs into — a board rather than a ragged row
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.logo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+  gap: 10px;
+  margin-top: clamp(24px, 3.5vh, 36px);
+}
+
+.logo-grid .logo {
+  justify-content: flex-start;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+.logo-grid .logo svg { width: 22px; height: 22px; }
+
+/* The long list of sources behind the rest: there, and out of the way. */
+.sources {
+  margin-top: 26px;
+  font-size: 14.5px;
+  color: var(--dim);
+}
+
+.sources summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--haze);
+}
+
+.sources summary::-webkit-details-marker { display: none; }
+.sources summary::after { content: '+'; font-size: 15px; opacity: 0.6; }
+.sources[open] summary::after { content: '–'; }
+.sources p { margin: 14px 0 0; max-width: 50rem; line-height: 1.65; }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   The updates page: a long list, made shorter to read
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: clamp(26px, 4vh, 38px);
+}
+
+.filters button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--haze);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  cursor: pointer;
+  transition: color 200ms ease, background 200ms ease;
+}
+
+.filters button:hover { color: var(--moon); background: rgba(255, 255, 255, 0.09); }
+.filters button[aria-pressed='true'] { color: var(--ink); background: var(--moon); box-shadow: none; }
+.update[hidden] { display: none; }
+
+/* Nothing matched the filter — said out loud, rather than an empty page. */
+.no-matches { margin-top: 28px; color: var(--dim); }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   An announcement: where you are in it
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.toc { margin-top: clamp(30px, 5vh, 46px); }
+.toc-list {
+  display: grid;
+  margin-top: 20px;
+  max-width: 54rem;
+  border-top: 1px solid var(--rule);
+}
+
+.toc-list a { border-bottom: 1px solid var(--rule); border-radius: 0; }
+
+.toc-list a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 16px;
+  padding: 16px 14px;
+  text-decoration: none;
+  color: var(--haze);
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.toc-list a:hover { background: rgba(255, 255, 255, 0.05); color: var(--moon); }
+.toc-list strong { font-family: var(--serif); font-size: 20px; font-weight: 400; color: var(--moon); }
+.toc-list span { font-size: 14px; color: var(--dim); white-space: nowrap; }
+
+
+
+/* The photograph credits: required, and not what anyone came to the foot of
+   the page to read. */
+.credit-fold summary {
+  cursor: pointer;
+  list-style: none;
+  color: rgba(238, 240, 250, 0.72);
+}
+
+.credit-fold summary::-webkit-details-marker { display: none; }
+.credit-fold summary::after { content: ' +'; opacity: 0.6; }
+.credit-fold[open] summary::after { content: ' –'; }
+.credit-fold p { margin-top: 10px; }

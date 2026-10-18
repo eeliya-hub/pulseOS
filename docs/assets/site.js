@@ -82,38 +82,56 @@
     });
   }
 
-  /* ── The feature switcher ─────────────────────────────────────────────────
-     A proper tab list: arrow keys move between them, and the panels are real
-     elements that are hidden rather than rebuilt, so the images stay cached
-     and a screen reader is told which one is showing. */
-  var tablist = document.querySelector('[role="tablist"]');
-  if (tablist) {
-    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+  /* ── The tour ─────────────────────────────────────────────────────────────
+     A proper tab list over the nine views: arrow keys move along it, the
+     panels are real elements that are hidden rather than rebuilt (so the
+     screenshots stay cached and a screen reader is told which one is showing),
+     and the address bar follows, so a view can be linked to. */
+  var rail = document.querySelector('[data-tour]');
+  if (rail) {
+    var tabs = Array.prototype.slice.call(rail.querySelectorAll('[role="tab"]'));
 
     var show = function (tab, focus) {
+      if (!tab) return;
       tabs.forEach(function (other) {
         var on = other === tab;
         other.setAttribute('aria-selected', on ? 'true' : 'false');
         other.tabIndex = on ? 0 : -1;
         var panel = document.getElementById(other.getAttribute('aria-controls'));
         if (!panel) return;
+        // Un-hiding restarts the panel's own entry animation, because an
+        // element coming back from display:none replays it.
         panel.hidden = !on;
-        if (on && !reduced) {
-          // Restart the entry animation for the panel being shown.
-          panel.classList.remove('fades');
-          void panel.offsetWidth;
-          panel.classList.add('fades');
-        }
       });
+      keepInView(tab);
       if (focus) tab.focus();
+    };
+
+    /* Narrow enough that the rail is a row of chips: bring the selected one
+       into view inside the rail. Only the rail scrolls — the page must not
+       move under the hand that just tapped. */
+    var keepInView = function (tab) {
+      if (rail.scrollWidth <= rail.clientWidth + 1) return;
+      var left = tab.offsetLeft - (rail.clientWidth - tab.offsetWidth) / 2;
+      rail.scrollTo({ left: Math.max(0, left), behavior: reduced ? 'auto' : 'smooth' });
+    };
+
+    var byPanel = function (id) {
+      return tabs.filter(function (tab) { return tab.getAttribute('aria-controls') === id; })[0];
     };
 
     tabs.forEach(function (tab, index) {
       tab.addEventListener('click', function () {
         show(tab, false);
+        // replaceState rather than a hash jump: selecting a view should not
+        // scroll the page out from under the hand that selected it.
+        if (window.history.replaceState) {
+          window.history.replaceState(null, '', '#' + tab.getAttribute('aria-controls'));
+        }
       });
       tab.addEventListener('keydown', function (event) {
-        var step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+        var step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
         if (step) {
           event.preventDefault();
           show(tabs[(index + step + tabs.length) % tabs.length], true);
@@ -126,6 +144,23 @@
         }
       });
     });
+
+    /* Arriving at a view, from the cards up the page or from an announcement.
+       The tour is tabs rather than a stack, so a bare #mail would otherwise
+       land on a panel that is hidden. */
+    var fromHash = function (scroll) {
+      var id = decodeURIComponent(window.location.hash.slice(1));
+      var tab = id && byPanel(id);
+      if (!tab) return;
+      show(tab, false);
+      if (scroll) {
+        var tour = document.getElementById('tour');
+        if (tour) tour.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      }
+    };
+    fromHash(false);
+    keepInView(rail.querySelector('[aria-selected="true"]') || tabs[0]);
+    window.addEventListener('hashchange', function () { fromHash(true); });
   }
 
   /* ── Which section you are in ─────────────────────────────────────────────
@@ -155,18 +190,41 @@
     });
   }
 
-  /* ── Arriving at a feature ────────────────────────────────────────────────
-     The features fold, so a link to one of them — #projects from the cards up
-     the page, or from an announcement — would land on a closed row and leave
-     the visitor to find the click. It opens the one it was sent to. */
-  function openFromHash() {
-    var id = decodeURIComponent(window.location.hash.slice(1));
-    if (!id) return;
-    var target = document.getElementById(id);
-    if (target && target.tagName === 'DETAILS') target.open = true;
+  /* ── Filtering the updates ────────────────────────────────────────────────
+     Sixty-odd entries down one column is a lot to read when you came looking
+     for one kind of thing. The filter hides rather than removes, so a month
+     that empties still says so. Without JS every entry is simply shown, which
+     is the behaviour worth having anyway. */
+  var filters = document.querySelector('[data-filters]');
+  if (filters) {
+    var entries = Array.prototype.slice.call(document.querySelectorAll('.update'));
+    var months = Array.prototype.slice.call(document.querySelectorAll('.update-month'));
+    var empty = document.querySelector('[data-no-matches]');
+
+    var apply = function (kind) {
+      entries.forEach(function (entry) {
+        entry.hidden = kind !== 'all' && entry.getAttribute('data-kind') !== kind;
+      });
+      // A month heading with nothing under it any more goes too.
+      months.forEach(function (month) {
+        var shown = 0;
+        for (var el = month.nextElementSibling; el && el.classList.contains('update'); el = el.nextElementSibling) {
+          if (!el.hidden) shown += 1;
+        }
+        month.hidden = shown === 0;
+      });
+      if (empty) empty.hidden = entries.some(function (entry) { return !entry.hidden; });
+    };
+
+    Array.prototype.forEach.call(filters.querySelectorAll('button'), function (button) {
+      button.addEventListener('click', function () {
+        Array.prototype.forEach.call(filters.querySelectorAll('button'), function (other) {
+          other.setAttribute('aria-pressed', other === button ? 'true' : 'false');
+        });
+        apply(button.getAttribute('data-kind'));
+      });
+    });
   }
-  openFromHash();
-  window.addEventListener('hashchange', openFromHash);
 
   /* ── Copy a link ──────────────────────────────────────────────────────────
      For sharing a post without reaching for the address bar. Falls back to

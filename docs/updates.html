@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=202610172130">
+<link rel="stylesheet" href="assets/site.css?v=202610180930">
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
@@ -49,12 +49,20 @@
     <p class="eyebrow">Updates</p>
     <h1 id="title">Everything that has <em>changed.</em></h1>
     <p class="lede">New features, improvements and fixes, newest first. Open any one to see what it actually did.</p>
+    <div class="filters" data-filters role="group" aria-label="Filter updates by kind">
+      <button type="button" data-kind="all" aria-pressed="true">Everything</button>
+      <button type="button" data-kind="feature" aria-pressed="false">Features</button>
+      <button type="button" data-kind="improvement" aria-pressed="false">Improvements</button>
+      <button type="button" data-kind="fix" aria-pressed="false">Fixes</button>
+      <button type="button" data-kind="film" aria-pressed="false">Films</button>
+    </div>
+    <p class="no-matches" data-no-matches hidden>Nothing of that kind yet.</p>
   </section>
 
   <section class="wrap" aria-label="Update history">
     <div class="updates">
       <p class="update-month">October 2026</p>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">17</span>
           <h3>Projects &mdash; boards, a timeline and a table</h3>
@@ -65,7 +73,7 @@
           <p>Projects leaves the Life Hub for a tab of its own, and is a board now rather than a list of to-dos.</p><ul><li><strong>One set of cards, three ways</strong> &mdash; lanes for what is in flight, a timeline for when it lands, a table for the whole lot at once, sortable, with lists and dates editable where they stand.</li><li><strong>Drag between lists</strong>; the finishing list ticks a card off, and dragging it back out un-ticks it.</li><li><strong>A card holds the detail</strong> &mdash; labels, a start and a due date, a checklist with its own progress, notes and a thread of notes to self.</li><li><strong>Lists can be renamed, reordered and deleted</strong>, and deleting one moves its cards rather than taking them with it.</li><li><strong>A new install opens on the Pulse OS board</strong>: three months of what shipped, what is being built, what is next and a column of ideas. Projects kept in the Life Hub come across as boards of their own.</li></ul><p><a href="announcements.html#whats-new">Read the full announcement &rarr;</a></p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">17</span>
           <h3>Ask Pulse can work on your boards</h3>
@@ -76,7 +84,7 @@
           <p>Three new things the assistant can do, typed or spoken.</p><ul><li><strong>Read a board</strong> &mdash; what is in each list, when each card is due, and what is already late.</li><li><strong>Add a card</strong>, to the first list that is not the finishing one or to the list you name. A card already on the board is not added twice.</li><li><strong>Move a card</strong> &mdash; and moving it to done ticks it off. A name that fits more than one card or list moves nothing; it asks which.</li><li>It cannot delete a card. That stays yours to do.</li></ul>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">17</span>
           <h3>Schedule &mdash; the Life Hub, rebuilt around the month</h3>
@@ -87,7 +95,7 @@
           <p>What was left of the Life Hub is the day, so it is called Schedule now, and the calendar is the screen.</p><ul><li><strong>Events are written into the days</strong> &mdash; up to three a day at any laptop size, with the count beside the date covering the rest.</li><li><strong>The months either side stay in view</strong>, quieter, their events in a greyer shade of each calendar&rsquo;s colour.</li><li><strong>The day sits beside it</strong>: what is over steps back, what is on now is lit in its own calendar&rsquo;s colour, and the line under the date says what is on now and what is next.</li><li><strong>The keyboard walks the month</strong> &mdash; arrows, Page Up and Page Down, Home and End, and <code>T</code> for today.</li><li><strong>Habits have gone</strong>; they were not earning their place.</li></ul><p><a href="announcements.html#whats-new">Read the full announcement &rarr;</a></p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">17</span>
           <h3>To-dos: until done, and repeats ticked off a day at a time</h3>
@@ -98,7 +106,7 @@
           <p>A to-do&rsquo;s frequency is chosen on the line you type it on now, and there is a new one: <strong>until done</strong>, which carries a to-do forward day after day until it is ticked, then leaves it on the day it was finished.</p><ul><li><strong>Ticking off a repeat ticks off that day</strong>. It used to tick the to-do off for good, so a weekly one done on Monday was already done next Monday.</li><li><strong>A monthly to-do on the 31st</strong> falls on the last day of a shorter month.</li><li><strong>Ask Pulse asks the same question of a day</strong>, and ticks a to-do off on the day it is told.</li></ul>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">17</span>
           <h3>Mail: a tab of its own, Ask Pulse on request, and lines onto boards</h3>
@@ -109,7 +117,7 @@
           <ul><li><strong>Mail is a tab</strong>, rather than a card in the Life Hub you opened it from.</li><li><strong>Asking Pulse to write is a button</strong> &mdash; Ask Pulse in the composer&rsquo;s footer, or <code>&#8984;J</code> &mdash; that opens a panel over the draft, instead of a box under every message that cost the draft a third of its height.</li><li><strong>Add to a project</strong> puts a card on the board, with the due date worked out from the email&rsquo;s own words and a note saying which email it came from.</li></ul><p><a href="announcements.html#whats-new">Read the full announcement &rarr;</a></p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">17</span>
           <h3>The tab bar, arranged</h3>
@@ -120,7 +128,7 @@
           <p>Home &middot; Apps &middot; Schedule &middot; Projects, then Ask Pulse in the middle, then Mail &middot; News &middot; Travel &middot; Music. Markets &amp; News reads as News in the bar and the Launchpad as Apps, and each view keeps its full name at the top. The order, and which tabs are put away, are yours in Settings.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="fix">
         <summary>
           <span class="day">17</span>
           <h3>An old event could take the calendar down</h3>
@@ -131,7 +139,7 @@
           <p>An iCalendar property with a parameter on it &mdash; a language tag on a title, say &mdash; came out of the parser as an object rather than text, and the view cannot draw an object. Older events carry more of them, which is why it showed up on paging back through the months. The text is unwrapped where the feed is read, and the calendar checks what it is given before drawing it.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="fix">
         <summary>
           <span class="day">17</span>
           <h3>Website icons no longer go blank for a day</h3>
@@ -142,7 +150,7 @@
           <ul><li><strong>A site that refused to be read once</strong> &mdash; a 403 meant for robots, a slow reply &mdash; was remembered as having no icon until the next day. A poor answer is kept for five minutes now.</li><li><strong>Icons are ranked by the size they really are</strong>, read from the image itself, rather than the size a page claims.</li><li><strong>The Launchpad tries again</strong> when you come back to it, instead of keeping a miss for the session.</li></ul>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="fix">
         <summary>
           <span class="day">17</span>
           <h3>The composer&rsquo;s head, at dusk</h3>
@@ -153,7 +161,7 @@
           <p>The tint behind the composer&rsquo;s head started on a hard edge, which drew a bright bar under the horizon &mdash; most obvious at dusk, when the accent is orange. It fades in from the top of the column now.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="film">
         <summary>
           <span class="day">17</span>
           <h3>The update film</h3>
@@ -164,7 +172,7 @@
           <p>Two minutes and twelve seconds on Mail, Projects and Schedule, narrated and captioned, in the launch film&rsquo;s style &mdash; every frame built in Remotion from the app&rsquo;s own components.</p><p><a href="announcements.html#whats-new">Read the announcement &rarr;</a> &middot; <a href="index.html#new">Watch it</a></p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="fix">
         <summary>
           <span class="day">11</span>
           <h3>Travel: switching trips stops pushing the page through the horizon</h3>
@@ -175,7 +183,7 @@
           <p>With more than one trip, a row of them sat above everything else &mdash; and on a large screen with three trips it pushed the content through the horizon and cut the currency converter in half. It is a picker now, in a row that was already there, and it does not grow with the number of trips.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">10</span>
           <h3>Pulse fills a big screen</h3>
@@ -186,7 +194,7 @@
           <p>On a 2560 &times; 1440 display the layout sat small in the middle with room going spare. It scales to fill it now, and nothing at or below 1920 &times; 1080 moves. Every view&rsquo;s content starts a little higher, the live channel&rsquo;s heading in Markets is set a size up, and Home drops the line counting the day&rsquo;s events under the greeting.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">9</span>
           <h3>Mail — Gmail and Outlook</h3>
@@ -197,7 +205,7 @@
           <p>Email joins the rest of your day. Connect one mailbox or several, from either service, and the inbox lives on a card in the Life Hub rather than in a tab of its own.</p><ul><li><strong>One button finds what is in a message</strong> — the meetings, the deadlines, the things you have been asked to do, who is involved, and whether it needs a reply. Each comes back with the button that acts on it.</li><li><strong>Dates are worked out in code, not guessed</strong> — the model only quotes the words the email used, and the calendar is resolved against the day the message was sent.</li><li><strong>Highlight anything</strong> and turn it into a task, an event, a project line or a drafted reply, through a review card you edit first.</li><li><strong>Write an email by describing it</strong> — tell the composer what to say, then edit what it gives you.</li><li><strong>It never sends, files or deletes anything on its own</strong>, and permanent deletion is impossible because the permission is never requested.</li></ul><p><a href="announcements.html#mail">Read the full announcement &rarr;</a></p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="fix">
         <summary>
           <span class="day">9</span>
           <h3>Outlook: three things Microsoft Graph would not answer</h3>
@@ -208,7 +216,7 @@
           <ul><li>The folder index asked for <code>wellKnownName</code>, a property that personal Microsoft accounts do not carry — one rejected request took out every listing, so a correctly connected mailbox looked empty.</li><li>Opening a message asked for <code>contentId</code> on the base attachment type instead of the file-attachment type it belongs to, so no Outlook message would open at all.</li><li>Opening a conversation filtered and sorted in the same request, which Exchange refuses; the ordering is done locally now.</li></ul>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="fix">
         <summary>
           <span class="day">9</span>
           <h3>Read and unread, without a refresh</h3>
@@ -219,7 +227,7 @@
           <p>Marking a message read updated the provider but not the row in front of you, so nothing changed until the next poll. The flag is translated to the field the list actually renders now, and the unread counts on the card and in the sidebar move with it.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="film">
         <summary>
           <span class="day">7</span>
           <h3>The launch film, and the ad</h3>
@@ -230,7 +238,7 @@
           <p>Two and a half minutes on every part of Pulse, narrated and captioned, with a thirty-second cut made for phones. Every frame is built in Remotion from the app&rsquo;s own components rather than recorded off a screen, so it is sharp at any size.</p><p><a href="announcements.html#launch-film">Read the announcement &rarr;</a> &middot; <a href="index.html">Watch it</a></p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">2</span>
           <h3>Music plays in the desktop app</h3>
@@ -241,7 +249,7 @@
           <p>Spotify playback works inside the packaged desktop build, not only in the browser — the Web Playback SDK needed a path through Electron that it did not have.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">1</span>
           <h3>Travel: the map draws in a built app</h3>
@@ -252,7 +260,7 @@
           <p>The itinerary map renders in the desktop build as well as in development, and Travel now loads its trips at launch rather than on first visit.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">1</span>
           <h3>Carry your setup from one Pulse to another</h3>
@@ -263,7 +271,7 @@
           <p>Everything you have made — trips, the launchpad, folders, to-dos, habits, projects and conversations — exports to a single file and imports into another copy. A browser keeps this per origin, and the desktop app serves itself from a different port, so without a file nothing crosses between them.</p><p>Caches are deliberately left out: they belong to an account the new copy has not connected.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">1</span>
           <h3>Pulse OS is an application</h3>
@@ -275,7 +283,7 @@
         </div>
       </details>
       <p class="update-month">September 2026</p>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">30</span>
           <h3>Launchpad, rebuilt over a week</h3>
@@ -286,7 +294,7 @@
           <p>A fortnight of work on the shelf, in one line: it finds the applications you actually have installed and notices new ones while it is open; browser-installed web apps count as apps; any icon can be replaced, including <code>.icns</code> files; every icon is one size with a background of its own; folders can be reordered and things filed into them in a tap; and anything can be renamed to what you call it.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">30</span>
           <h3>Sport, and a race worth reading</h3>
@@ -297,7 +305,7 @@
           <p>Every sport tab yields to the others, each team carries its own crest, and each card takes its colour from the place the match is played. Formula 1 gained the shape of the circuit and a result you can read at a glance. Airline crests and Brave search arrived in the same pass.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">30</span>
           <h3>Life Hub: writing an event instead of filling in a form</h3>
@@ -308,7 +316,7 @@
           <p>New events are typed as a sentence rather than assembled field by field.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">29</span>
           <h3>Markets: a tape that never runs out</h3>
@@ -319,7 +327,7 @@
           <p>The ticker is yours to set and no longer stops; its coins work again; and the panel was rebuilt around the things it already knew. Travel&rsquo;s flight card holds its state properly.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="improvement">
         <summary>
           <span class="day">28</span>
           <h3>Music: queues, radio and playlists</h3>
@@ -330,7 +338,7 @@
           <p>The queue stops repeating a single track, a radio station can be started from any song, and a playlist shows what is on it through the player queue.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">23</span>
           <h3>An iOS app</h3>
@@ -341,7 +349,7 @@
           <p>A SwiftUI shell running against the same backend, with every section built against sample data.</p>
         </div>
       </details>
-      <details class="update">
+      <details class="update" data-kind="feature">
         <summary>
           <span class="day">21</span>
           <h3>v2 “Afterglow”</h3>
@@ -364,6 +372,6 @@
   </div>
 </footer>
 
-<script src="assets/site.js?v=202610172130" defer></script>
+<script src="assets/site.js?v=202610180930" defer></script>
 </body>
 </html>
