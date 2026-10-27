@@ -1,33 +1,47 @@
-# Pulse OS
-
-A personal command-centre dashboard — one screen that never scrolls, carrying
-weather, calendar, email, news, markets, sport, music and travel, with an AI assistant
-that can read all of it and act on it. React + Vite frontend, Express backend.
-
-> **New — Mail, Projects and Schedule, talking to each other.** Projects is a
-> board with a timeline and a table, Schedule is rebuilt around the month, and
-> Mail feeds both: a date into your calendar, a line onto a board. Ask Pulse can
-> read a board and change it. There is a two-minute film about all of it.
-> **[Read the announcement](https://eeliya-hub.github.io/pulseOS/announcements.html#whats-new)**.
->
-> **Mail** (9 October) connects Gmail and Outlook, and Pulse reads a message to
-> find the meetings, deadlines and tasks in it. It never sends, files or deletes
-> anything without you.
-> **[Read about Mail](https://eeliya-hub.github.io/pulseOS/announcements.html#mail)**.
->
-> **The launch film is out.** Two and a half minutes on every part of Pulse OS,
-> and a thirty-second ad made for phones. Watch both on the
-> **[site](https://eeliya-hub.github.io/pulseOS/)**, or read the
-> **[announcements](ANNOUNCEMENT.md)**.
+<h1 align="center">Pulse OS</h1>
 
 <p align="center">
-  <a href="https://eeliya-hub.github.io/pulseOS/"><img src="docs/launch/launch-preview.gif" width="100%" alt="Scenes from the Pulse OS launch film — watch it on the launch page"></a>
+  <strong>Your whole day, on one calm screen.</strong><br>
+  Your plans, your mail, your projects, the weather, the news, your music and
+  wherever you are headed — in one place, lit by the hour you are actually in,
+  with an assistant that can read all of it and act on it.
 </p>
 
-> **v2 "Afterglow"** (21 September) rebuilt the whole frontend around a shared
-> spatial system and a background that follows the time of day, made Travel
-> live, and taught the assistant to speak. The full before/after is further down
-> **[ANNOUNCEMENT.md](ANNOUNCEMENT.md#pulse-os-v2--afterglow)**.
+<p align="center">
+  <a href="https://eeliya-hub.github.io/pulseOS/"><strong>The site</strong></a> ·
+  <a href="https://eeliya-hub.github.io/pulseOS/updates.html">Updates</a> ·
+  <a href="https://eeliya-hub.github.io/pulseOS/announcements.html">Announcements</a>
+</p>
+
+---
+
+### The tour — every part of it, asked for out loud
+
+<video src="https://github.com/eeliya-hub/pulseOS/releases/download/films/pulseos-tour.mp4" controls muted poster="https://eeliya-hub.github.io/pulseOS/films/tour-poster.jpg" width="100%"></video>
+
+Four and a half minutes through the whole app. Every section opens by asking
+Pulse for something, and it does it — moves the meeting, writes the reply, puts
+the card on the board. *(If the player does not load, [watch it on the
+site](https://eeliya-hub.github.io/pulseOS/).)*
+
+### Morning to midnight — the whole day, at speed
+
+<video src="https://github.com/eeliya-hub/pulseOS/releases/download/films/pulseos-day.mp4" controls muted poster="https://eeliya-hub.github.io/pulseOS/films/day-poster.jpg" width="340"></video>
+
+Two minutes, no interface — a day in Pulse OS told in motion, from the first
+alarm to the last song.
+
+---
+
+> **Latest — Mail, Projects and Schedule, talking to each other.** Projects is a
+> board with a timeline and a table, Schedule is rebuilt around the month, and
+> Mail feeds both: a date into your calendar, a line onto a board. Ask Pulse can
+> read a board and change it.
+> **[Read the announcement](https://eeliya-hub.github.io/pulseOS/announcements.html#whats-new)**
+> · **[All updates](https://eeliya-hub.github.io/pulseOS/updates.html)**
+
+React + Vite frontend, Express backend. Built in the open — the code, the films
+and every write-up are here.
 
 ![Pulse OS home](docs/release/gallery/home.jpg)
 
