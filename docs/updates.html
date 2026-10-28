@@ -3,375 +3,379 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Updates — Pulse OS</title>
-<meta name="description" content="Every change to Pulse OS, newest first: new features, improvements and fixes, each one expandable.">
-<meta name="theme-color" content="#0a0d1c">
-<link rel="canonical" href="https://eeliya-hub.github.io/pulseOS/updates.html">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Pulse OS">
-<meta property="og:title" content="Updates — Pulse OS">
-<meta property="og:description" content="Every change to Pulse OS, newest first: new features, improvements and fixes, each one expandable.">
-<meta property="og:url" content="https://eeliya-hub.github.io/pulseOS/updates.html">
-<meta property="og:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Updates — Pulse OS">
-<meta name="twitter:description" content="Every change to Pulse OS, newest first: new features, improvements and fixes, each one expandable.">
-<meta name="twitter:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
+<title>Pulse OS — Updates</title>
+<meta name="description" content="Everything that has changed in Pulse OS: new features, improvements and fixes, newest first.">
+<meta name="theme-color" content="#04060d">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%230a0d1c'/%3E%3Cpath d='M5 25h9l2.6-5.5 4.2 11 3.8-14.5 3.2 9H39' fill='none' stroke='%23a9bbff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=202610180930">
+<link rel="stylesheet" href="assets/world.css">
 </head>
 <body>
-<div class="sky" aria-hidden="true"></div>
-<header class="wrap top">
-  <a class="brand" href="index.html" aria-label="Pulse OS — home">
+
+<div class="world" aria-hidden="true">
+  <i class="sky"></i>
+  <i class="sun"></i>
+  <i class="ground"></i>
+</div>
+
+<header class="top">
+  <a class="brand" href="index.html">
     <svg viewBox="0 0 44 18" fill="none" aria-hidden="true"><path d="M1.5 10.5h10l2.6-5.5 4.2 11 3.8-14.5 3.2 9h17.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>Pulse OS</span>
   </a>
-  <nav class="tabbar" aria-label="Sections">
-      <a href="index.html">Pulse OS</a>
-      <a href="updates.html" aria-current="page">Updates</a>
-      <a href="announcements.html">Announcements</a>
+  <nav class="tabs" aria-label="Pulse OS">
+    <a href="features.html">Features</a>
+    <a href="index.html">Films</a>
+    <a href="updates.html" aria-current="page">Updates</a>
+    <a href="announcements.html">Announcements</a>
   </nav>
-  <div class="pills">
-    <a class="pill pill--lit" href="https://github.com/eeliya-hub/pulseOS" aria-label="Pulse OS on GitHub">
-      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      GitHub
-    </a>
-  </div>
+  <p class="clock" aria-hidden="true"><span data-clock>--:--</span><small data-half></small></p>
+  <a class="ghost" href="https://github.com/eeliya-hub/pulseOS">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    <span>GitHub</span>
+  </a>
 </header>
-<main>
-  <section class="wrap hero" aria-labelledby="title" style="padding-bottom:clamp(20px,4vh,40px)">
-    <p class="eyebrow">Updates</p>
-    <h1 id="title">Everything that has <em>changed.</em></h1>
-    <p class="lede">New features, improvements and fixes, newest first. Open any one to see what it actually did.</p>
-    <div class="filters" data-filters role="group" aria-label="Filter updates by kind">
-      <button type="button" data-kind="all" aria-pressed="true">Everything</button>
-      <button type="button" data-kind="feature" aria-pressed="false">Features</button>
-      <button type="button" data-kind="improvement" aria-pressed="false">Improvements</button>
-      <button type="button" data-kind="fix" aria-pressed="false">Fixes</button>
-      <button type="button" data-kind="film" aria-pressed="false">Films</button>
-    </div>
-    <p class="no-matches" data-no-matches hidden>Nothing of that kind yet.</p>
-  </section>
 
-  <section class="wrap" aria-label="Update history">
-    <div class="updates">
-      <p class="update-month">October 2026</p>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">17</span>
-          <h3>Projects &mdash; boards, a timeline and a table</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Projects leaves the Life Hub for a tab of its own, and is a board now rather than a list of to-dos.</p><ul><li><strong>One set of cards, three ways</strong> &mdash; lanes for what is in flight, a timeline for when it lands, a table for the whole lot at once, sortable, with lists and dates editable where they stand.</li><li><strong>Drag between lists</strong>; the finishing list ticks a card off, and dragging it back out un-ticks it.</li><li><strong>A card holds the detail</strong> &mdash; labels, a start and a due date, a checklist with its own progress, notes and a thread of notes to self.</li><li><strong>Lists can be renamed, reordered and deleted</strong>, and deleting one moves its cards rather than taking them with it.</li><li><strong>A new install opens on the Pulse OS board</strong>: three months of what shipped, what is being built, what is next and a column of ideas. Projects kept in the Life Hub come across as boards of their own.</li></ul><p><a href="announcements.html#whats-new">Read the full announcement &rarr;</a></p>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">17</span>
-          <h3>Ask Pulse can work on your boards</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Three new things the assistant can do, typed or spoken.</p><ul><li><strong>Read a board</strong> &mdash; what is in each list, when each card is due, and what is already late.</li><li><strong>Add a card</strong>, to the first list that is not the finishing one or to the list you name. A card already on the board is not added twice.</li><li><strong>Move a card</strong> &mdash; and moving it to done ticks it off. A name that fits more than one card or list moves nothing; it asks which.</li><li>It cannot delete a card. That stays yours to do.</li></ul>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">17</span>
-          <h3>Schedule &mdash; the Life Hub, rebuilt around the month</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>What was left of the Life Hub is the day, so it is called Schedule now, and the calendar is the screen.</p><ul><li><strong>Events are written into the days</strong> &mdash; up to three a day at any laptop size, with the count beside the date covering the rest.</li><li><strong>The months either side stay in view</strong>, quieter, their events in a greyer shade of each calendar&rsquo;s colour.</li><li><strong>The day sits beside it</strong>: what is over steps back, what is on now is lit in its own calendar&rsquo;s colour, and the line under the date says what is on now and what is next.</li><li><strong>The keyboard walks the month</strong> &mdash; arrows, Page Up and Page Down, Home and End, and <code>T</code> for today.</li><li><strong>Habits have gone</strong>; they were not earning their place.</li></ul><p><a href="announcements.html#whats-new">Read the full announcement &rarr;</a></p>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">17</span>
-          <h3>To-dos: until done, and repeats ticked off a day at a time</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>A to-do&rsquo;s frequency is chosen on the line you type it on now, and there is a new one: <strong>until done</strong>, which carries a to-do forward day after day until it is ticked, then leaves it on the day it was finished.</p><ul><li><strong>Ticking off a repeat ticks off that day</strong>. It used to tick the to-do off for good, so a weekly one done on Monday was already done next Monday.</li><li><strong>A monthly to-do on the 31st</strong> falls on the last day of a shorter month.</li><li><strong>Ask Pulse asks the same question of a day</strong>, and ticks a to-do off on the day it is told.</li></ul>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">17</span>
-          <h3>Mail: a tab of its own, Ask Pulse on request, and lines onto boards</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <ul><li><strong>Mail is a tab</strong>, rather than a card in the Life Hub you opened it from.</li><li><strong>Asking Pulse to write is a button</strong> &mdash; Ask Pulse in the composer&rsquo;s footer, or <code>&#8984;J</code> &mdash; that opens a panel over the draft, instead of a box under every message that cost the draft a third of its height.</li><li><strong>Add to a project</strong> puts a card on the board, with the due date worked out from the email&rsquo;s own words and a note saying which email it came from.</li></ul><p><a href="announcements.html#whats-new">Read the full announcement &rarr;</a></p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">17</span>
-          <h3>The tab bar, arranged</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Home &middot; Apps &middot; Schedule &middot; Projects, then Ask Pulse in the middle, then Mail &middot; News &middot; Travel &middot; Music. Markets &amp; News reads as News in the bar and the Launchpad as Apps, and each view keeps its full name at the top. The order, and which tabs are put away, are yours in Settings.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="fix">
-        <summary>
-          <span class="day">17</span>
-          <h3>An old event could take the calendar down</h3>
-          <span class="kind">Fix</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>An iCalendar property with a parameter on it &mdash; a language tag on a title, say &mdash; came out of the parser as an object rather than text, and the view cannot draw an object. Older events carry more of them, which is why it showed up on paging back through the months. The text is unwrapped where the feed is read, and the calendar checks what it is given before drawing it.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="fix">
-        <summary>
-          <span class="day">17</span>
-          <h3>Website icons no longer go blank for a day</h3>
-          <span class="kind">Fix</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <ul><li><strong>A site that refused to be read once</strong> &mdash; a 403 meant for robots, a slow reply &mdash; was remembered as having no icon until the next day. A poor answer is kept for five minutes now.</li><li><strong>Icons are ranked by the size they really are</strong>, read from the image itself, rather than the size a page claims.</li><li><strong>The Launchpad tries again</strong> when you come back to it, instead of keeping a miss for the session.</li></ul>
-        </div>
-      </details>
-      <details class="update" data-kind="fix">
-        <summary>
-          <span class="day">17</span>
-          <h3>The composer&rsquo;s head, at dusk</h3>
-          <span class="kind">Fix</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>The tint behind the composer&rsquo;s head started on a hard edge, which drew a bright bar under the horizon &mdash; most obvious at dusk, when the accent is orange. It fades in from the top of the column now.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="film">
-        <summary>
-          <span class="day">17</span>
-          <h3>The update film</h3>
-          <span class="kind">Film</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Two minutes and twelve seconds on Mail, Projects and Schedule, narrated and captioned, in the launch film&rsquo;s style &mdash; every frame built in Remotion from the app&rsquo;s own components.</p><p><a href="announcements.html#whats-new">Read the announcement &rarr;</a> &middot; <a href="index.html#new">Watch it</a></p>
-        </div>
-      </details>
-      <details class="update" data-kind="fix">
-        <summary>
-          <span class="day">11</span>
-          <h3>Travel: switching trips stops pushing the page through the horizon</h3>
-          <span class="kind">Fix</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>With more than one trip, a row of them sat above everything else &mdash; and on a large screen with three trips it pushed the content through the horizon and cut the currency converter in half. It is a picker now, in a row that was already there, and it does not grow with the number of trips.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">10</span>
-          <h3>Pulse fills a big screen</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>On a 2560 &times; 1440 display the layout sat small in the middle with room going spare. It scales to fill it now, and nothing at or below 1920 &times; 1080 moves. Every view&rsquo;s content starts a little higher, the live channel&rsquo;s heading in Markets is set a size up, and Home drops the line counting the day&rsquo;s events under the greeting.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">9</span>
-          <h3>Mail — Gmail and Outlook</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Email joins the rest of your day. Connect one mailbox or several, from either service, and the inbox lives on a card in the Life Hub rather than in a tab of its own.</p><ul><li><strong>One button finds what is in a message</strong> — the meetings, the deadlines, the things you have been asked to do, who is involved, and whether it needs a reply. Each comes back with the button that acts on it.</li><li><strong>Dates are worked out in code, not guessed</strong> — the model only quotes the words the email used, and the calendar is resolved against the day the message was sent.</li><li><strong>Highlight anything</strong> and turn it into a task, an event, a project line or a drafted reply, through a review card you edit first.</li><li><strong>Write an email by describing it</strong> — tell the composer what to say, then edit what it gives you.</li><li><strong>It never sends, files or deletes anything on its own</strong>, and permanent deletion is impossible because the permission is never requested.</li></ul><p><a href="announcements.html#mail">Read the full announcement &rarr;</a></p>
-        </div>
-      </details>
-      <details class="update" data-kind="fix">
-        <summary>
-          <span class="day">9</span>
-          <h3>Outlook: three things Microsoft Graph would not answer</h3>
-          <span class="kind">Fix</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <ul><li>The folder index asked for <code>wellKnownName</code>, a property that personal Microsoft accounts do not carry — one rejected request took out every listing, so a correctly connected mailbox looked empty.</li><li>Opening a message asked for <code>contentId</code> on the base attachment type instead of the file-attachment type it belongs to, so no Outlook message would open at all.</li><li>Opening a conversation filtered and sorted in the same request, which Exchange refuses; the ordering is done locally now.</li></ul>
-        </div>
-      </details>
-      <details class="update" data-kind="fix">
-        <summary>
-          <span class="day">9</span>
-          <h3>Read and unread, without a refresh</h3>
-          <span class="kind">Fix</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Marking a message read updated the provider but not the row in front of you, so nothing changed until the next poll. The flag is translated to the field the list actually renders now, and the unread counts on the card and in the sidebar move with it.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="film">
-        <summary>
-          <span class="day">7</span>
-          <h3>The launch film, and the ad</h3>
-          <span class="kind">Film</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Two and a half minutes on every part of Pulse, narrated and captioned, with a thirty-second cut made for phones. Every frame is built in Remotion from the app&rsquo;s own components rather than recorded off a screen, so it is sharp at any size.</p><p><a href="announcements.html#launch-film">Read the announcement &rarr;</a> &middot; <a href="index.html">Watch it</a></p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">2</span>
-          <h3>Music plays in the desktop app</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Spotify playback works inside the packaged desktop build, not only in the browser — the Web Playback SDK needed a path through Electron that it did not have.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">1</span>
-          <h3>Travel: the map draws in a built app</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>The itinerary map renders in the desktop build as well as in development, and Travel now loads its trips at launch rather than on first visit.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">1</span>
-          <h3>Carry your setup from one Pulse to another</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Everything you have made — trips, the launchpad, folders, to-dos, habits, projects and conversations — exports to a single file and imports into another copy. A browser keeps this per origin, and the desktop app serves itself from a different port, so without a file nothing crosses between them.</p><p>Caches are deliberately left out: they belong to an account the new copy has not connected.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">1</span>
-          <h3>Pulse OS is an application</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>A packaged desktop build for macOS and Windows, wrapping the same frontend and backend that run locally.</p>
-        </div>
-      </details>
-      <p class="update-month">September 2026</p>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">30</span>
-          <h3>Launchpad, rebuilt over a week</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>A fortnight of work on the shelf, in one line: it finds the applications you actually have installed and notices new ones while it is open; browser-installed web apps count as apps; any icon can be replaced, including <code>.icns</code> files; every icon is one size with a background of its own; folders can be reordered and things filed into them in a tap; and anything can be renamed to what you call it.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">30</span>
-          <h3>Sport, and a race worth reading</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>Every sport tab yields to the others, each team carries its own crest, and each card takes its colour from the place the match is played. Formula 1 gained the shape of the circuit and a result you can read at a glance. Airline crests and Brave search arrived in the same pass.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">30</span>
-          <h3>Life Hub: writing an event instead of filling in a form</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>New events are typed as a sentence rather than assembled field by field.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">29</span>
-          <h3>Markets: a tape that never runs out</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>The ticker is yours to set and no longer stops; its coins work again; and the panel was rebuilt around the things it already knew. Travel&rsquo;s flight card holds its state properly.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="improvement">
-        <summary>
-          <span class="day">28</span>
-          <h3>Music: queues, radio and playlists</h3>
-          <span class="kind">Improvement</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>The queue stops repeating a single track, a radio station can be started from any song, and a playlist shows what is on it through the player queue.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">23</span>
-          <h3>An iOS app</h3>
-          <span class="kind kind--feature">Feature</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>A SwiftUI shell running against the same backend, with every section built against sample data.</p>
-        </div>
-      </details>
-      <details class="update" data-kind="feature">
-        <summary>
-          <span class="day">21</span>
-          <h3>v2 “Afterglow”</h3>
-          <span class="kind kind--feature">Release</span>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <div class="update-body">
-          <p>The whole frontend rebuilt around one spatial system — a sky, a horizon and a ground — with a background that follows the time of day, a real type scale, and the dock as a baseline. Travel went live, and the assistant learned to speak.</p><p><a href="announcements.html#afterglow">Read the announcement &rarr;</a></p>
-        </div>
-      </details>
+<main>
+<div class="band">
+<section class="head rise">
+  <p class="at">Updates</p>
+  <h1>Everything that <em>has changed.</em></h1>
+  <p class="lede">New features, improvements and fixes, newest first. Each one says what it actually did &mdash; and the bigger ones link through to the announcement that explains why.</p>
+  <div class="chips">
+    <button type="button" data-kind="all" class="is-on">Everything</button>
+    <button type="button" data-kind="feature">Features</button>
+    <button type="button" data-kind="improvement">Improvements</button>
+    <button type="button" data-kind="fix">Fixes</button>
+    <button type="button" data-kind="film">Films</button>
+  </div>
+</section>
+<p class="month rise">October 2026</p>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">17 <span class="tag">Feature</span></p>
+    <h3>Projects &mdash; boards, a timeline and a table</h3>
+  </div>
+  <div class="body">
+    <p>Projects leaves the Life Hub for a tab of its own, and is a board now rather than a list of to-dos.</p>
+    <ul class="points">
+      <li><b>One set of cards, three ways</b> &mdash; lanes for what is in flight, a timeline for when it lands, a table for the whole lot at once, sortable, with lists and dates editable where they stand.</li>
+      <li><b>Drag between lists</b>; the finishing list ticks a card off, and dragging it back out un-ticks it.</li>
+      <li><b>A card holds the detail</b> &mdash; labels, a start and a due date, a checklist with its own progress, notes and a thread of notes to self.</li>
+      <li><b>Lists can be renamed, reordered and deleted</b>, and deleting one moves its cards rather than taking them with it.</li>
+      <li><b>A new install opens on the Pulse OS board</b>: three months of what shipped, what is being built, what is next and a column of ideas. Projects kept in the Life Hub come across as boards of their own.</li>
+    </ul>
+    <a class="more" href="announcements.html#talking">Read the full announcement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:14px"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">17 <span class="tag">Feature</span></p>
+    <h3>Ask Pulse can work on your boards</h3>
+  </div>
+  <div class="body">
+    <p>Three new things the assistant can do, typed or spoken.</p>
+    <ul class="points">
+      <li><b>Read a board</b> &mdash; what is in each list, when each card is due, and what is already late.</li>
+      <li><b>Add a card</b>, to the first list that is not the finishing one or to the list you name. A card already on the board is not added twice.</li>
+      <li><b>Move a card</b> &mdash; and moving it to done ticks it off. A name that fits more than one card or list moves nothing; it asks which.</li>
+      <li><b>It cannot delete a card.</b> That stays yours to do.</li>
+    </ul>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">17 <span class="tag">Feature</span></p>
+    <h3>Schedule &mdash; the Life Hub, rebuilt around the month</h3>
+  </div>
+  <div class="body">
+    <p>What was left of the Life Hub is the day, so it is called Schedule now, and the calendar is the screen.</p>
+    <ul class="points">
+      <li><b>Events are written into the days</b> &mdash; up to three a day at any laptop size, with the count beside the date covering the rest.</li>
+      <li><b>The months either side stay in view</b>, quieter, their events in a greyer shade of each calendar&rsquo;s colour.</li>
+      <li><b>The day sits beside it</b>: what is over steps back, what is on now is lit in its own calendar&rsquo;s colour, and the line under the date says what is on now and what is next.</li>
+      <li><b>The keyboard walks the month</b> &mdash; arrows, Page Up and Page Down, Home and End, and T for today.</li>
+      <li><b>Habits have gone</b>; they were not earning their place.</li>
+    </ul>
+    <a class="more" href="announcements.html#talking">Read the full announcement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:14px"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">17 <span class="tag">Feature</span></p>
+    <h3>To-dos: until done, and repeats ticked off a day at a time</h3>
+  </div>
+  <div class="body">
+    <p>A to-do&rsquo;s frequency is chosen on the line you type it on now, and there is a new one: <b>until done</b>, which carries a to-do forward day after day until it is ticked, then leaves it on the day it was finished.</p>
+    <ul class="points">
+      <li><b>Ticking off a repeat ticks off that day.</b> It used to tick the to-do off for good, so a weekly one done on Monday was already done next Monday.</li>
+      <li><b>A monthly to-do on the 31st</b> falls on the last day of a shorter month.</li>
+      <li><b>Ask Pulse asks the same question of a day</b>, and ticks a to-do off on the day it is told.</li>
+    </ul>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">17 <span class="tag">Improvement</span></p>
+    <h3>Mail: a tab of its own, Ask Pulse on request, and lines onto boards</h3>
+  </div>
+  <div class="body">
+    <ul class="points">
+      <li><b>Mail is a tab</b>, rather than a card in the Life Hub you opened it from.</li>
+      <li><b>Asking Pulse to write is a button</b> &mdash; Ask Pulse in the composer&rsquo;s footer, or &#8984;J &mdash; that opens a panel over the draft, instead of a box under every message that cost the draft a third of its height.</li>
+      <li><b>Add to a project</b> puts a card on the board, with the due date worked out from the email&rsquo;s own words and a note saying which email it came from.</li>
+    </ul>
+    <a class="more" href="announcements.html#talking">Read the full announcement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:14px"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">17 <span class="tag">Improvement</span></p>
+    <h3>The tab bar, arranged</h3>
+  </div>
+  <div class="body">
+    <p>Home &middot; Apps &middot; Schedule &middot; Projects, then Ask Pulse in the middle, then Mail &middot; News &middot; Travel &middot; Music. Markets &amp; News reads as News in the bar and the Launchpad as Apps, and each view keeps its full name at the top. The order, and which tabs are put away, are yours in Settings.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="fix">
+  <div class="what">
+    <p class="when">17 <span class="tag tag--fix">Fix</span></p>
+    <h3>An old event could take the calendar down</h3>
+  </div>
+  <div class="body">
+    <p>An iCalendar property with a parameter on it &mdash; a language tag on a title, say &mdash; came out of the parser as an object rather than text, and the view cannot draw an object. Older events carry more of them, which is why it showed up on paging back through the months. The text is unwrapped where the feed is read, and the calendar checks what it is given before drawing it.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="fix">
+  <div class="what">
+    <p class="when">17 <span class="tag tag--fix">Fix</span></p>
+    <h3>Website icons no longer go blank for a day</h3>
+  </div>
+  <div class="body">
+    <ul class="points">
+      <li>A site that refused to be read once &mdash; a 403 meant for robots, a slow reply &mdash; was remembered as having no icon until the next day. <b>A poor answer is kept for five minutes now.</b></li>
+      <li><b>Icons are ranked by the size they really are</b>, read from the image itself, rather than the size a page claims.</li>
+      <li><b>The Launchpad tries again when you come back to it</b>, instead of keeping a miss for the session.</li>
+    </ul>
+  </div>
+</article>
+<article class="entry rise" data-kind="fix">
+  <div class="what">
+    <p class="when">17 <span class="tag tag--fix">Fix</span></p>
+    <h3>The composer&rsquo;s head, at dusk</h3>
+  </div>
+  <div class="body">
+    <p>The tint behind the composer&rsquo;s head started on a hard edge, which drew a bright bar under the horizon &mdash; most obvious at dusk, when the accent is orange. It fades in from the top of the column now.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="film">
+  <div class="what">
+    <p class="when">17 <span class="tag tag--film">Film</span></p>
+    <h3>The update film</h3>
+  </div>
+  <div class="body">
+    <p>Two minutes and twelve seconds on Mail, Projects and Schedule, narrated and captioned, in the launch film&rsquo;s style &mdash; every frame built in Remotion from the app&rsquo;s own components.</p>
+    <a class="more" href="announcements.html#talking">Read the announcement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:14px"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</article>
+<article class="entry rise" data-kind="fix">
+  <div class="what">
+    <p class="when">11 <span class="tag tag--fix">Fix</span></p>
+    <h3>Travel: switching trips stops pushing the page through the horizon</h3>
+  </div>
+  <div class="body">
+    <p>With more than one trip, a row of them sat above everything else &mdash; and on a large screen with three trips it pushed the content through the horizon and cut the currency converter in half. It is a picker now, in a row that was already there, and it does not grow with the number of trips.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">10 <span class="tag">Improvement</span></p>
+    <h3>Pulse fills a big screen</h3>
+  </div>
+  <div class="body">
+    <p>On a 2560 &times; 1440 display the layout sat small in the middle with room going spare. It scales to fill it now, and nothing at or below 1920 &times; 1080 moves. Every view&rsquo;s content starts a little higher, the live channel&rsquo;s heading in Markets is set a size up, and Home drops the line counting the day&rsquo;s events under the greeting.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">9 <span class="tag">Feature</span></p>
+    <h3>Mail &mdash; Gmail and Outlook</h3>
+  </div>
+  <div class="body">
+    <p>Email joins the rest of your day. Connect one mailbox or several, from either service.</p>
+    <ul class="points">
+      <li><b>One button finds what is in a message</b> &mdash; the meetings, the deadlines, the things you have been asked to do, who is involved, and whether it needs a reply. Each comes back with the button that acts on it.</li>
+      <li><b>Dates are worked out in code, not guessed</b> &mdash; the model only quotes the words the email used, and the calendar is resolved against the day the message was sent.</li>
+      <li><b>Highlight anything</b> and turn it into a task, an event, a project line or a drafted reply, through a review card you edit first.</li>
+      <li><b>Write an email by describing it</b> &mdash; tell the composer what to say, then edit what it gives you.</li>
+      <li><b>It never sends, files or deletes anything on its own</b>, and permanent deletion is impossible because the permission is never requested.</li>
+    </ul>
+    <a class="more" href="announcements.html#inbox">Read the full announcement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:14px"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</article>
+<article class="entry rise" data-kind="fix">
+  <div class="what">
+    <p class="when">9 <span class="tag tag--fix">Fix</span></p>
+    <h3>Outlook: three things Microsoft Graph would not answer</h3>
+  </div>
+  <div class="body">
+    <ul class="points">
+      <li>The folder index asked for <code>wellKnownName</code>, a property that personal Microsoft accounts do not carry &mdash; one rejected request took out every listing, so a correctly connected mailbox looked empty.</li>
+      <li>Opening a message asked for <code>contentId</code> on the base attachment type instead of the file-attachment type it belongs to, so no Outlook message would open at all.</li>
+      <li>Opening a conversation filtered and sorted in the same request, which Exchange refuses; the ordering is done locally now.</li>
+    </ul>
+  </div>
+</article>
+<article class="entry rise" data-kind="fix">
+  <div class="what">
+    <p class="when">9 <span class="tag tag--fix">Fix</span></p>
+    <h3>Read and unread, without a refresh</h3>
+  </div>
+  <div class="body">
+    <p>Marking a message read updated the provider but not the row in front of you, so nothing changed until the next poll. The flag is translated to the field the list actually renders now, and the unread counts on the card and in the sidebar move with it.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="film">
+  <div class="what">
+    <p class="when">7 <span class="tag tag--film">Film</span></p>
+    <h3>The launch film, and the ad</h3>
+  </div>
+  <div class="body">
+    <p>Two and a half minutes on every part of Pulse, narrated and captioned, with a thirty-second cut made for phones. Every frame is built in Remotion from the app&rsquo;s own components rather than recorded off a screen, so it is sharp at any size. Both have since been retired in favour of the tour.</p>
+    <a class="more" href="announcements.html#film">Read the announcement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:14px"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">2 <span class="tag">Improvement</span></p>
+    <h3>Music plays in the desktop app</h3>
+  </div>
+  <div class="body">
+    <p>Spotify playback works inside the packaged desktop build, not only in the browser &mdash; the Web Playback SDK needed a path through Electron that it did not have.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">1 <span class="tag">Improvement</span></p>
+    <h3>Travel: the map draws in a built app</h3>
+  </div>
+  <div class="body">
+    <p>The itinerary map renders in the desktop build as well as in development, and Travel now loads its trips at launch rather than on first visit.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">1 <span class="tag">Feature</span></p>
+    <h3>Carry your setup from one Pulse to another</h3>
+  </div>
+  <div class="body">
+    <p>Everything you have made &mdash; trips, the launchpad, folders, to-dos, habits, projects and conversations &mdash; exports to a single file and imports into another copy. A browser keeps this per origin, and the desktop app serves itself from a different port, so without a file nothing crosses between them. Caches are deliberately left out: they belong to an account the new copy has not connected.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">1 <span class="tag">Feature</span></p>
+    <h3>Pulse OS is an application</h3>
+  </div>
+  <div class="body">
+    <p>A packaged desktop build for macOS and Windows, wrapping the same frontend and backend that run locally.</p>
+  </div>
+</article>
+<p class="month rise">September 2026</p>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">30 <span class="tag">Improvement</span></p>
+    <h3>Launchpad, rebuilt over a week</h3>
+  </div>
+  <div class="body">
+    <p>A fortnight of work on the shelf, in one line: it finds the applications you actually have installed and notices new ones while it is open; browser-installed web apps count as apps; any icon can be replaced, including <code>.icns</code> files; every icon is one size with a background of its own; folders can be reordered and things filed into them in a tap; and anything can be renamed to what you call it.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">30 <span class="tag">Improvement</span></p>
+    <h3>Sport, and a race worth reading</h3>
+  </div>
+  <div class="body">
+    <p>Every sport tab yields to the others, each team carries its own crest, and each card takes its colour from the place the match is played. Formula 1 gained the shape of the circuit and a result you can read at a glance. Airline crests and Brave search arrived in the same pass.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">30 <span class="tag">Improvement</span></p>
+    <h3>Life Hub: writing an event instead of filling in a form</h3>
+  </div>
+  <div class="body">
+    <p>New events are typed as a sentence rather than assembled field by field.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">29 <span class="tag">Improvement</span></p>
+    <h3>Markets: a tape that never runs out</h3>
+  </div>
+  <div class="body">
+    <p>The ticker is yours to set and no longer stops; its coins work again; and the panel was rebuilt around the things it already knew. Travel&rsquo;s flight card holds its state properly.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="improvement">
+  <div class="what">
+    <p class="when">28 <span class="tag">Improvement</span></p>
+    <h3>Music: queues, radio and playlists</h3>
+  </div>
+  <div class="body">
+    <p>The queue stops repeating a single track, a radio station can be started from any song, and a playlist shows what is on it through the player queue.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">23 <span class="tag">Feature</span></p>
+    <h3>An iOS app</h3>
+  </div>
+  <div class="body">
+    <p>A SwiftUI shell running against the same backend, with every section built against sample data.</p>
+  </div>
+</article>
+<article class="entry rise" data-kind="feature">
+  <div class="what">
+    <p class="when">21 <span class="tag">Feature</span></p>
+    <h3>v2 &ldquo;Afterglow&rdquo;</h3>
+  </div>
+  <div class="body">
+    <p>The whole frontend rebuilt around one spatial system &mdash; a sky, a horizon and a ground &mdash; with a background that follows the time of day, a real type scale, and the dock as a baseline. Travel went live, and the assistant learned to speak.</p>
+    <a class="more" href="announcements.html#afterglow">Read the announcement <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:14px"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</article>
+<section class="part" style="padding-top:clamp(40px,7svh,80px)">
+  <div class="body">
+    <p class="lede rise">The full commit history is <a href="https://github.com/eeliya-hub/pulseOS/commits/main">on GitHub</a>, and the bigger moments are written up in full.</p>
+    <div class="row rise">
+      <a class="pill pill--lit" href="announcements.html">The announcements</a>
+      <a class="pill" href="features.html">What it does</a>
+      <a class="pill" href="index.html">The room</a>
     </div>
-    <p class="logos-note" style="margin-top:26px">The full commit history is on <a href="https://github.com/eeliya-hub/pulseOS/commits/main" style="color:inherit">GitHub</a>.</p>
-  </section>
+  </div>
+</section>
+</div>
+
 </main>
 
-<footer class="wrap">
-  <div class="sign">
-    <span>Pulse OS, made by Eeliya. 2026.</span>
-    <a href="https://github.com/eeliya-hub/pulseOS" style="color:inherit">github.com/eeliya-hub/pulseOS</a>
+<footer>
+  <div class="band">
+    <p>Pulse OS — your day, in a heartbeat. Lit for the hour you are in.</p>
+    <nav>
+      <a href="index.html">The room</a>
+      <a href="features.html">Features</a>
+      <a href="updates.html">Updates</a>
+      <a href="announcements.html">Announcements</a>
+      <a href="https://github.com/eeliya-hub/pulseOS">GitHub</a>
+      <a href="PulseOS-Doc.html">Documentation</a>
+    </nav>
   </div>
 </footer>
 
-<script src="assets/site.js?v=202610180930" defer></script>
+<script src="assets/world.js"></script>
 </body>
 </html>

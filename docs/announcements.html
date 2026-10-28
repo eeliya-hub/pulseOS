@@ -3,497 +3,373 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Announcements — Pulse OS</title>
-<meta name="description" content="The story behind each new part of Pulse OS: Projects, Schedule and the update film, Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
-<meta name="theme-color" content="#0a0d1c">
-<link rel="canonical" href="https://eeliya-hub.github.io/pulseOS/announcements.html">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Pulse OS">
-<meta property="og:title" content="Announcements — Pulse OS">
-<meta property="og:description" content="The story behind each new part of Pulse OS: Projects, Schedule and the update film, Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
-<meta property="og:url" content="https://eeliya-hub.github.io/pulseOS/announcements.html">
-<meta property="og:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Announcements — Pulse OS">
-<meta name="twitter:description" content="The story behind each new part of Pulse OS: Projects, Schedule and the update film, Mail with Gmail and Outlook, the launch film, and the v2 Afterglow redesign.">
-<meta name="twitter:image" content="https://eeliya-hub.github.io/pulseOS/launch/og.jpg">
+<title>Pulse OS — Announcements</title>
+<meta name="description" content="Every new part of Pulse OS, in full: what it does, how it was built, and where its limits are.">
+<meta name="theme-color" content="#04060d">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%230a0d1c'/%3E%3Cpath d='M5 25h9l2.6-5.5 4.2 11 3.8-14.5 3.2 9H39' fill='none' stroke='%23a9bbff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=202610180930">
+<link rel="stylesheet" href="assets/world.css">
 </head>
 <body>
-<div class="sky" aria-hidden="true"></div>
-<header class="wrap top">
-  <a class="brand" href="index.html" aria-label="Pulse OS — home">
+
+<div class="world" aria-hidden="true">
+  <i class="sky"></i>
+  <i class="sun"></i>
+  <i class="ground"></i>
+</div>
+
+<header class="top">
+  <a class="brand" href="index.html">
     <svg viewBox="0 0 44 18" fill="none" aria-hidden="true"><path d="M1.5 10.5h10l2.6-5.5 4.2 11 3.8-14.5 3.2 9h17.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>Pulse OS</span>
   </a>
-  <nav class="tabbar" aria-label="Sections">
-      <a href="index.html">Pulse OS</a>
-      <a href="updates.html">Updates</a>
-      <a href="announcements.html" aria-current="page">Announcements</a>
+  <nav class="tabs" aria-label="Pulse OS">
+    <a href="features.html">Features</a>
+    <a href="index.html">Films</a>
+    <a href="updates.html">Updates</a>
+    <a href="announcements.html" aria-current="page">Announcements</a>
   </nav>
-  <div class="pills">
-    <a class="pill pill--lit" href="https://github.com/eeliya-hub/pulseOS" aria-label="Pulse OS on GitHub">
-      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      GitHub
-    </a>
-  </div>
+  <p class="clock" aria-hidden="true"><span data-clock>--:--</span><small data-half></small></p>
+  <a class="ghost" href="https://github.com/eeliya-hub/pulseOS">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    <span>GitHub</span>
+  </a>
 </header>
+
 <main>
-  <section class="wrap hero" aria-labelledby="title" style="padding-bottom:0">
-    <p class="eyebrow">Announcements</p>
-    <h1 id="title">The <em>why</em>, not just the what.</h1>
-    <p class="lede">Every new part of Pulse, in full &mdash; what it does, how it was built, and where its limits are.</p>
-    <nav class="toc" aria-label="The posts on this page">
-      <div class="toc-list">
-        <a href="#whats-new"><strong>Mail, Projects and Schedule, talking to each other</strong><span>17 October 2026</span></a>
-        <a href="#mail"><strong>Your inbox, in Pulse</strong><span>9 October 2026</span></a>
-        <a href="#launch-film"><strong>Pulse OS has a film</strong><span>7 October 2026</span></a>
-        <a href="#afterglow"><strong>v2 &mdash; Afterglow</strong><span>21 September 2026</span></a>
-      </div>
-    </nav>
-  </section>
+<div class="band">
+<section class="head rise">
+  <p class="at">Announcements</p>
+  <h1>The why, <em>not just the what.</em></h1>
+  <p class="lede">Every new part of Pulse, in full &mdash; what it does, how it was built, and where its limits are. Choose one; the short version of all of it is in the <a href="updates.html">updates</a>.</p>
+</section>
 
-  <!-- ══ What's new: Mail, Projects and Schedule ═════════════════════ -->
-  <article id="whats-new">
-    <div class="wrap post" style="padding-top:clamp(56px,9vh,96px)">
-      <p class="eyebrow">17 October 2026</p>
-      <h2 style="margin-top:12px;font-size:clamp(36px,5vw,58px)">Mail, Projects and Schedule, <em>talking to each other.</em></h2>
-      <div class="meta">
-        <span class="badge badge--new">New</span>
-        <span>Projects &middot; Schedule &middot; Mail</span>
-        <span class="dotsep">&middot;</span>
-        <span>With a film, 2 min 12 s</span>
-      </div>
-      <p>Mail and Projects have tabs of their own now, and the calendar has been rebuilt around the month. None of that is the point by itself. The point is that they read each other: a meeting in an email arrives in your calendar, a line in one becomes a card on the right board, and Ask Pulse can tell you what is left on a project and move the card when it is done.</p>
-    </div>
-
-    <div class="wrap post">
-      <figure class="frame frame--wide" style="margin:0">
-        <video controls playsinline preload="metadata" poster="update/update-poster.jpg" aria-label="The Pulse OS update film: Mail, Projects and Schedule">
-          <source src="update/pulseos-update.mp4" type="video/mp4">
-          <track kind="captions" src="update/pulseos-update.en.vtt" srclang="en" label="English">
-        </video>
-      </figure>
-    </div>
-
-    <div class="wrap post">
+<nav class="index" data-switch aria-label="Announcements">
+  <a href="#talking" id="tab-talking">
+    <img src="release/gallery/projects-board.jpg" alt="" decoding="async">
+    <span class="ix">
+      <span class="meta"><span class="tag">New</span>17 October 2026</span>
+      <span class="t">Mail, Projects and Schedule, talking to each other</span>
+      <span class="s">Mail and Projects have tabs of their own now, and the calendar has been rebuilt around the month.</span>
+      <span class="go">Read it</span>
+    </span>
+  </a>
+  <a href="#inbox" id="tab-inbox">
+    <img src="release/gallery/mail-inbox.jpg" alt="" decoding="async">
+    <span class="ix">
+      <span class="meta"><span class="tag">New</span>9 October 2026</span>
+      <span class="t">Your inbox, in Pulse</span>
+      <span class="s">Gmail and Outlook now connect to Pulse OS.</span>
+      <span class="go">Read it</span>
+    </span>
+  </a>
+  <a href="#film" id="tab-film">
+    <img src="launch/launch-poster.jpg" alt="" decoding="async">
+    <span class="ix">
+      <span class="meta"><span class="tag tag--film">Film</span>7 October 2026</span>
+      <span class="t">Pulse OS has a film</span>
+      <span class="s">Two and a half minutes covering every part of the app &mdash; and every frame of it is code: Pulse&rsquo;s own views, rebuilt from its components and cut to a score composed for them.</span>
+      <span class="go">Read it</span>
+    </span>
+  </a>
+  <a href="#afterglow" id="tab-afterglow">
+    <img src="release/gallery/home.jpg" alt="" decoding="async">
+    <span class="ix">
+      <span class="meta"><span class="tag">Release</span>21 September 2026</span>
+      <span class="t">v2 — Afterglow</span>
+      <span class="s">The whole frontend rebuilt around one spatial system, with a background that follows the time of day.</span>
+      <span class="go">Read it</span>
+    </span>
+  </a>
+</nav>
+<article class="panel story" id="talking" aria-labelledby="tab-talking">
+  <header class="story-head">
+    <p class="meta"><span class="tag">New</span>17 October 2026 &middot; Projects &middot; Schedule &middot; Mail &middot; with a film, 2 min 12 s</p>
+    <h2>Mail, Projects and Schedule, <em>talking to each other.</em></h2>
+    <p class="stand">Mail and Projects have tabs of their own now, and the calendar has been rebuilt around the month. None of that is the point by itself. The point is that they read each other: a meeting in an email arrives in your calendar, a line in one becomes a card on the right board, and Ask Pulse can tell you what is left on a project and move the card when it is done.</p>
+  </header>
+    <figure class="shot">
+      <img src="release/gallery/projects-board.jpg" alt="The board is what is in flight" loading="lazy" decoding="async">
+      <figcaption><b>The board is what is in flight.</b> Labels say what kind of work a card is, a due date goes amber on the day and red after it, and the ring says how much of the project is done before you have counted.</figcaption>
+    </figure>
+    <section class="sec">
       <h3>A board for every plan</h3>
       <p>Projects used to be a column of the Life Hub: a name, and a list of to-dos under it. It is a board now. Lists you name and reorder, cards you drag between them, and a last list that ticks a card off when it lands there &mdash; drag it back out and it un-ticks. A card holds what a card needs: labels, a start and a due date, a checklist with its own progress bar, notes, and a thread of notes to self.</p>
-      <p>One set of cards, drawn three ways because they answer three different questions. <strong>The board</strong> is what is in flight. <strong>The timeline</strong> is when it lands, with today marked and the undated cards counted at the foot rather than quietly left out. <strong>The table</strong> is the whole lot at once, sortable by any column, with each card&rsquo;s list and dates editable where they stand.</p>
+      <p>One set of cards, drawn three ways because they answer three different questions. The board is what is in flight. The timeline is when it lands, with today marked and the undated cards counted at the foot rather than quietly left out. The table is the whole lot at once, sortable by any column, with each card&rsquo;s list and dates editable where they stand.</p>
+    </section>
+    <div class="shots">
+    <figure class="shot">
+      <img src="release/gallery/projects-card.jpg" alt="The detail lives on the card" loading="lazy" decoding="async">
+      <figcaption><b>The detail lives on the card.</b> Labels, the dates, the notes, a checklist with its own progress and a thread of notes to self.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/projects-timeline.jpg" alt="The same cards, against time" loading="lazy" decoding="async">
+      <figcaption><b>The same cards, against time.</b> Three months of shipped work as bars, today marked, and the undated cards counted at the foot.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/projects-table.jpg" alt="Every card at once" loading="lazy" decoding="async">
+      <figcaption><b>Every card at once.</b> Any column sorts, and a card&rsquo;s list or dates change where they stand.</figcaption>
+    </figure>
     </div>
-
-    <div class="wrap post">
-      <figure class="shots"><img src="release/gallery/projects-board.jpg" alt="The Pulse OS board: Ideas, Up next, Building and Shipped, with labels, due dates and checklists on the cards" loading="lazy">
-        <figcaption><strong>The board is what is in flight.</strong> Labels say what kind of work a card is, a due date goes amber on the day and red after it, and the ring says how much of the project is done before you have counted.</figcaption>
-      </figure>
-    </div>
-
-    <div class="wrap post">
+    <section class="sec">
       <h3>It starts on Pulse OS&rsquo;s own board</h3>
       <p>A new install does not open on an empty board. It opens on this project&rsquo;s: three months of what shipped, dated as it shipped, from the first commit on 16 July to this week; what is being built now; what is up next; and a column of ideas for what could come after. It is the board doing what boards are for, which teaches the view better than four demonstration cards ever did. Projects you kept in the Life Hub come across as boards of their own, their to-dos as cards, and anything already there is left alone.</p>
-    </div>
-
-    <div class="wrap post">
-      <figure class="shots"><img src="release/gallery/projects-card.jpg" alt="A card opened: its labels, start and due dates, notes, a checklist five of seven done, and a note to self" loading="lazy">
-        <figcaption><strong>The detail lives on the card.</strong> Labels, the dates, the notes, a checklist with its own progress and a thread of notes to self.</figcaption>
-      </figure>
-      <figure class="shots"><img src="release/gallery/projects-timeline.jpg" alt="The timeline: each card a bar from its start to its due date, with today marked" loading="lazy">
-        <figcaption><strong>The same cards, against time.</strong> Three months of shipped work as bars, today marked, and the cards with no date counted at the foot rather than dropped.</figcaption>
-      </figure>
-      <figure class="shots"><img src="release/gallery/projects-table.jpg" alt="The table: every card with its list, labels, dates and checklist, sorted by due date" loading="lazy">
-        <figcaption><strong>Every card at once.</strong> Sorted here by due date, oldest first. Any column sorts, and a card&rsquo;s list or dates change where they stand.</figcaption>
-      </figure>
-    </div>
-
-    <div class="wrap post">
+    </section>
+    <section class="sec">
       <h3>Ask Pulse, on the board</h3>
-      <p>The assistant can read a board and work on it. Ask <em>what is left on Pulse OS?</em> and it reads the board before answering &mdash; what is in each list, when each card is due, and what is already late. Ask it to add a card and the card lands in the first list that is not the finishing one, unless you name another; tell it something is done and it moves the card into the last list, which ticks it off.</p>
+      <p>The assistant can read a board and work on it. Ask <em class="quote">what is left on Pulse OS?</em> and it reads the board before answering &mdash; what is in each list, when each card is due, and what is already late. Ask it to add a card and the card lands in the first list that is not the finishing one, unless you name another; tell it something is done and it moves the card into the last list, which ticks it off.</p>
       <p>It is careful where it matters. A card that is already on the board is not added twice. A name that fits two cards, or two lists, moves nothing &mdash; it asks which you meant. And it cannot delete a card at all; that is yours to do, on the board.</p>
-
-      <div class="pull">
-        <p>Your mail, your plans, your days. Finally talking to each other.</p>
-      </div>
-
+    </section>
+    <p class="said">Your mail, your plans, your days. Finally talking to each other.</p>
+    <section class="sec">
       <h3>From an email, onto a board</h3>
       <p>Highlight a line in a message and the menu now has <strong>Add to a project</strong> in it. Pulse writes the task in the imperative, quotes the words the email used for its date and works the date out in code &mdash; the same way as everywhere else in Mail &mdash; and picks the project it thinks the work belongs to. It all arrives in a review card you can change, and nothing is added until you press the button. The card that lands on the board carries a note saying which email it came from, so it can always be traced back.</p>
+    </section>
+    <div class="shots">
+    <figure class="shot">
+      <img src="release/gallery/mail-highlight.jpg" alt="Highlight a line" loading="lazy" decoding="async">
+      <figcaption><b>Highlight a line.</b> Explain it, summarise it, or turn just that into a task, today&rsquo;s to-do, an event, a card on a project or a drafted reply.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/mail-project.jpg" alt="Onto a board, with its date" loading="lazy" decoding="async">
+      <figcaption><b>Onto a board, with its date.</b> &ldquo;Could you get me the Q4 deck before end of day Friday&rdquo; becomes <em>Send Priya the Q4 deck</em>, due Friday &mdash; each part of it yours to change first.</figcaption>
+    </figure>
     </div>
-
-    <div class="wrap post">
-      <figure class="shots"><img src="release/gallery/mail-highlight.jpg" alt="A highlighted line in an email with a menu: explain, summarise, create a task, add to today, add to a project, add to calendar, draft a reply" loading="lazy">
-        <figcaption><strong>Highlight a line.</strong> Explain it, summarise it, or turn just that into a task, today&rsquo;s to-do, an event, a card on a project or a drafted reply.</figcaption>
-      </figure>
-      <figure class="shots"><img src="release/gallery/mail-project.jpg" alt="The review card for a project task found in an email: the task, its due date and the project, each editable" loading="lazy">
-        <figcaption><strong>Onto a board, with its date.</strong> &ldquo;Could you get me the Q4 deck before end of day Friday&rdquo; becomes <em>Send Priya the Q4 deck</em>, due Friday 23 October, on Pulse OS &mdash; each part of it yours to change first.</figcaption>
-      </figure>
-    </div>
-
-    <div class="wrap post">
+    <section class="sec">
       <h3>Ask Pulse writes it, when you ask</h3>
-      <p>Writing with Pulse used to be a box open under every message, costing the draft a third of its height for something reached for on some emails and not most. It is a button now &mdash; <strong>Ask Pulse</strong> in the composer&rsquo;s footer, or <code>&#8984;J</code> &mdash; and a panel over the draft. Say what the email should say and Pulse writes it into the draft, then steps aside so you can edit. Or take what is already there and improve it, make it more professional or friendlier, shorten it, turn the gist into a proper email, or just fix the grammar. Send is still a button a person presses.</p>
-    </div>
-
-    <div class="wrap post">
-      <figure class="shots"><img src="release/gallery/mail-askpulse.jpg" alt="The Ask Pulse panel over a reply: a box saying what the reply should say, a Write it button, and rewrites below it" loading="lazy">
-        <figcaption><strong>It writes into the draft. It never sends.</strong> Enter to run, Escape to close, and the panel is gone the moment the words are in.</figcaption>
-      </figure>
-    </div>
-
-    <div class="wrap post">
+      <p>Writing with Pulse used to be a box open under every message, costing the draft a third of its height for something reached for on some emails and not most. It is a button now &mdash; <strong>Ask Pulse</strong> in the composer&rsquo;s footer, or &#8984;J &mdash; and a panel over the draft. Say what the email should say and Pulse writes it into the draft, then steps aside so you can edit. Or take what is already there and improve it, make it more professional or friendlier, shorten it, turn the gist into a proper email, or just fix the grammar. Send is still a button a person presses.</p>
+    </section>
+    <figure class="shot">
+      <img src="release/gallery/mail-askpulse.jpg" alt="It writes into the draft" loading="lazy" decoding="async">
+      <figcaption><b>It writes into the draft. It never sends.</b> Enter to run, Escape to close, and the panel is gone the moment the words are in.</figcaption>
+    </figure>
+    <section class="sec">
       <h3>Schedule, with room to breathe</h3>
-      <p>What was left of the Life Hub is the day, so it is called Schedule now, and the calendar is the screen. A cell per day fills the height it is given, with events written into the days rather than counted under them &mdash; up to three a day at any laptop size, and the count beside the date always covering the rest. The days either side of the month stay in view, quieter, their events in a greyer shade of each calendar&rsquo;s colour. The keyboard walks it: arrows by the day, Page Up and Page Down by the month, Home and End to its first and last day, and <code>T</code> back to today.</p>
-      <p>Beside it, the day. What is over steps back, what is on now is lit in its own calendar&rsquo;s colour, and the line under the date says it in a sentence &mdash; <em>3 events &middot; 2 to-dos &middot; On now: Gym</em>.</p>
+      <p>What was left of the Life Hub is the day, so it is called Schedule now, and the calendar is the screen. A cell per day fills the height it is given, with events written into the days rather than counted under them &mdash; up to three a day at any laptop size, and the count beside the date always covering the rest. The days either side of the month stay in view, quieter, their events in a greyer shade of each calendar&rsquo;s colour. The keyboard walks it: arrows by the day, Page Up and Page Down by the month, Home and End to its first and last day, and T back to today.</p>
+      <p>Beside it, the day. What is over steps back, what is on now is lit in its own calendar&rsquo;s colour, and the line under the date says it in a sentence &mdash; <em class="quote">3 events &middot; 2 to-dos &middot; On now: Gym</em>.</p>
       <p>And to-dos get a frequency, chosen on the line you type them on: once, daily, weekly, monthly or yearly &mdash; or <strong>until done</strong>, which carries a to-do forward day after day until it is ticked, then leaves it on the day it was finished. A repeat is ticked off one day at a time, so Monday&rsquo;s bins say nothing about next Monday&rsquo;s, and Ask Pulse asks the same question of a day. Habits have gone from Schedule; they were not earning their place.</p>
-    </div>
-
-    <div class="wrap post">
-      <figure class="shots"><img src="release/gallery/schedule.jpg" alt="Schedule: the month, with each day&rsquo;s events written into it, beside today&rsquo;s events and to-dos" loading="lazy">
-        <figcaption><strong>The month at the size of a month.</strong> Gym is on now, so it is lit; the day&rsquo;s two earlier events have stepped back; and the first week of November is there at the foot, quieter, rather than missing.</figcaption>
-      </figure>
-    </div>
-
-    <div class="wrap post">
+    </section>
+    <figure class="shot">
+      <img src="release/gallery/schedule.jpg" alt="The month at the size of a month" loading="lazy" decoding="async">
+      <figcaption><b>The month at the size of a month.</b> Gym is on now, so it is lit; the day&rsquo;s two earlier events have stepped back; and the first week of November is there at the foot, quieter, rather than missing.</figcaption>
+    </figure>
+    <section class="sec">
       <h3>How they talk to each other</h3>
-      <ul>
-        <li><strong>Mail to Schedule.</strong> A meeting found in an email becomes an event in Google, iCloud or Pulse&rsquo;s own calendar, and is on the month the moment you add it.</li>
-        <li><strong>Mail to Projects.</strong> A line becomes a card on the board it belongs to, with its due date and the email it came from.</li>
-        <li><strong>Mail to your to-dos.</strong> A request becomes a task on the day it is due.</li>
-        <li><strong>Ask Pulse, across all of it.</strong> It reads the board, the calendar and the to-do list, and changes them when you ask &mdash; typed, or out loud in voice mode.</li>
+      <ul class="points">
+        <li><b>Mail to Schedule.</b> A meeting found in an email becomes an event in Google, iCloud or Pulse&rsquo;s own calendar, and is on the month the moment you add it.</li>
+        <li><b>Mail to Projects.</b> A line becomes a card on the board it belongs to, with its due date and the email it came from.</li>
+        <li><b>Mail to your to-dos.</b> A request becomes a task on the day it is due.</li>
+        <li><b>Ask Pulse, across all of it.</b> It reads the board, the calendar and the to-do list, and changes them when you ask &mdash; typed, or out loud in voice mode.</li>
       </ul>
-
+    </section>
+    <section class="sec">
       <h3>Fixed along the way</h3>
-      <ul>
-        <li><strong>An old event could take the calendar down.</strong> An iCalendar property with a parameter on it &mdash; a language tag on a title, say &mdash; comes out of the parser as an object rather than text, and the view cannot draw an object. Older events carry more of them, which is why it showed up on paging back through the months. The text is unwrapped where the feed is read now, and the calendar checks what it is given before drawing it.</li>
-        <li><strong>Website icons could go blank for a day.</strong> A site that refused to be read once &mdash; a 403 meant for robots, a slow reply &mdash; was remembered as having no icon until tomorrow. A poor answer is kept for five minutes now, and icons are ranked by the size they really are rather than the size a page claims.</li>
-        <li><strong>The composer&rsquo;s head</strong> no longer draws a bright bar under the horizon at dusk.</li>
+      <ul class="points">
+        <li><b>An old event could take the calendar down.</b> An iCalendar property with a parameter on it &mdash; a language tag on a title, say &mdash; comes out of the parser as an object rather than text, and the view cannot draw an object. Older events carry more of them, which is why it showed up on paging back through the months. The text is unwrapped where the feed is read now, and the calendar checks what it is given before drawing it.</li>
+        <li><b>Website icons could go blank for a day.</b> A site that refused to be read once &mdash; a 403 meant for robots, a slow reply &mdash; was remembered as having no icon until tomorrow. A poor answer is kept for five minutes now, and icons are ranked by the size they really are rather than the size a page claims.</li>
+        <li><b>The composer&rsquo;s head</b> no longer draws a bright bar under the horizon at dusk.</li>
       </ul>
-
+    </section>
+    <section class="sec">
       <h3>The film</h3>
       <p>Two minutes and twelve seconds, in the launch film&rsquo;s style and built the same way: every frame is code &mdash; Pulse&rsquo;s own views rebuilt in Remotion from its components rather than recorded off a screen &mdash; with two voices, a narrator and Pulse itself, generated with Google&rsquo;s Gemini and cut to the word on a ninety-beat grid. It opens on the same line and the same five words, connects Gmail and Outlook with their own logos, fills a board and asks it a question, and ends with the three sections folding into the mark.</p>
-
-      <div class="pills" style="margin-top:32px">
-        <a class="pill" href="update/pulseos-update.mp4" download>Download the film, 54 MB</a>
-        <a class="pill" href="update/pulseos-update.en.vtt" download>Captions (.vtt)</a>
-        <a class="pill" href="updates.html">Every change, in the updates</a>
-      </div>
+    </section>
+    <div class="row">
+      <a class="pill pill--lit" href="update/pulseos-update.mp4">Watch the update film &middot; 2:12</a>
+      <a class="pill" href="update/pulseos-update.en.vtt">Captions (.vtt)</a>
+      <a class="pill" href="updates.html">Every change, in the updates</a>
     </div>
-  </article>
-
-  <div class="wrap horizon" aria-hidden="true" style="margin-top:clamp(70px,11vh,110px)"></div>
-
-  <!-- ══ Mail ══════════════════════════════════════════════════════════ -->
-  <article id="mail">
-    <div class="wrap post" style="padding-top:clamp(56px,9vh,96px)">
-      <p class="eyebrow">9 October 2026</p>
-      <h2 style="margin-top:12px;font-size:clamp(36px,5vw,58px)">Your inbox, <em>in Pulse.</em></h2>
-      <div class="meta">
-        <span class="badge badge--new">New</span>
-        <span>Gmail &middot; Outlook &middot; Microsoft 365</span>
-        <span class="dotsep">&middot;</span>
-        <span>Lives in the Life Hub</span>
-      </div>
-      <div class="fineprint"><p><strong>Updated 17 October.</strong> Mail has a tab of its own now, rather than living in the Life Hub, and asking Pulse to write is a button in the composer instead of a box under every message. <a href="#whats-new">See what&rsquo;s new</a>.</p></div>
-      <p>Gmail and Outlook now connect to Pulse OS. Not as another mail client bolted on the side &mdash; as a part of your day the rest of Pulse can read. An email that mentions Thursday at half two becomes something in your calendar. One that asks for the Q4 deck by Friday becomes a task with the right date on it. You see both before either happens.</p>
-    </div>
-
-    <div class="wrap post">
-              <figure class="wires" aria-labelledby="wires-cap">
-          <div class="wires-scroll">
-            <svg viewBox="0 0 1000 410" role="img" aria-labelledby="wires-title wires-desc">
-              <title id="wires-title">How mail reaches Pulse, and what Pulse does with it</title>
-              <desc id="wires-desc">Gmail and Outlook connect to Pulse, which reads a message and proposes a calendar event, a to-do or a drafted reply.</desc>
-        
-              <!-- Wires in, then out. Drawn first so the boxes sit on top of them. -->
-              <path class="wire" d="M180 116 C 290 116, 330 172, 425 176" />
-              <path class="wire" d="M180 264 C 290 264, 330 224, 425 224" />
-              <path class="flow flow--gmail" d="M180 116 C 290 116, 330 172, 425 176" />
-              <path class="flow flow--outlook" d="M180 264 C 290 264, 330 224, 425 224" />
-        
-              <path class="wire" d="M575 180 C 655 180, 672 73, 750 73" />
-              <path class="wire" d="M575 200 L 750 200" />
-              <path class="wire" d="M575 220 C 655 220, 672 327, 750 327" />
-              <path class="flow flow--out" d="M575 180 C 655 180, 672 73, 750 73" />
-              <path class="flow flow--out2" d="M575 200 L 750 200" />
-              <path class="flow flow--out3" d="M575 220 C 655 220, 672 327, 750 327" />
-        
-              <!-- Gmail -->
-              <g>
-                <rect class="node-box" x="10" y="78" width="170" height="76" rx="16" />
-                <g transform="translate(30 101) scale(0.625)">
-                  <path fill="#4CAF50" d="M45 16.2l-5 2.75-5 4.75V40h7a3 3 0 0 0 3-3V16.2z" />
-                  <path fill="#1E88E5" d="M3 16.2l3.614 1.71L13 23.7V40H6a3 3 0 0 1-3-3V16.2z" />
-                  <path fill="#E53935" d="M35 11.2L24 19.45 13 11.2l-1 5.8 1 6.7 11 8.25 11-8.25 1-6.7z" />
-                  <path fill="#C62828" d="M3 12.298V16.2l10 7.5V11.2L9.876 8.859A3.75 3.75 0 0 0 7.298 8 4.298 4.298 0 0 0 3 12.298z" />
-                  <path fill="#FBC02D" d="M45 12.298V16.2l-10 7.5V11.2l3.124-2.341A3.75 3.75 0 0 1 40.702 8 4.298 4.298 0 0 1 45 12.298z" />
-                </g>
-                <text class="node-label" x="74" y="111">Gmail</text>
-                <text class="node-sub" x="74" y="130">Personal and Workspace</text>
-              </g>
-        
-              <!-- Outlook -->
-              <g>
-                <rect class="node-box" x="10" y="226" width="170" height="76" rx="16" />
-                <g transform="translate(30 249) scale(0.625)">
-                  <path fill="#0F6CBD" d="M22 12h22a2 2 0 0 1 2 2v22a2 2 0 0 1-2 2H22z" />
-                  <path fill="#fff" fill-opacity=".92" d="M24 17h20v2.6L34 26.4 24 19.6z" />
-                  <path fill="#0A4A84" fill-opacity=".55" d="M24 19.6l10 6.8 10-6.8V22l-10 6.8L24 22z" />
-                  <rect x="2" y="7" width="24" height="34" rx="3.2" fill="#0A3D73" />
-                  <ellipse cx="14" cy="24" rx="6.1" ry="7.6" fill="none" stroke="#fff" stroke-width="3.3" />
-                </g>
-                <text class="node-label" x="74" y="259">Outlook</text>
-                <text class="node-sub" x="74" y="278">outlook.com and 365</text>
-              </g>
-        
-              <!-- Pulse -->
-              <g>
-                <rect class="hub-glow" x="425" y="135" width="150" height="130" rx="22" fill="var(--accent)" opacity="0.25" style="transform-origin:500px 200px" />
-                <rect class="hub-box" x="425" y="135" width="150" height="130" rx="22" />
-                <path class="hub-beat" d="M450 186 H468 L478 166 L492 206 L505 160 L516 190 H550" />
-                <text class="node-label" x="500" y="236" text-anchor="middle" style="font-family:var(--serif);font-size:17px">Pulse</text>
-              </g>
-              <text class="note" x="500" y="300" text-anchor="middle">reads it · finds what matters</text>
-        
-              <!-- What comes out -->
-              <g>
-                <rect class="node-box" x="750" y="40" width="240" height="66" rx="14" />
-                <text class="node-label" x="772" y="69">An event, in your calendar</text>
-                <text class="node-sub" x="772" y="89">Google, iCloud, or Pulse’s own</text>
-              </g>
-              <g>
-                <rect class="node-box" x="750" y="167" width="240" height="66" rx="14" />
-                <text class="node-label" x="772" y="196">A task, on the right project</text>
-                <text class="node-sub" x="772" y="216">The same list as everything else</text>
-              </g>
-              <g>
-                <rect class="node-box" x="750" y="294" width="240" height="66" rx="14" />
-                <text class="node-label" x="772" y="323">A reply, drafted</text>
-                <text class="node-sub" x="772" y="343">For you to read, edit and send</text>
-              </g>
-            </svg>
-          </div>
-          <p class="wires-hint">Scroll the diagram sideways to see all of it.</p>
-          <figcaption class="wires-key" id="wires-cap">
-            <span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              Signed in with OAuth. Your password never reaches Pulse.
-            </span>
-            <span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-              Everything on the right is proposed, and waits for you.
-            </span>
-            <span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path d="m3 3 18 18"/></svg>
-              Message bodies are never written to disk.
-            </span>
-          </figcaption>
-        </figure>
-    
-    </div>
-
-    <div class="wrap post">
+  <nav class="panel-nav" aria-label="Other announcements">
+    <span></span>
+    <a class="next" href="#inbox"><small>Older</small>Your inbox, in Pulse</a>
+  </nav>
+</article>
+<article class="panel story" id="inbox" aria-labelledby="tab-inbox">
+  <header class="story-head">
+    <p class="meta"><span class="tag">New</span>9 October 2026 &middot; Gmail &middot; Outlook &middot; Microsoft 365</p>
+    <h2>Your inbox, <em>in Pulse.</em></h2>
+    <p class="stand">Gmail and Outlook now connect to Pulse OS. Not as another mail client bolted on the side &mdash; as a part of your day the rest of Pulse can read. An email that mentions Thursday at half two becomes something in your calendar. One that asks for the Q4 deck by Friday becomes a task with the right date on it. You see both before either happens.</p>
+  </header>
+    <aside class="note">
+      <p><strong>Updated 17 October.</strong> Mail has a tab of its own now, rather than living in the Life Hub, and asking Pulse to write is a button in the composer instead of a box under every message. <a href="#talking">See what&rsquo;s new</a>.</p>
+    </aside>
+    <figure class="shot">
+      <img src="release/gallery/mail-inbox.jpg" alt="Two accounts, one inbox" loading="lazy" decoding="async">
+      <figcaption><b>Two accounts, one inbox.</b> Gmail&rsquo;s categories are in the sidebar because this Gmail account has them. The Outlook account below it does not, so they are not offered for it.</figcaption>
+    </figure>
+    <section class="sec">
       <h3>Two services, one way of working</h3>
       <p>Gmail speaks in labels. Outlook speaks in folders. Gmail has an Important flag and four inbox categories; Outlook has neither. Most apps that support both show you the lowest common denominator, or worse, four empty tabs on the account that has never heard of them.</p>
-      <p>Pulse does it the other way round. There is one internal idea of a mailbox &mdash; inbox, starred, important, drafts, sent, archive, spam, bin &mdash; and each service declares what it can actually do. <strong>Gmail&rsquo;s categories appear for a Gmail account and are simply absent for an Outlook one.</strong> Gmail has no Archive label, so archiving is a search; Outlook has no Starred folder, so starred is a flag. You never see either of those details.</p>
+      <p>Pulse does it the other way round. There is one internal idea of a mailbox &mdash; inbox, starred, important, drafts, sent, archive, spam, bin &mdash; and each service declares what it can actually do. Gmail&rsquo;s categories appear for a Gmail account and are simply absent for an Outlook one. Gmail has no Archive label, so archiving is a search; Outlook has no Starred folder, so starred is a flag. You never see either of those details.</p>
       <p>Connect both and the inbox interleaves by date, each message carrying its own account. If one stops answering it says so, rather than quietly showing you a smaller number.</p>
-
-    </div>
-
-    <div class="wrap post">
-            <figure class="shots"><img src="release/gallery/mail-inbox.jpg" alt="The Mail workspace: mailboxes and both accounts on the left, the inbox in the middle, a message open on the right" loading="lazy">
-        <figcaption><strong>Two accounts, one inbox.</strong> Gmail&rsquo;s categories are in the sidebar because this Gmail account has them. The Outlook account below it does not, so they are not offered for it.</figcaption>
-      </figure>
-    
-    </div>
-
-    <div class="wrap post">
+    </section>
+    <section class="sec">
       <h3>It reads the email so you don&rsquo;t have to twice</h3>
       <p>Open a message and there is a button marked <strong>Dates &amp; tasks</strong>. One press and Pulse reads the whole thing once and hands back what is in it: the meetings, the things you have been asked to do, the dates to know about, who is involved, and whether it needs a reply at all. Each arrives as a row with the button that acts on it &mdash; the meeting has <em>Add to calendar</em> beside it, the task has <em>Add to to-do</em>.</p>
-
-    </div>
-
-    <div class="wrap post">
-            <figure class="shots"><img src="release/gallery/mail-findings.jpg" alt="The What&rsquo;s in this panel showing a meeting, two tasks, a deadline and the people involved, each with an action button" loading="lazy">
-        <figcaption><strong>Everything in one press.</strong> A meeting, two things to do, a date to be aware of and who is involved. Each date carries the words it was read from &mdash; <em>from &ldquo;end of day Friday&rdquo;</em> &mdash; so a misreading is visible without opening the email again.</figcaption>
-      </figure>
-    
-    </div>
-
-    <div class="wrap post">
-      <div class="pull">
-        <p>An earlier version answered the same question in a paragraph. It was accurate, and it was useless: you cannot add a paragraph to a calendar.</p>
-      </div>
-
-      <h3>The dates are worked out in code, not guessed</h3>
+      <p>An earlier version answered the same question in a paragraph. It was accurate, and it was useless: you cannot add a paragraph to a calendar.</p>
+    </section>
+    <figure class="shot">
+      <img src="assets/screens/mail-day.jpg" alt="Everything in one press" loading="lazy" decoding="async">
+      <figcaption><b>Everything in one press.</b> A meeting, two things to do, a date to be aware of and who is involved. Each date carries the words it was read from &mdash; <em>from &ldquo;end of day Friday&rdquo;</em> &mdash; so a misreading is visible without opening the email again.</figcaption>
+    </figure>
+    <p class="said">The dates are worked out in code, not guessed.</p>
+    <section class="sec">
       <p>This is where this sort of feature usually fails quietly. Ask a language model for the calendar date of &ldquo;Thursday&rsquo;s design review&rdquo; and it answers confidently, often wrongly, and differently if you ask again. In testing it put a Thursday meeting on the Wednesday once and eight days out the next time &mdash; both with high confidence.</p>
-      <p>So Pulse does not ask. The model only <strong>quotes</strong> the words the email itself used &mdash; &ldquo;Thursday&rdquo;, &ldquo;end of day Friday&rdquo;, &ldquo;3 November&rdquo; &mdash; which is reading, not arithmetic. The calendar is then worked out in ordinary tested code, against <strong>the day the email was sent</strong>, so a Tuesday email saying &ldquo;Thursday&rdquo; means that Thursday however long ago you got it.</p>
-      <p>Both are shown together: <em>Thursday 9 October &middot; from &ldquo;end of day Friday&rdquo;</em>. That is not decoration. It is the only way to tell a misread date from a correct one without opening the email again.</p>
-
+      <p>So Pulse does not ask. The model only quotes the words the email itself used &mdash; &ldquo;Thursday&rdquo;, &ldquo;end of day Friday&rdquo;, &ldquo;3 November&rdquo; &mdash; which is reading, not arithmetic. The calendar is then worked out in ordinary tested code, <strong>against the day the email was sent</strong>, so a Tuesday email saying &ldquo;Thursday&rdquo; means that Thursday however long ago you got it.</p>
+      <p>Both are shown together: <em class="quote">Thursday 9 October &middot; from &ldquo;end of day Friday&rdquo;</em>. That is not decoration. It is the only way to tell a misread date from a correct one without opening the email again.</p>
+    </section>
+    <section class="sec">
       <h3>A line in an email, into your day</h3>
       <p>Highlight any text in a message and Pulse offers to explain it, summarise it, turn it into a task, put it on today&rsquo;s list, file it against one of your projects, add it to your calendar, or draft a reply about it.</p>
-      <p>Everything that would change something opens a review card first, with every field editable and the model&rsquo;s own uncertainty said out loud &mdash; &ldquo;I think there&rsquo;s an event here, but the time is only implied.&rdquo; Nothing is written until you press the button on that card. And it uses the lists you already have: a task made from an email is an ordinary Pulse task, on the same projects as everything else.</p>
-
+      <p>Everything that would change something opens a review card first, with every field editable and the model&rsquo;s own uncertainty said out loud &mdash; <em class="quote">I think there&rsquo;s an event here, but the time is only implied.</em> Nothing is written until you press the button on that card. And it uses the lists you already have: a task made from an email is an ordinary Pulse task, on the same projects as everything else.</p>
+    </section>
+    <div class="shots">
+    <figure class="shot">
+      <img src="release/gallery/mail-proposal.jpg" alt="Nothing is written until you press the button" loading="lazy" decoding="async">
+      <figcaption><b>Nothing is written until you press the button.</b> Every field editable, the calendar yours to pick, and the model&rsquo;s own uncertainty shown where it has any.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/mail-compose.jpg" alt="Say what it should say" loading="lazy" decoding="async">
+      <figcaption><b>Say what it should say.</b> The composer takes the reading column, lit down its edge. Pulse fills the box; Send is still a button a person presses.</figcaption>
+    </figure>
     </div>
-
-    <div class="wrap post">
-            <figure class="shots"><img src="release/gallery/mail-proposal.jpg" alt="The review card for a calendar event found in an email, with every field editable before it is saved" loading="lazy">
-        <figcaption><strong>Nothing is written until you press the button.</strong> Every field editable, the calendar yours to pick, and the model&rsquo;s own uncertainty shown where it has any.</figcaption>
-      </figure>
-    
-    </div>
-
-    <div class="wrap post">
+    <section class="sec">
       <h3>Writing, with the words taken care of</h3>
-      <p>The composer sits in the same column you were reading in &mdash; a reply belongs beside the thing it is replying to &mdash; with an accent rule down the edge so you always know which of the two you are in. At the bottom there is a box: <strong>tell Pulse what the email should say</strong>. &ldquo;Say yes to Thursday, ask whether the room has a projector.&rdquo; It writes it; you edit it. Where only you can supply something, it leaves a gap in square brackets rather than deciding for you.</p>
-
-    </div>
-
-    <div class="wrap post">
-            <figure class="shots"><img src="release/gallery/mail-compose.jpg" alt="The composer in the reading column, with a box describing what the reply should say and a Write it button" loading="lazy">
-        <figcaption><strong>Say what it should say.</strong> The composer takes the reading column, lit down its edge so reading and writing are never mistaken for one another. Pulse fills the box; Send is still a button a person presses.</figcaption>
-      </figure>
-    
-    </div>
-
-    <div class="wrap post">
+      <p>The composer sits in the same column you were reading in &mdash; a reply belongs beside the thing it is replying to &mdash; with an accent rule down the edge so you always know which of the two you are in. Tell Pulse what the email should say: <em class="quote">say yes to Thursday, ask whether the room has a projector.</em> It writes it; you edit it. Where only you can supply something, it leaves a gap in square brackets rather than deciding for you.</p>
+    </section>
+    <section class="sec">
       <h3>What it will never do</h3>
-      <ul>
-        <li><strong>It never sends.</strong> Send is a button, pressed by a person. The assistant can fill the box and has no way to press it.</li>
-        <li><strong>It never deletes, archives or files anything on its own.</strong></li>
-        <li><strong>It cannot permanently delete mail at all</strong> &mdash; not by policy, but because the permission is never requested.</li>
-        <li><strong>Your password never reaches Pulse.</strong> You sign in with Google or Microsoft; only the resulting token is kept, on your own machine, where no page in the browser can read it.</li>
-        <li><strong>Message bodies are never written to disk</strong>, and are left out of exported backups on purpose.</li>
-        <li><strong>The assistant is never handed your mailbox</strong> &mdash; one message, one thread or one search, each with a hard ceiling.</li>
-        <li><strong>Nothing is read by a model unless you ask.</strong> The unread count and the &ldquo;8 look important&rdquo; line are worked out by ordinary rules on your machine.</li>
+      <ul class="points">
+        <li><b>It never sends.</b> Send is a button, pressed by a person. The assistant can fill the box and has no way to press it.</li>
+        <li><b>It never deletes, archives or files</b> anything on its own.</li>
+        <li><b>It cannot permanently delete mail at all</b> &mdash; not by policy, but because the permission is never requested.</li>
+        <li><b>Your password never reaches Pulse.</b> You sign in with Google or Microsoft; only the resulting token is kept, on your own machine, where no page in the browser can read it.</li>
+        <li><b>Message bodies are never written to disk,</b> and are left out of exported backups on purpose.</li>
+        <li><b>The assistant is never handed your mailbox</b> &mdash; one message, one thread or one search, each with a hard ceiling.</li>
+        <li><b>Nothing is read by a model unless you ask.</b> The unread count and the &ldquo;8 look important&rdquo; line are worked out by ordinary rules on your machine.</li>
       </ul>
-
-      <div class="fineprint">
-        <p><strong>Scopes.</strong> Gmail: <code>gmail.modify</code>, <code>gmail.send</code>, <code>gmail.compose</code>. Microsoft Graph: <code>Mail.ReadWrite</code>, <code>Mail.Send</code>, <code>offline_access</code>, <code>User.Read</code>. The full <code>https://mail.google.com/</code> scope is deliberately not requested.</p>
-        <p><strong>Yahoo is not supported</strong>, and that is Yahoo&rsquo;s limitation rather than an omission: they retired their Mail API, so access is IMAP with OAuth2 and those scopes are not self-served. The adapter is shaped so a Yahoo provider would be one more file if that changes.</p>
-      </div>
-    </div>
-  </article>
-
-  <div class="wrap horizon" aria-hidden="true" style="margin-top:clamp(70px,11vh,110px)"></div>
-
-  <!-- ══ The launch film ═══════════════════════════════════════════════ -->
-  <article id="launch-film">
-    <div class="wrap post" style="padding-top:clamp(56px,9vh,96px)">
-      <p class="eyebrow">7 October 2026</p>
-      <h2 style="margin-top:12px;font-size:clamp(36px,5vw,58px)">Pulse OS <em>has a film.</em></h2>
-      <div class="meta"><span class="badge">Film</span><span>2 min 29 s, narrated</span><span class="dotsep">&middot;</span><span>Plus a 30-second ad</span></div>
-      <p>Two and a half minutes covering every part of the app &mdash; and every frame of it is code: Pulse&rsquo;s own views, rebuilt from its components and cut to a score composed for them. With it came a thirty-second ad, made for phones.</p>
-    </div>
-
-    <div class="wrap post">
-      <figure class="frame frame--wide" style="margin:0">
-        <img src="launch/launch-poster.jpg" alt="A frame from the Pulse OS launch film" loading="lazy">
-      </figure>
-      <p style="margin-top:18px">This film and its thirty-second ad have been retired: the app has moved on a long way since October, and <a href="index.html">the tour</a> now covers every part of it as it stands. They are kept in the repository&rsquo;s history rather than on the site.</p>
-    
-    </div>
-
-    <div class="wrap post">
+    </section>
+    <aside class="note">
+      <p><strong>Scopes.</strong> Gmail: <code>gmail.modify</code>, <code>gmail.send</code>, <code>gmail.compose</code>. Microsoft Graph: <code>Mail.ReadWrite</code>, <code>Mail.Send</code>, <code>offline_access</code>, <code>User.Read</code>. The full <code>https://mail.google.com/</code> scope is deliberately not requested.</p>
+      <p><strong>Yahoo is not supported</strong>, and that is Yahoo&rsquo;s limitation rather than an omission: they retired their Mail API, so access is IMAP with OAuth2 and those scopes are not self-served. The adapter is shaped so a Yahoo provider would be one more file if that changes.</p>
+    </aside>
+  <nav class="panel-nav" aria-label="Other announcements">
+    <a class="prev" href="#talking"><small>Newer</small>Mail, Projects and Schedule, talking to each other</a>
+    <a class="next" href="#film"><small>Older</small>Pulse OS has a film</a>
+  </nav>
+</article>
+<article class="panel story" id="film" aria-labelledby="tab-film">
+  <header class="story-head">
+    <p class="meta"><span class="tag tag--film">Film</span>7 October 2026 &middot; 2 min 29 s, narrated &middot; plus a 30-second ad</p>
+    <h2>Pulse OS <em>has a film.</em></h2>
+    <p class="stand">Two and a half minutes covering every part of the app &mdash; and every frame of it is code: Pulse&rsquo;s own views, rebuilt from its components and cut to a score composed for them. With it came a thirty-second ad, made for phones.</p>
+  </header>
+    <figure class="shot">
+      <img src="launch/launch-poster.jpg" alt="The launch film, October 2026" loading="lazy" decoding="async">
+      <figcaption><b>The launch film, October 2026.</b> Retired: the app has moved a long way since, and the tour covers every part of it as it stands. Both films are kept in the repository&rsquo;s history rather than on the site.</figcaption>
+    </figure>
+    <section class="sec">
       <h3>Every frame is code</h3>
       <p>Both films are built in Remotion from Pulse&rsquo;s own views, rebuilt from its components rather than recorded off a screen &mdash; so every frame is sharp at any size, and every number on screen is the one the story needs rather than whatever the API happened to return that afternoon.</p>
-
+    </section>
+    <section class="sec">
       <h3>Cut to the word</h3>
       <p>Two voices &mdash; a narrator, and Pulse itself &mdash; generated with Google&rsquo;s Gemini, each line read three times and the best take chosen blind. whisper.cpp timed every word, and the picture moves on the words, on a ninety-beat-a-minute grid with a score composed in code.</p>
-
+    </section>
+    <section class="sec">
       <h3>Cut to the bar</h3>
       <p>The ad has no voice at all. It runs at 124 beats a minute, edited on the bars of &ldquo;Rising Forest&rdquo; by Diego Nava, with forty-five sound effects set on the beats.</p>
-
-      <div class="pills" style="margin-top:32px">
-        <a class="pill pill--lit" href="index.html">Watch the tour instead</a>
-        <a class="pill" href="https://github.com/eeliya-hub/pulseOS/blob/main/docs/launch/PRESS.md">Press kit</a>
-      </div>
+    </section>
+    <div class="row">
+      <a class="pill pill--lit" href="index.html">Watch the tour instead &middot; 4:31</a>
+      <a class="pill" href="launch/PRESS.md">Press kit</a>
     </div>
-  </article>
-
-  <div class="wrap horizon" aria-hidden="true" style="margin-top:clamp(70px,11vh,110px)"></div>
-
-  <!-- ══ Afterglow ═════════════════════════════════════════════════════ -->
-  <article id="afterglow">
-    <div class="wrap post" style="padding-top:clamp(56px,9vh,96px)">
-      <p class="eyebrow">21 September 2026</p>
-      <h2 style="margin-top:12px;font-size:clamp(36px,5vw,58px)">v2 &mdash; <em>Afterglow.</em></h2>
-      <div class="meta"><span class="badge">Release</span><span>The frontend, rebuilt</span></div>
-      <p>The whole frontend rebuilt around one spatial system, with a background that follows the time of day. Travel went live, and the assistant learned to speak.</p>
-    </div>
-
-    <div class="wrap post">
+  <nav class="panel-nav" aria-label="Other announcements">
+    <a class="prev" href="#inbox"><small>Newer</small>Your inbox, in Pulse</a>
+    <a class="next" href="#afterglow"><small>Older</small>v2 — Afterglow</a>
+  </nav>
+</article>
+<article class="panel story" id="afterglow" aria-labelledby="tab-afterglow">
+  <header class="story-head">
+    <p class="meta"><span class="tag">Release</span>21 September 2026 &middot; The frontend, rebuilt</p>
+    <h2>v2 &mdash; <em>Afterglow.</em></h2>
+    <p class="stand">The whole frontend rebuilt around one spatial system, with a background that follows the time of day. Travel went live, and the assistant learned to speak.</p>
+  </header>
+    <figure class="shot">
+      <img src="release/gallery/home.jpg" alt="The sky is the hour" loading="lazy" decoding="async">
+      <figcaption><b>The sky is the hour.</b> Dawn, day, dusk and night each light the whole screen differently and crossfade as the day turns.</figcaption>
+    </figure>
+    <section class="sec">
       <h3>A sky, a horizon, and a ground</h3>
       <p>Every view is composed of the same three parts: a <strong>sky</strong> holding what the view is about, set large and straight on the light with no box around it; a <strong>horizon</strong> at a fixed height, so the line falls in the same place as you move between tabs; and a full-bleed <strong>ground</strong> divided into columns by space and a faint rule rather than chopped into floating cards. Only real objects &mdash; a record sleeve, a video, a map, an app icon &mdash; get a tile of their own.</p>
-
+    </section>
+    <section class="sec">
       <h3>The light follows the hour</h3>
       <p>The background is not a picture of a sky, it is the hour itself: dawn, day, dusk and night each light the whole screen differently, crossfading as the day turns. Music lends the screen the colours of whatever record is playing.</p>
-
+    </section>
+    <div class="shots">
+    <figure class="shot">
+      <img src="assets/screens/home-dawn.jpg" alt="Dawn" loading="lazy" decoding="async">
+      <figcaption><b>Dawn.</b></figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="assets/screens/home-day.jpg" alt="Day" loading="lazy" decoding="async">
+      <figcaption><b>Day.</b></figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="assets/screens/home-night.jpg" alt="Night" loading="lazy" decoding="async">
+      <figcaption><b>Night.</b></figcaption>
+    </figure>
+    </div>
+    <section class="sec">
       <h3>A type system, not a font choice</h3>
       <p>Newsreader for display and figures, Schibsted Grotesk for everything else, on one scale used everywhere instead of sizes picked per view. Colour carries the hierarchy: accent-tinted eyebrows, bright titles, dim meta.</p>
-
+    </section>
+    <section class="sec">
       <h3>Travel is live, and Pulse can hear you</h3>
       <p>Flights tracked from community ADS&#8209;B receivers, real exchange rates with a month of history, and maps that need no key. And a voice mode on the Gemini Live API that shares every one of the typed assistant&rsquo;s tools &mdash; so anything you can ask for, you can say.</p>
-
-      <div class="pills" style="margin-top:32px">
-        <a class="pill" href="https://github.com/eeliya-hub/pulseOS/blob/main/ANNOUNCEMENT.md#pulse-os-v2--afterglow">The full release notes, with before and after</a>
-      </div>
+    </section>
+    <div class="row">
+      <a class="pill" href="features.html">Everything it does now</a>
+      <a class="pill" href="updates.html">The full release notes</a>
     </div>
-  </article>
+  <nav class="panel-nav" aria-label="Other announcements">
+    <a class="prev" href="#film"><small>Newer</small>Pulse OS has a film</a>
+    <a class="next" href="updates.html"><small>Everything else</small>The updates</a>
+  </nav>
+</article>
+<details class="credits">
+  <summary>Credits &mdash; what is borrowed</summary>
+  <div>
+    <h3>Photographs</h3>
+    <p>Thirteen photographs, from Wikimedia Commons, under the licences shown: <em>Emirates Stadium</em>, Ed g2s, CC BY-SA 3.0; <em>Everbank Stadium 2024</em>, Excel23, CC BY 4.0; <em>Japan Airlines A350-1041</em>, S5A-0043, CC BY 4.0; <em>Tokyo Tower at dusk</em>, Foooomio, CC BY 3.0; <em>London Thames sunset panorama</em>, Diliff, CC BY 3.0; <em>Shibuya crossing</em>, Syced, CC0; <em>Liverpool Street at rush hour</em>, Roger Carvell, CC BY 3.0; <em>Bicycle commuters</em>, Roger Carvell, CC BY 3.0; <em>Eiffel Tower at sunset</em>, Pedro K&uuml;mmel, CC0; <em>Travers Solar Farm</em>, Kkiefuik, CC BY 4.0; <em>Sydney Harbour Bridge at night</em>, sander88, CC BY 2.0; <em>New York skyline at night</em>, Azeusss, CC BY 4.0; <em>Trams in Lisbon</em>, Heather Cowper, CC BY 2.0.</p>
+    <h3>Sound and voice</h3>
+    <p>The launch film&rsquo;s and the update film&rsquo;s scores were composed for them in code. The ad&rsquo;s music is &ldquo;Rising Forest&rdquo; by Diego Nava; its sound effects, and a handful in the update film, are from Mixkit, under the Mixkit free licences. The narration in every film is AI-generated with Google Gemini &mdash; Charon and Puck on the launch and update films, Sulafat and Puck on the tour &mdash; and carries Google&rsquo;s SynthID watermark.</p>
+    <h3>Trademarks</h3>
+    <p>The Gmail, Outlook, Google Calendar, iCloud, Spotify and Gemini marks, and the club and league crests, belong to their owners and appear here only to show what Pulse connects to. No endorsement is implied, and Pulse OS is not affiliated with any of them.</p>
+    <p>Pulse OS, made by Eeliya. 2026. <a href="launch/CREDITS.md">Full credits</a>.</p>
+  </div>
+</details>
+</div>
 
-  <section class="wrap cta">
-    <svg class="beat" viewBox="0 0 560 90" fill="none" aria-hidden="true">
-      <path class="rule" d="M0 60 H200 M360 60 H560" stroke-width="1.2" stroke-linecap="round"/>
-      <path class="draw" pathLength="1" d="M200 60 L226 36 L246 84 L276 6 L304 72 L322 60 L360 60" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <h2>Pulse OS</h2>
-    <p class="tag">Your day, in a <em>heartbeat.</em></p>
-    <div class="pills">
-      <a class="pill pill--lit pill--tall" href="index.html">See what it does</a>
-      <a class="pill pill--tall" href="updates.html">Every update</a>
-    </div>
-  </section>
 </main>
 
-<footer class="wrap">
-  <div class="credits">
-    <div>
-      <h3>Photographs</h3>
-      <details class="credit-fold"><summary>Thirteen photographs, from Wikimedia Commons, under the licences shown</summary>
-      <p>
-        <a href="https://commons.wikimedia.org/wiki/File:Emirates_Stadium_-_East_stand_Club_Level.jpg">Emirates Stadium</a>, Ed g2s, CC BY-SA 3.0;
-        <a href="https://commons.wikimedia.org/wiki/File:Everbank_Stadium_2024.jpg">Everbank Stadium 2024</a>, Excel23, CC BY 4.0;
-        <a href="https://commons.wikimedia.org/wiki/File:(GBR-London)_Japan_Airlines_Airbus_A350-1041_JA08WJ_@_EGLL_2025-06-17.jpg">Japan Airlines A350-1041</a>, S5A-0043, CC BY 4.0;
-        <a href="https://commons.wikimedia.org/wiki/File:Tokyo_Tower_At_Dusk_(223572511).jpeg">Tokyo Tower at dusk</a>, Foooomio, CC BY 3.0;
-        <a href="https://commons.wikimedia.org/wiki/File:London_Thames_Sunset_panorama_-_Feb_2008.jpg">London Thames sunset panorama</a>, Diliff, CC BY 3.0;
-        <a href="https://commons.wikimedia.org/wiki/File:Shibuya_crossing_seen_from_Shibuya_Stream,_2024.jpg">Shibuya crossing</a>, Syced, CC0;
-        <a href="https://commons.wikimedia.org/wiki/File:%27Owing_to_a_signal_failure_at_...%27_Rush_hour_delays_at_London%27s_Liverpool_Street_terminus_station._-_panoramio.jpg">Liverpool Street at rush hour</a>, Roger Carvell, CC BY 3.0;
-        <a href="https://commons.wikimedia.org/wiki/File:First_Capital_Connect%27s_bicycle_commuters,_2012_-_panoramio.jpg">Bicycle commuters</a>, Roger Carvell, CC BY 3.0;
-        <a href="https://commons.wikimedia.org/wiki/File:Eiffel_Tower_sunset_skyline_(Unsplash).jpg">Eiffel Tower at sunset</a>, Pedro Kümmel, CC0;
-        <a href="https://commons.wikimedia.org/wiki/File:Photovoltaic_Panels_at_the_Travers_Solar_Farm.jpg">Travers Solar Farm</a>, Kkiefuik, CC BY 4.0;
-        <a href="https://commons.wikimedia.org/wiki/File:Sydney_Harbour_Bridge_at_night.jpg">Sydney Harbour Bridge at night</a>, sander88, CC BY 2.0;
-        <a href="https://commons.wikimedia.org/wiki/File:New_York_skyline_at_night.jpg">New York skyline at night</a>, Azeusss, CC BY 4.0;
-        <a href="https://commons.wikimedia.org/wiki/File:Trams_in_Lisbon_(front%26back).jpg">Trams in Lisbon</a>, Heather Cowper, CC BY 2.0.
-      </p>
-      </details>
-    </div>
-    <div>
-      <h3>Sound and voice</h3>
-      <p>The launch film’s and the update film’s scores were composed for them in code. The ad’s music is “Rising Forest” by Diego Nava; its sound effects, and a handful in the update film, are from Mixkit, under the Mixkit free licences.</p>
-      <p>The narration is AI-generated with Google Gemini (voices Charon and Puck) and carries Google’s SynthID watermark.</p>
-      <h3 style="margin-top:18px">Trademarks</h3>
-      <p>The Gmail, Outlook, Google Calendar, iCloud, Spotify and Gemini marks, and the club and league crests, belong to their owners and appear here only to show what Pulse connects to. No endorsement is implied, and Pulse OS is not affiliated with any of them.</p>
-    </div>
-  </div>
-  <div class="sign">
-    <span>Pulse OS, made by Eeliya. 2026.</span>
-    <a href="https://github.com/eeliya-hub/pulseOS/blob/main/docs/launch/CREDITS.md" style="color:inherit">Full credits</a>
+<footer>
+  <div class="band">
+    <p>Pulse OS — your day, in a heartbeat. Lit for the hour you are in.</p>
+    <nav>
+      <a href="index.html">The room</a>
+      <a href="features.html">Features</a>
+      <a href="updates.html">Updates</a>
+      <a href="announcements.html">Announcements</a>
+      <a href="https://github.com/eeliya-hub/pulseOS">GitHub</a>
+      <a href="PulseOS-Doc.html">Documentation</a>
+    </nav>
   </div>
 </footer>
 
-<script src="assets/site.js?v=202610180930" defer></script>
+<script src="assets/world.js"></script>
 </body>
 </html>

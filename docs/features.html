@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pulse OS — Features</title>
+<meta name="description" content="Every part of Pulse OS, in full: what each view does, what the assistant can do with it, and where the limits are.">
+<meta name="theme-color" content="#04060d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%230a0d1c'/%3E%3Cpath d='M5 25h9l2.6-5.5 4.2 11 3.8-14.5 3.2 9H39' fill='none' stroke='%23a9bbff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/world.css">
+</head>
+<body>
+
+<div class="world" aria-hidden="true">
+  <i class="sky"></i>
+  <i class="sun"></i>
+  <i class="ground"></i>
+</div>
+
+<header class="top">
+  <a class="brand" href="index.html">
+    <svg viewBox="0 0 44 18" fill="none" aria-hidden="true"><path d="M1.5 10.5h10l2.6-5.5 4.2 11 3.8-14.5 3.2 9h17.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Pulse OS</span>
+  </a>
+  <nav class="tabs" aria-label="Pulse OS">
+    <a href="features.html" aria-current="page">Features</a>
+    <a href="index.html">Films</a>
+    <a href="updates.html">Updates</a>
+    <a href="announcements.html">Announcements</a>
+  </nav>
+  <p class="clock" aria-hidden="true"><span data-clock>--:--</span><small data-half></small></p>
+  <a class="ghost" href="https://github.com/eeliya-hub/pulseOS">
+    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    <span>GitHub</span>
+  </a>
+</header>
+
+<main>
+<div class="band">
+<section class="head rise">
+  <p class="at">What it does</p>
+  <h1>Nine apps&rsquo; worth of your day, <em>in one place.</em></h1>
+  <p class="lede">Pulse OS puts the things you check all day on a single screen and gives them one way of working. Ask it for something and it does it &mdash; moves the meeting, writes the reply, puts the card on the board &mdash; rather than telling you where to go and do it yourself. Pick a part of it below.</p>
+</section>
+</div>
+
+<nav class="switch" data-switch aria-label="Parts of Pulse OS">
+  <div class="band">
+    <a href="#home" id="tab-home">Home</a>
+    <a href="#mail" id="tab-mail">Mail</a>
+    <a href="#projects" id="tab-projects">Projects</a>
+    <a href="#schedule" id="tab-schedule">Schedule</a>
+    <a href="#apps" id="tab-apps">Apps</a>
+    <a href="#ask" id="tab-ask">Ask Pulse</a>
+    <a href="#news" id="tab-news">News &amp; markets</a>
+    <a href="#travel" id="tab-travel">Travel</a>
+    <a href="#music" id="tab-music">Music</a>
+    <a href="#under" id="tab-under">Underneath</a>
+  </div>
+</nav>
+
+<div class="band">
+<section class="panel view" id="home" aria-labelledby="tab-home">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">The first screen</p>
+      <h2>The whole day, <em>before coffee.</em></h2>
+      <p class="lede">Home is not a launcher with widgets bolted to it. It is the day itself, laid out once: what is on, what the weather is doing about it, and everything you open most — under a sky that is the hour you are actually in.</p>
+    </div>
+    <figure class="shot">
+      <img src="release/gallery/home.jpg" alt="The sky is the hour" decoding="async">
+      <figcaption><b>The sky is the hour.</b> Dawn, day, dusk and night each light the whole screen differently and crossfade as the day turns — so the view tells you roughly what time it is before you have read a word of it.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>The highlighted event</h3><p>What is on now, or next if nothing is — with the calendar it came from, the room or the link, and the minutes until it starts.</p></li>
+      <li class="tile"><span class="n">02</span><h3>Upcoming</h3><p>The next five things across every calendar you have connected, each in its own calendar’s colour, with today’s separated from the rest of the week.</p></li>
+      <li class="tile"><span class="n">03</span><h3>The forecast</h3><p>Today in large, then five days as bars you can read at a glance — the high and the low at either end, and the temperature now sitting where it falls between them. Feels-like, humidity, wind and UV underneath.</p></li>
+      <li class="tile"><span class="n">04</span><h3>Launch</h3><p>The applications and sites you open most, one tap away, in the order and the folders you put them in.</p></li>
+      <li class="tile"><span class="n">05</span><h3>Ask Pulse, right there</h3><p>The box under the greeting takes a typed sentence or a held key, and reaches everything below it.</p></li>
+      <li class="tile"><span class="n">06</span><h3>Big screens</h3><p>On a 2560 × 1440 display it scales up to fill the screen rather than sitting small in the middle of it, and nothing at or below 1920 × 1080 moves a pixel.</p></li>
+    </ol>
+  <nav class="panel-nav" aria-label="Other parts">
+    <span></span>
+    <a class="next" href="#mail"><small>Next</small>Mail</a>
+  </nav>
+</section>
+<section class="panel view" id="mail" aria-labelledby="tab-mail">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">Gmail · Outlook · Microsoft 365</p>
+      <h2>It reads your mail <em>first.</em></h2>
+      <p class="lede">Connect one mailbox or several, from either service. Not another mail client bolted on the side — a part of your day the rest of Pulse can read. An email that mentions Thursday at half two becomes something in your calendar. One that asks for the Q4 deck by Friday becomes a task with the right date on it. You see both before either happens.</p>
+    </div>
+    <figure class="shot">
+      <img src="assets/screens/mail-day.jpg" alt="Everything in one press" loading="lazy" decoding="async">
+      <figcaption><b>Everything in one press.</b> A meeting, two things to do, a date to be aware of and who is involved — each with the button that acts on it, and each date carrying the words it was read from.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>Two services, one way of working</h3><p>Gmail speaks in labels, Outlook in folders. Pulse keeps one idea of a mailbox — inbox, starred, important, drafts, sent, archive, spam, bin — and each service declares what it can actually do. Gmail’s categories appear for a Gmail account and are simply absent for an Outlook one.</p></li>
+      <li class="tile"><span class="n">02</span><h3>One inbox, two accounts</h3><p>Connect both and messages interleave by date, each carrying its own account. If one service stops answering it says so, rather than quietly showing you a smaller number.</p></li>
+      <li class="tile"><span class="n">03</span><h3>Dates &amp; tasks</h3><p>One press and Pulse reads the whole message once and hands back what is in it: the meetings, the things you have been asked to do, the dates to know about, who is involved, and whether it needs a reply at all. Each row arrives with the button that acts on it.</p></li>
+      <li class="tile"><span class="n">04</span><h3>Highlight anything</h3><p>Explain it, summarise it, or turn just that into a task, today’s to-do, an event, a card on a project, or a drafted reply.</p></li>
+      <li class="tile"><span class="n">05</span><h3>A review card, every time</h3><p>Anything that would change something opens for you to edit first, with the model’s own uncertainty said out loud. Nothing is written until you press the button on that card.</p></li>
+      <li class="tile"><span class="n">06</span><h3>Writing</h3><p>Ask Pulse in the composer’s footer, or ⌘J, opens a panel over the draft. Say what the email should say, or take what is there and make it shorter, friendlier, more professional, or just correct. Where only you can supply something it leaves a gap in square brackets rather than deciding for you.</p></li>
+    </ol>
+  <aside class="note">
+    <h3>The dates are worked out in code, not guessed.</h3>
+    <p>This is where this sort of feature usually fails quietly. Ask a language model for the calendar date of &ldquo;Thursday&rsquo;s design review&rdquo; and it answers confidently, often wrongly, and differently if you ask again. In testing it put a Thursday meeting on the Wednesday once and eight days out the next time &mdash; both with high confidence.</p>
+<p>So Pulse does not ask. The model only quotes the words the email itself used &mdash; &ldquo;Thursday&rdquo;, &ldquo;end of day Friday&rdquo;, &ldquo;3 November&rdquo; &mdash; which is reading, not arithmetic. The calendar date is then worked out in ordinary tested code, <strong>against the day the message was sent</strong>, so a Tuesday email saying &ldquo;Thursday&rdquo; means that Thursday however long ago you got it. Both are shown together: <em class="quote">Thursday 9 October &middot; from &ldquo;end of day Friday&rdquo;</em>. That is the only way to tell a misread date from a correct one without opening the email again.</p>
+  </aside>
+  <h3 class="group">More of it</h3>
+  <div class="shots">
+    <figure class="shot">
+      <img src="release/gallery/mail-inbox.jpg" alt="Two accounts, one inbox" loading="lazy" decoding="async">
+      <figcaption>Two accounts, one inbox. Gmail’s categories are in the sidebar because this Gmail account has them; the Outlook account below it does not, so they are not offered for it.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/mail-highlight.jpg" alt="Highlight a line and the menu has everything it could become in it" loading="lazy" decoding="async">
+      <figcaption>Highlight a line and the menu has everything it could become in it.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/mail-askpulse.jpg" alt="It writes into the draft, and it never sends" loading="lazy" decoding="async">
+      <figcaption>It writes into the draft, and it never sends. ⌘J to open, Escape to close.</figcaption>
+    </figure>
+  </div>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#home"><small>Before</small>Home</a>
+    <a class="next" href="#projects"><small>Next</small>Projects</a>
+  </nav>
+</section>
+<section class="panel view" id="projects" aria-labelledby="tab-projects">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">Boards · timeline · table</p>
+      <h2>Boards that <em>move.</em></h2>
+      <p class="lede">One set of cards, drawn three ways, because they answer three different questions. The board is what is in flight. The timeline is when it lands. The table is the whole lot at once.</p>
+    </div>
+    <figure class="shot">
+      <img src="release/gallery/projects-board.jpg" alt="The board is what is in flight" loading="lazy" decoding="async">
+      <figcaption><b>The board is what is in flight.</b> Labels say what kind of work a card is, a due date goes amber on the day and red after it, and the ring says how much of the project is done before you have counted.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>Lists you own</h3><p>Name them, reorder them, delete them — and deleting one moves its cards rather than taking them with it.</p></li>
+      <li class="tile"><span class="n">02</span><h3>Drag between lists</h3><p>The last list ticks a card off when it lands there, and dragging it back out un-ticks it.</p></li>
+      <li class="tile"><span class="n">03</span><h3>A card holds the detail</h3><p>Labels for the kind of work, a start and a due date, a checklist with its own progress, notes, and a thread of notes to self.</p></li>
+      <li class="tile"><span class="n">04</span><h3>The timeline</h3><p>Three months of shipped work as bars, today marked, and the cards with no date counted at the foot rather than quietly left out.</p></li>
+      <li class="tile"><span class="n">05</span><h3>The table</h3><p>Every card at once, sortable by any column, with each card’s list and dates editable where they stand.</p></li>
+      <li class="tile"><span class="n">06</span><h3>It starts full</h3><p>A new install opens on the Pulse OS board — three months of what shipped, dated as it shipped, what is being built, what is next, and a column of ideas. Projects you kept in the old Life Hub come across as boards of their own.</p></li>
+    </ol>
+  <h3 class="group">More of it</h3>
+  <div class="shots">
+    <figure class="shot">
+      <img src="release/gallery/projects-card.jpg" alt="The detail lives on the card" loading="lazy" decoding="async">
+      <figcaption>The detail lives on the card.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/projects-timeline.jpg" alt="The same cards, against time" loading="lazy" decoding="async">
+      <figcaption>The same cards, against time.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/projects-table.jpg" alt="Every card at once, sorted by any column" loading="lazy" decoding="async">
+      <figcaption>Every card at once, sorted by any column.</figcaption>
+    </figure>
+  </div>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#mail"><small>Before</small>Mail</a>
+    <a class="next" href="#schedule"><small>Next</small>Schedule</a>
+  </nav>
+</section>
+<section class="panel view" id="schedule" aria-labelledby="tab-schedule">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">Google · iCloud · Pulse’s own</p>
+      <h2>Both calendars, <em>at last.</em></h2>
+      <p class="lede">The calendar is the screen, not a strip at the side of one. A cell per day fills the height it is given, with events written into the days rather than counted under them.</p>
+    </div>
+    <figure class="shot">
+      <img src="release/gallery/schedule.jpg" alt="The month at the size of a month" loading="lazy" decoding="async">
+      <figcaption><b>The month at the size of a month.</b> Gym is on now, so it is lit; the day’s two earlier events have stepped back; and the first week of November is there at the foot, quieter, rather than missing.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>The month leads</h3><p>Up to three events written into a day at any laptop size, and the count beside the date always covering the rest.</p></li>
+      <li class="tile"><span class="n">02</span><h3>The months either side stay in view</h3><p>Quieter, their events in a greyer shade of each calendar’s colour, so the first week of next month is there rather than missing.</p></li>
+      <li class="tile"><span class="n">03</span><h3>The day, beside it</h3><p>What is over steps back, what is on now is lit in its own calendar’s colour, and the line under the date says it in a sentence — <em class="quote">3 events · 2 to-dos · On now: Gym</em>.</p></li>
+      <li class="tile"><span class="n">04</span><h3>The keyboard walks it</h3><p>Arrows by the day, Page Up and Page Down by the month, Home and End to its first and last day, and T back to today.</p></li>
+      <li class="tile"><span class="n">05</span><h3>Write an event, don’t fill in a form</h3><p>Type it as a sentence and Pulse takes it apart into a time, a place and a calendar.</p></li>
+      <li class="tile"><span class="n">06</span><h3>To-dos with a frequency</h3><p>Once, daily, weekly, monthly or yearly — or <b>until done</b>, which carries a to-do forward day after day until it is ticked, then leaves it on the day it was finished. A repeat is ticked off one day at a time, so Monday’s bins say nothing about next Monday’s. A monthly to-do on the 31st falls on the last day of a shorter month.</p></li>
+    </ol>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#projects"><small>Before</small>Projects</a>
+    <a class="next" href="#apps"><small>Next</small>Apps</a>
+  </nav>
+</section>
+<section class="panel view" id="apps" aria-labelledby="tab-apps">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">The launchpad</p>
+      <h2>Everything you open, <em>where you put it.</em></h2>
+      <p class="lede">A shelf of the things you actually use, which knows what is installed on the machine it is running on.</p>
+    </div>
+    <figure class="shot">
+      <img src="assets/screens/apps-day.jpg" alt="The shelf" loading="lazy" decoding="async">
+      <figcaption><b>The shelf.</b> The applications really installed on this machine, the sites you saved beside them, and folders you arrange.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>It finds your applications</h3><p>The ones you really have installed, and notices new ones while it is open.</p></li>
+      <li class="tile"><span class="n">02</span><h3>Web apps count</h3><p>Anything installed through a browser sits alongside the rest.</p></li>
+      <li class="tile"><span class="n">03</span><h3>Icons</h3><p>Every one at a single size with a background of its own, ranked by the size the image really is rather than the size a page claims — and any of them can be replaced, <code>.icns</code> included.</p></li>
+      <li class="tile"><span class="n">04</span><h3>Folders</h3><p>Reorder them, and file something into one in a tap.</p></li>
+      <li class="tile"><span class="n">05</span><h3>Names</h3><p>Anything can be renamed to whatever you call it.</p></li>
+    </ol>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#schedule"><small>Before</small>Schedule</a>
+    <a class="next" href="#ask"><small>Next</small>Ask Pulse</a>
+  </nav>
+</section>
+<section class="panel view" id="ask" aria-labelledby="tab-ask">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">Typed, or out loud</p>
+      <h2>It doesn’t answer. <em>It does it.</em></h2>
+      <p class="lede">The assistant is not a chat window that tells you where to go and do something yourself. It reads your mail, your calendar, your boards and your to-do list, and it changes them when you ask — typed, or spoken, with voice mode sharing every one of the typed assistant’s tools.</p>
+    </div>
+    <figure class="shot">
+      <img src="release/gallery/voice-speaking.jpg" alt="Voice mode" loading="lazy" decoding="async">
+      <figcaption><b>Voice mode.</b> It listens, works, and says what it did — and everything it can do typed, it can do out loud.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>It reads a board</h3><p>Ask <em class="quote">what is left on Pulse OS?</em> and it reads what is in each list, when each card is due and what is already late, before it answers.</p></li>
+      <li class="tile"><span class="n">02</span><h3>It adds and moves cards</h3><p>A card lands in the first list that is not the finishing one, unless you name another; tell it something is done and it moves the card to the last list, which ticks it off.</p></li>
+      <li class="tile"><span class="n">03</span><h3>It is careful where it matters</h3><p>A card already on the board is not added twice, and a name that fits two cards — or two lists — moves nothing. It asks which you meant.</p></li>
+      <li class="tile"><span class="n">04</span><h3>It cannot delete</h3><p>Not a card, not an email, not an event. That stays yours to do.</p></li>
+      <li class="tile"><span class="n">05</span><h3>Out loud</h3><p>A voice mode on the Gemini Live API, with the same tools as the typed one — so anything you can ask for, you can say.</p></li>
+    </ol>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#apps"><small>Before</small>Apps</a>
+    <a class="next" href="#news"><small>Next</small>News &amp; markets</a>
+  </nav>
+</section>
+<section class="panel view" id="news" aria-labelledby="tab-news">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">News · sport · markets</p>
+      <h2>Live, in the <em>corner.</em></h2>
+      <p class="lede">A channel actually running while you read the rest of it, a headline list you can filter by what it is, and a ticker you set yourself.</p>
+    </div>
+    <figure class="shot">
+      <img src="assets/screens/news-day.jpg" alt="The world, in the corner" loading="lazy" decoding="async">
+      <figcaption><b>The world, in the corner.</b> A channel live, the watchlist along the top, and the headlines beside it.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>A live channel</h3><p>Playing in the corner, with the story under it, and the whole site one press away.</p></li>
+      <li class="tile"><span class="n">02</span><h3>Headlines worth the space</h3><p>Each with its source and how long ago it landed, filtered to news, sport or markets.</p></li>
+      <li class="tile"><span class="n">03</span><h3>A tape that never runs out</h3><p>The watchlist is yours to set, its coins work, and it keeps going rather than stopping at the end of a list.</p></li>
+      <li class="tile"><span class="n">04</span><h3>Sport that looks like sport</h3><p>Every team carries its own crest, each card takes its colour from the place the match is played, and every tab yields to the others.</p></li>
+      <li class="tile"><span class="n">05</span><h3>Formula 1</h3><p>The shape of the circuit, and a result you can read at a glance rather than a table you have to decode.</p></li>
+    </ol>
+  <h3 class="group">More of it</h3>
+  <div class="shots">
+    <figure class="shot">
+      <img src="release/gallery/premier-league.jpg" alt="Crests, and the colour of the ground it is played on" loading="lazy" decoding="async">
+      <figcaption>Crests, and the colour of the ground it is played on.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/formula-1.jpg" alt="The circuit, and a result you can read at a glance" loading="lazy" decoding="async">
+      <figcaption>The circuit, and a result you can read at a glance.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="release/gallery/watchlist.jpg" alt="A watchlist you set, on a tape that does not stop" loading="lazy" decoding="async">
+      <figcaption>A watchlist you set, on a tape that does not stop.</figcaption>
+    </figure>
+  </div>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#ask"><small>Before</small>Ask Pulse</a>
+    <a class="next" href="#travel"><small>Next</small>Travel</a>
+  </nav>
+</section>
+<section class="panel view" id="travel" aria-labelledby="tab-travel">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">Flights · maps · money</p>
+      <h2>Wherever you’re <em>headed.</em></h2>
+      <p class="lede">A trip is not a folder of bookings. It is where you are going, when the plane is, where you are sleeping, what the money is worth there, and what each day of it looks like on a map.</p>
+    </div>
+    <figure class="shot">
+      <img src="assets/screens/travel-day.jpg" alt="A trip, six days out" loading="lazy" decoding="async">
+      <figcaption><b>A trip, six days out.</b> JL44 from Heathrow to Haneda, the hotel in Shibuya with its photo and rating, the route on the map, and the hours there against the hours here.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>The flight, looked up</h3><p>Type the number and the route comes back: the airports, the distance, the time in the air, the airline’s mark, and one of its aircraft behind the card. The route only — never a live position — so a number that flies every day can’t put someone else’s aeroplane on your trip.</p></li>
+      <li class="tile"><span class="n">02</span><h3>Where you’re staying</h3><p>Find a hotel near where you are going and it arrives with its photo, its rating and its address, goes on the map, and lands in the itinerary as the check-in.</p></li>
+      <li class="tile"><span class="n">03</span><h3>Maps with no key</h3><p>The route, the hotel and every day of the plan draw on a real map, in the browser and in the packaged desktop app.</p></li>
+      <li class="tile"><span class="n">04</span><h3>Money</h3><p>Real exchange rates with a month of history behind them, so you can see which way it has been going.</p></li>
+      <li class="tile"><span class="n">05</span><h3>The time there</h3><p>Next to the time here, with the plug, the side of the road, the dialling code and the emergency number beside it.</p></li>
+      <li class="tile"><span class="n">06</span><h3>More than one trip</h3><p>A picker in a row that was already there, which does not grow with the number of trips or push the page through the horizon.</p></li>
+    </ol>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#news"><small>Before</small>News &amp; markets</a>
+    <a class="next" href="#music"><small>Next</small>Music</a>
+  </nav>
+</section>
+<section class="panel view" id="music" aria-labelledby="tab-music">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">Spotify, built in</p>
+      <h2>Lit by whatever’s <em>playing.</em></h2>
+      <p class="lede">Your own Spotify, inside Pulse rather than in another window — and a full screen that takes its colours from the record and puts the words where they belong.</p>
+    </div>
+    <figure class="shot">
+      <img src="release/gallery/immersive.jpg" alt="Whatever is playing lights the room" loading="lazy" decoding="async">
+      <figcaption><b>Whatever is playing lights the room.</b> The colours come off the sleeve, and the words arrive on the beat.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">What it does</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>The immersive screen</h3><p>The album’s own colours light the whole view, and the lyrics land on time, line by line.</p></li>
+      <li class="tile"><span class="n">02</span><h3>Queues that behave</h3><p>The queue stops repeating a single track, radio can be started from any song, and a playlist shows what is on it through the player queue.</p></li>
+      <li class="tile"><span class="n">03</span><h3>In the desktop app too</h3><p>Playback works inside the packaged build, not only in a browser — the Web Playback SDK needed a path through Electron that it did not have.</p></li>
+    </ol>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#travel"><small>Before</small>Travel</a>
+    <a class="next" href="#under"><small>Next</small>Underneath</a>
+  </nav>
+</section>
+<section class="panel view" id="under" aria-labelledby="tab-under">
+  <div class="view-head">
+    <div class="intro">
+      <p class="at">How it is built</p>
+      <h2>A sky, a horizon, <em>and a ground.</em></h2>
+      <p class="lede">Every view is composed of the same three parts, which is why moving between them feels like moving around one place rather than between nine apps — and a handful of rules about your accounts that nothing in it can break.</p>
+    </div>
+    <figure class="shot">
+      <img src="assets/screens/home-dusk.jpg" alt="Dusk" loading="lazy" decoding="async">
+      <figcaption><b>Dusk.</b> The same Home as in the morning, lit for the hour it is actually being looked at.</figcaption>
+    </figure>
+  </div>
+  <h3 class="group">How it is built</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>The sky</h3><p>Holds what the view is about, set large and straight on the light, with no box around it.</p></li>
+      <li class="tile"><span class="n">02</span><h3>The horizon</h3><p>Sits at a fixed height, so the line falls in the same place as you move between tabs.</p></li>
+      <li class="tile"><span class="n">03</span><h3>The ground</h3><p>Is full-bleed and divided into columns by space and a faint rule, rather than chopped into floating cards. Only real objects — a record sleeve, a video, a map, an app icon — get a tile of their own.</p></li>
+      <li class="tile"><span class="n">04</span><h3>The light follows the hour</h3><p>The background is not a picture of a sky, it is the hour itself: dawn, day, dusk and night each light the whole screen differently, crossfading as the day turns. Music lends the screen the colours of whatever record is playing.</p></li>
+      <li class="tile"><span class="n">05</span><h3>A type system, not a font choice</h3><p>Newsreader for display and figures, Schibsted Grotesk for everything else, on one scale used everywhere instead of sizes picked per view. Colour carries the hierarchy.</p></li>
+    </ol>
+  <h3 class="group">What it will never do</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>It never sends</h3><p>Send is a button, pressed by a person. The assistant can fill the box and has no way to press it.</p></li>
+      <li class="tile"><span class="n">02</span><h3>It never files anything on its own</h3><p>Nothing is deleted, archived or moved unless you do it.</p></li>
+      <li class="tile"><span class="n">03</span><h3>It cannot permanently delete mail</h3><p>Not by policy, but because the permission is never requested.</p></li>
+      <li class="tile"><span class="n">04</span><h3>Your password never reaches Pulse</h3><p>You sign in with Google or Microsoft; only the resulting token is kept, on your own machine, where no page in the browser can read it.</p></li>
+      <li class="tile"><span class="n">05</span><h3>Message bodies stay off the disk</h3><p>And are left out of exported backups on purpose.</p></li>
+      <li class="tile"><span class="n">06</span><h3>The assistant is never handed your mailbox</h3><p>One message, one thread or one search, each with a hard ceiling — and nothing is read by a model unless you ask. The unread count and the “8 look important” line are worked out by ordinary rules on your machine.</p></li>
+    </ol>
+  <h3 class="group">Where it runs</h3>
+  <ol class="tiles">
+      <li class="tile"><span class="n">01</span><h3>In a browser</h3><p>Against a local backend that holds every provider token, so the frontend never sees one.</p></li>
+      <li class="tile"><span class="n">02</span><h3>As an application</h3><p>A packaged desktop build for macOS and Windows, wrapping the same frontend and backend.</p></li>
+      <li class="tile"><span class="n">03</span><h3>On iOS</h3><p>As a SwiftUI shell running against the same backend.</p></li>
+      <li class="tile"><span class="n">04</span><h3>From 1280 to 2560 wide</h3><p>On a big display it scales up to fill the screen; nothing at or below 1920 × 1080 moves.</p></li>
+      <li class="tile"><span class="n">05</span><h3>Carried between copies</h3><p>Trips, the launchpad, folders, to-dos, projects and conversations export to a single file and import into another Pulse. Caches are left out: they belong to an account the new copy has not connected.</p></li>
+      <li class="tile"><span class="n">06</span><h3>Arranged how you like it</h3><p>The tab bar’s order, and which tabs are put away, are yours in Settings.</p></li>
+    </ol>
+  <aside class="note">
+    <h3>Scopes, and Yahoo</h3>
+    <p><strong>Scopes.</strong> Gmail: <code>gmail.modify</code>, <code>gmail.send</code>, <code>gmail.compose</code>. Microsoft Graph: <code>Mail.ReadWrite</code>, <code>Mail.Send</code>, <code>offline_access</code>, <code>User.Read</code>. The full <code>https://mail.google.com/</code> scope is deliberately not requested.</p>
+      <p><strong>Yahoo is not supported</strong>, and that is Yahoo&rsquo;s limitation rather than an omission: they retired their Mail API, so access is IMAP with OAuth2 and those scopes are not self-served. The adapter is shaped so a Yahoo provider would be one more file if that changes.</p>
+  </aside>
+  <nav class="panel-nav" aria-label="Other parts">
+    <a class="prev" href="#music"><small>Before</small>Music</a>
+    <a class="next" href="index.html"><small>Back to</small>The room</a>
+  </nav>
+</section>
+<div class="row end rise">
+  <a class="pill pill--lit" href="index.html">Watch the tour &middot; 4:31</a>
+  <a class="pill" href="updates.html">Every update</a>
+  <a class="pill" href="announcements.html">The announcements</a>
+</div>
+</div>
+
+</main>
+
+<footer>
+  <div class="band">
+    <p>Pulse OS — your day, in a heartbeat. Lit for the hour you are in.</p>
+    <nav>
+      <a href="index.html">The room</a>
+      <a href="features.html">Features</a>
+      <a href="updates.html">Updates</a>
+      <a href="announcements.html">Announcements</a>
+      <a href="https://github.com/eeliya-hub/pulseOS">GitHub</a>
+      <a href="PulseOS-Doc.html">Documentation</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="assets/world.js"></script>
+</body>
+</html>

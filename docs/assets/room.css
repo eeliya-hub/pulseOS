@@ -1,0 +1,1672 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Pulse OS — "The Room"
+
+   A desk, seen straight on, at every hour of one day. Scrolling moves the
+   clock; the whole scene re-lights as it goes — the shaft from the window
+   swings across the desk and dies, the lamp comes up, the screens stay the
+   brightest thing in the room. The things on the desk are the navigation:
+   click one and the camera pushes into it.
+
+   The room is drawn as little as it can be. Dark shapes, long light, and the
+   real app doing the detail — a drawn monitor with a screenshot in it reads
+   as a monitor; a drawn monitor with drawn contents reads as clip art.
+
+   Everything sits on a 1600 × 900 stage that is scaled to fit the window as a
+   single piece, so there is no layout to break at any size. The wall and the
+   desk run far past that box, so whatever shape the window is, the room still
+   fills it and nothing ever letterboxes.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --moon: #f2f4fd;
+  --haze: rgba(236, 240, 255, 0.74);
+  --dim: rgba(236, 240, 255, 0.46);
+  --edge: rgba(255, 255, 255, 0.1);
+
+  /* Written every frame by room.js, from the hour we are scrolled to. */
+  --sky-top: #0b1030;
+  --sky-low: #10233f;
+  --accent: #a9bbff;
+  --light: #ffd9b8;      /* what is coming through the window */
+  --light-on: 0;         /* how much of it there is */
+  --shaft-x: 0px;        /* where it falls across the desk */
+  --shaft-skew: -22deg;
+  --lamp: 0;             /* the desk lamp, after dark */
+  --stars: 0;
+  --steam: 0;            /* the mug, while the coffee is still hot */
+  --kb-tilt: 62deg;      /* how far back anything lying on the desk is laid */
+  --room: #0a0c18;       /* the walls, which darken with the hour */
+
+  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Schibsted Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --ease: cubic-bezier(0.22, 0.75, 0.2, 1);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #04060d;
+  color: var(--moon);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* The page is only a scrollbar: all of it is fixed, and scrolling moves time. */
+.runway { height: 760svh; }
+
+/* ── The stage ───────────────────────────────────────────────────────────── */
+
+.frame {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #05070f;
+}
+
+/* The corners fall away, which is most of what makes a room feel like a room. */
+.frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background: radial-gradient(128% 96% at 50% 42%, transparent 42%, rgba(2, 3, 9, 0.8) 100%);
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1600px;
+  height: 900px;
+  margin: -450px 0 0 -800px;
+  /* One scale for the whole room, and the camera's push on top of it. */
+  transform: scale(var(--fit, 1)) translate(var(--cam-x, 0px), var(--cam-y, 0px)) scale(var(--cam-z, 1));
+  transform-origin: 50% 50%;
+  transition: transform 1.1s var(--ease);
+}
+
+/* ── The wall, and the window in it ──────────────────────────────────────── */
+
+.wall {
+  position: absolute;
+  left: -1400px;
+  right: -1400px;
+  top: -900px;
+  bottom: -900px;
+  z-index: 0;
+  background:
+    /* the warmth the window puts on the wall around it */
+    radial-gradient(620px 460px at 1720px 1140px, rgba(255, 236, 214, calc(0.03 + 0.15 * var(--light-on))), transparent 72%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--room) calc(44% + 22% * var(--light-on)), #000) 0px,
+      color-mix(in srgb, var(--room) calc(70% + 24% * var(--light-on)), #000) 740px,
+      color-mix(in srgb, var(--room) 100%, #fff) 1150px,
+      color-mix(in srgb, var(--room) calc(56% + 20% * var(--light-on)), #000) 1660px,
+      #04060d 2080px);
+}
+
+/* What the room is lit by. The sky in it is the same sky the app uses. */
+.window {
+  position: absolute;
+  z-index: 3;
+  left: 84px;
+  top: 74px;
+  width: 430px;
+  height: 392px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 11px #080a14,
+    0 0 0 12px rgba(255, 255, 255, calc(0.05 + 0.1 * var(--light-on))),
+    0 30px 90px -10px rgba(0, 0, 0, 0.7);
+}
+.window i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-low));
+}
+/* Stars, only worth drawing after dark. */
+.window i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: var(--stars);
+  background-image:
+    radial-gradient(1.3px 1.3px at 18% 22%, #fff, transparent),
+    radial-gradient(1.1px 1.1px at 44% 13%, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 68% 31%, #fff, transparent),
+    radial-gradient(1.1px 1.1px at 82% 17%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 31% 44%, #fff, transparent),
+    radial-gradient(1.3px 1.3px at 60% 56%, #fff, transparent),
+    radial-gradient(1px 1px at 9% 37%, #fff, transparent),
+    radial-gradient(1px 1px at 74% 9%, #fff, transparent);
+}
+/* The sun crossing behind the glass. */
+.window b {
+  position: absolute;
+  left: var(--sun-x, 50%);
+  top: var(--sun-y, 60%);
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff 0%, var(--light) 34%, transparent 70%);
+  filter: blur(7px);
+  opacity: var(--sun-glow, 0);
+}
+/* The frame's bars, so it reads as a window rather than a picture. */
+.window u {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 4px), #090b15 calc(50% - 4px), #090b15 calc(50% + 4px), transparent calc(50% + 4px)),
+    linear-gradient(180deg, transparent calc(50% - 4px), #090b15 calc(50% - 4px), #090b15 calc(50% + 4px), transparent calc(50% + 4px));
+}
+
+/* The sill under it, which is what tells you the wall has thickness. */
+.sill {
+  position: absolute;
+  z-index: 3;
+  left: 60px;
+  top: 478px;
+  width: 478px;
+  height: 15px;
+  border-radius: 2px 2px 5px 5px;
+  background: linear-gradient(180deg, rgba(255, 238, 220, calc(0.16 + 0.44 * var(--light-on))), #0b0e1a 72%);
+  box-shadow: 0 16px 34px -14px rgba(0, 0, 0, 0.9);
+}
+
+/* A shelf on the far wall, which is all the right-hand side needs. */
+.shelf {
+  position: absolute;
+  z-index: 3;
+  left: 1186px;
+  top: 118px;
+  width: 268px;
+  height: 84px;
+  pointer-events: none;
+}
+.shelf i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 9px;
+  border-radius: 2px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #4b5178 calc(22% + 36% * var(--light-on)), #171a31),
+    #0a0d1b);
+  box-shadow: 0 14px 26px -12px rgba(0, 0, 0, 0.9);
+}
+/* two books, leaning */
+.shelf b {
+  position: absolute;
+  bottom: 9px;
+  width: 15px;
+  height: 56px;
+  border-radius: 2px;
+  background: linear-gradient(170deg,
+    color-mix(in srgb, #6b5570 calc(20% + 34% * var(--light-on)), #1a1c35),
+    color-mix(in srgb, #2d2640 calc(16% + 26% * var(--light-on)), #11142a));
+}
+.shelf b:nth-of-type(1) { left: 22px; }
+.shelf b:nth-of-type(2) { left: 39px; height: 48px; transform: rotate(9deg); transform-origin: 50% 100%; }
+/* and a small frame at the other end */
+.shelf u {
+  position: absolute;
+  right: 26px;
+  bottom: 9px;
+  width: 62px;
+  height: 46px;
+  border-radius: 3px;
+  background: linear-gradient(150deg,
+    color-mix(in srgb, #5a6189 calc(20% + 32% * var(--light-on)), #171a31),
+    color-mix(in srgb, #23294a calc(16% + 24% * var(--light-on)), #0e1124));
+  box-shadow: inset 0 0 0 3px rgba(10, 13, 27, 0.8);
+}
+
+/* The bloom the glass throws onto the wall around it. */
+.glow {
+  position: absolute;
+  z-index: 3;
+  left: -90px;
+  top: -130px;
+  width: 790px;
+  height: 790px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: var(--light-on);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--light) 36%, transparent), transparent 74%);
+  filter: blur(28px);
+  mix-blend-mode: screen;
+}
+
+/* ── The shaft ───────────────────────────────────────────────────────────────
+   The window's own shape, thrown across the room: the same two mullions cut
+   through it, it brightens where it lands on the desk, and it swings and dies
+   with the sun. A second copy sits in front of everything at a third of the
+   strength, which is the haze you would actually be looking through. */
+
+.beam {
+  position: absolute;
+  z-index: 2;
+  left: 84px;
+  top: 76px;
+  width: 430px;
+  height: 1080px;
+  /* Hinged at the glass: only the far end of it swings with the sun. */
+  transform: translateX(var(--shaft-x)) skewX(var(--shaft-skew));
+  transform-origin: 50% 0;
+  opacity: var(--light-on);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.beam i {
+  position: absolute;
+  inset: 0;
+  filter: blur(11px);
+  /* Down the beam: the two mullions, then the brighter patch on the desk. */
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--light) 34%, transparent) 0%,
+    color-mix(in srgb, var(--light) 30%, transparent) 17%,
+    color-mix(in srgb, var(--light) 27%, transparent) 26%,
+    transparent 28.6%,
+    transparent 31.4%,
+    color-mix(in srgb, var(--light) 26%, transparent) 34%,
+    color-mix(in srgb, var(--light) 21%, transparent) 44%,
+    color-mix(in srgb, var(--light) 44%, transparent) 51%,
+    color-mix(in srgb, var(--light) 30%, transparent) 60%,
+    color-mix(in srgb, var(--light) 10%, transparent) 76%,
+    transparent 90%);
+  /* Across it: the edges of the glass, and the upright between the panes. */
+  -webkit-mask-image: linear-gradient(90deg,
+    transparent 0, #000 17%, #000 44%,
+    transparent 47.4%, transparent 52.6%,
+    #000 56%, #000 83%, transparent 100%);
+  mask-image: linear-gradient(90deg,
+    transparent 0, #000 17%, #000 44%,
+    transparent 47.4%, transparent 52.6%,
+    #000 56%, #000 83%, transparent 100%);
+}
+.beam--front { z-index: 5; opacity: calc(var(--light-on) * 0.2); }
+.beam--front i { filter: blur(26px); }
+
+/* Dust, which only exists where the light is. */
+.motes {
+  position: absolute;
+  z-index: 3;
+  left: 84px;
+  top: 76px;
+  width: 430px;
+  height: 860px;
+  transform: translateX(var(--shaft-x)) skewX(var(--shaft-skew));
+  transform-origin: 50% 0;
+  opacity: calc(var(--light-on) * 0.75);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.motes i {
+  position: absolute;
+  width: calc(3px * var(--s, 1));
+  height: calc(3px * var(--s, 1));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--light) 90%, #fff);
+  animation: drift var(--w, 20s) linear var(--d, 0s) infinite;
+}
+@keyframes drift {
+  0% { transform: translate(0, 40px); opacity: 0; }
+  18% { opacity: 0.9; }
+  82% { opacity: 0.7; }
+  100% { transform: translate(26px, -210px); opacity: 0; }
+}
+
+/* ── What the room is called ─────────────────────────────────────────────
+   Painted on the wall above the monitor, taking the hour's light like
+   everything else in here. It is part of the stage, so the camera carries
+   it when you push into something. */
+
+.mark {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 48px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-weight: 350;
+  font-size: 112px;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  color: color-mix(in srgb, var(--moon) calc(40% + 46% * var(--light-on)), transparent);
+  text-shadow: 0 0 70px color-mix(in srgb, var(--accent) 34%, transparent);
+  pointer-events: none;
+}
+
+/* And what it is, said once, on the desk in front of the keyboard. */
+.tagline {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: 846px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 31px;
+  color: color-mix(in srgb, var(--haze) calc(52% + 42% * var(--light-on)), transparent);
+  pointer-events: none;
+}
+
+/* ── The desk ────────────────────────────────────────────────────────────── */
+
+.desk {
+  position: absolute;
+  left: -1400px;
+  right: -1400px;
+  top: 612px;
+  bottom: -900px;
+  z-index: 1;
+  background:
+    /* the sheen along the near edge of the top */
+    linear-gradient(180deg, rgba(255, 252, 246, calc(0.04 + 0.08 * var(--light-on))) 0px, transparent 86px),
+    linear-gradient(180deg, #1a1e3a 0px, #14182f 56px, #0d1022 148px, #080a18 268px, #05070f 470px);
+  box-shadow: 0 -34px 80px -30px rgba(0, 0, 0, 0.95);
+}
+.desk::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 32%, rgba(255, 248, 238, calc(0.26 + 0.4 * var(--light-on))) 46%, rgba(255, 248, 238, calc(0.26 + 0.4 * var(--light-on))) 54%, transparent 68%);
+}
+
+/* The front lip. It sits below the line under the keyboard, not through it. */
+.desk::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 312px;
+  height: 7px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, calc(0.04 + 0.06 * var(--light-on))), rgba(0, 0, 0, 0.5));
+}
+
+/* What the screens spill onto the desk in front of them. */
+.spill {
+  position: absolute;
+  z-index: 3;
+  left: 450px;
+  top: 604px;
+  width: 700px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%);
+  filter: blur(34px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* What each thing is standing in: a short, dark contact shadow that keeps it
+   from floating, thrown the opposite way to the light. */
+.cast {
+  position: absolute;
+  z-index: 3;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.78), transparent 76%);
+  filter: blur(13px);
+  pointer-events: none;
+}
+.cast--mon { left: 590px; top: 682px; width: 420px; height: 40px; }
+.cast--kb { left: 556px; top: 796px; width: 488px; height: 40px; }
+.cast--phone { left: 1206px; top: 590px; width: 170px; height: 30px; }
+.cast--cards { left: 100px; top: 770px; width: 276px; height: 46px; }
+/* Under the folded paper, which is where it sits for all but a moment. */
+.cast--post { left: 1244px; top: 766px; width: 312px; height: 46px; }
+
+/* ── What else is lying about ────────────────────────────────────────────── */
+
+/* The keyboard. Drawn flat as a real Mac board is from above — 14.5 units
+   across every row on a grid of quarter units, so a key's edge lines up with
+   the one below it — then laid back onto the desk in perspective, which does
+   the foreshortening of every cap for us. */
+.kb {
+  position: absolute;
+  z-index: 4;
+  left: 565px;
+  top: 624px;
+  width: 470px;
+  height: 194px;
+  transform-origin: 50% 100%;
+  transform: perspective(1700px) rotateX(var(--kb-tilt));
+  pointer-events: none;
+}
+.kb .deck {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(58, minmax(0, 1fr));
+  grid-template-rows: 0.56fr repeat(5, 1fr);
+  row-gap: 4.5px;
+  padding: 12px 11px 15px;
+  border-radius: 13px;
+  background:
+    /* the lamp, after dark, from the right */
+    linear-gradient(100deg, transparent 40%, rgba(255, 196, 140, calc(0.12 * var(--lamp)))),
+    /* brushed aluminium */
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg,
+      color-mix(in srgb, #8d93ad calc(18% + 48% * var(--light-on)), #222640),
+      color-mix(in srgb, #5c627f calc(14% + 40% * var(--light-on)), #161a2e));
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, calc(0.14 + 0.24 * var(--light-on))),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+}
+/* A cap: its top lit, and its near side a darker band under it. */
+.kb .deck > i,
+.kb .arrows i {
+  margin: 0 1.6px;
+  border-radius: 4.5px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #3d425c calc(28% + 40% * var(--light-on)), #14172a),
+    color-mix(in srgb, #242840 calc(24% + 34% * var(--light-on)), #0f1222));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, calc(0.05 + 0.12 * var(--light-on))),
+    0 3px 0 #0a0c17,
+    0 4.5px 3px rgba(0, 0, 0, 0.4);
+}
+.kb .deck > i { grid-column: span var(--u); }
+.kb .deck > i.fk { border-radius: 3.5px; }
+/* The arrows: an inverted T. Left and right are half height and sit low; up
+   and down share the middle column between them. */
+.kb .arrows {
+  grid-column: span 12;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 1fr 1fr;
+  row-gap: 2.5px;
+}
+.kb .arrows i { border-radius: 3px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, calc(0.05 + 0.12 * var(--light-on))), 0 2px 0 #0a0c17, 0 3px 2px rgba(0, 0, 0, 0.4); }
+.kb .arrows i:nth-child(1) { grid-area: 2 / 1; }
+.kb .arrows i:nth-child(2) { grid-area: 1 / 2; }
+.kb .arrows i:nth-child(3) { grid-area: 2 / 2; }
+.kb .arrows i:nth-child(4) { grid-area: 2 / 3; }
+/* The front edge of the case: the one face of it that looks at you. */
+.kb-lip {
+  position: absolute;
+  z-index: 4;
+  left: 566px;
+  top: 817px;
+  width: 468px;
+  height: 5px;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #7a809c calc(14% + 40% * var(--light-on)), #1d2036),
+    #0a0c17);
+  pointer-events: none;
+}
+
+.mug {
+  position: absolute;
+  z-index: 4;
+  left: 1096px;
+  top: 726px;
+  width: 54px;
+  height: 62px;
+  pointer-events: none;
+}
+.mug > i {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px 4px 15px 15px;
+  background: linear-gradient(104deg,
+    color-mix(in srgb, #efe4d8 calc(22% + 46% * var(--light-on) + 16% * var(--lamp)), #262b4a),
+    color-mix(in srgb, #9c93a8 calc(10% + 26% * var(--light-on)), #171a31) 72%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 16px 24px -12px rgba(0, 0, 0, 0.95);
+}
+.mug > b {
+  position: absolute;
+  right: -14px;
+  top: 13px;
+  width: 20px;
+  height: 25px;
+  border: 5px solid color-mix(in srgb, #d9cec4 calc(18% + 42% * var(--light-on)), #22263f);
+  border-left: 0;
+  border-radius: 0 11px 11px 0;
+}
+/* The rim, and the coffee in it. */
+.mug > s {
+  position: absolute;
+  left: 0;
+  top: -6px;
+  width: 100%;
+  height: 12px;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 50% 60%,
+      color-mix(in srgb, #5a3624 calc(16% + 34% * var(--light-on)), #120c0b) 0 56%,
+      transparent 60%),
+    color-mix(in srgb, #f4ebe1 calc(26% + 50% * var(--light-on) + 14% * var(--lamp)), #2a2f4e);
+}
+
+/* Steam, while it is still early enough to be hot. Each wisp is a thin
+   ribbon pulled about by a field of noise and blurred — drawn once — which
+   then rises off the coffee, widening and thinning out as it goes, one after
+   another. Only the rising moves, so it costs nothing to keep going. */
+.mug .steam {
+  position: absolute;
+  left: 4px;
+  bottom: 56px;
+  width: 46px;
+  height: 128px;
+  opacity: var(--steam);
+  pointer-events: none;
+}
+.steam .steam-defs { position: absolute; width: 0; height: 0; }
+.steam i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 46px;
+  height: 128px;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  animation: steam-rise 6.4s cubic-bezier(0.3, 0.1, 0.4, 1) infinite;
+}
+.steam i svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.steam i:nth-of-type(2) { left: 5px; animation-duration: 7.2s; animation-delay: -1.7s; }
+.steam i:nth-of-type(3) { left: -5px; animation-duration: 5.8s; animation-delay: -3.5s; }
+.steam i:nth-of-type(4) { left: 2px; animation-duration: 6.9s; animation-delay: -5.2s; }
+@keyframes steam-rise {
+  0% { opacity: 0; transform: translateY(14px) scale(0.55, 0.5) skewX(0deg); }
+  16% { opacity: 0.72; }
+  55% { opacity: 0.44; transform: translateY(-14px) scale(0.95, 0.92) skewX(-7deg); }
+  100% { opacity: 0; transform: translateY(-50px) scale(1.45, 1.18) skewX(6deg); }
+}
+/* The warm air just over the coffee, which the wisps come out of. */
+.mug .steam::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  bottom: -4px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.2), transparent);
+  filter: blur(4px);
+}
+
+/* A plant on the sill, against the glass. */
+.plant {
+  position: absolute;
+  z-index: 4;
+  left: 110px;
+  top: 300px;
+  width: 104px;
+  height: 178px;
+  pointer-events: none;
+}
+.plant i {
+  position: absolute;
+  left: 27px;
+  bottom: 0;
+  width: 50px;
+  height: 54px;
+  border-radius: 4px 4px 13px 13px;
+  background: linear-gradient(100deg,
+    color-mix(in srgb, #8a6a58 calc(20% + 40% * var(--light-on)), #1d2039),
+    color-mix(in srgb, #4b3a36 calc(14% + 26% * var(--light-on)), #12152a) 76%);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), 0 12px 18px -10px rgba(0, 0, 0, 0.9);
+}
+.plant s {
+  position: absolute;
+  bottom: 44px;
+  left: 46px;
+  width: 11px;
+  height: 80px;
+  border-radius: 100% 6px 100% 6px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(170deg,
+    color-mix(in srgb, #5f9b7e calc(16% + 40% * var(--light-on)), #18203c),
+    color-mix(in srgb, #28513f calc(12% + 28% * var(--light-on)), #11162f));
+  animation: sway 9s ease-in-out infinite;
+}
+.plant s:nth-of-type(1) { transform: rotate(-52deg); height: 58px; animation-delay: -1s; }
+.plant s:nth-of-type(2) { transform: rotate(-29deg); height: 82px; animation-delay: -3.4s; }
+.plant s:nth-of-type(3) { transform: rotate(-8deg); height: 100px; animation-delay: -5.8s; }
+.plant s:nth-of-type(4) { transform: rotate(12deg); height: 92px; animation-delay: -2.2s; }
+.plant s:nth-of-type(5) { transform: rotate(33deg); height: 74px; animation-delay: -7s; }
+.plant s:nth-of-type(6) { transform: rotate(55deg); height: 54px; animation-delay: -4.6s; }
+@keyframes sway {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.1); }
+}
+
+/* ── Things on the desk ──────────────────────────────────────────────────── */
+
+.thing {
+  position: absolute;
+  z-index: 4;
+  cursor: pointer;
+  transition: transform 0.5s var(--ease), filter 0.5s var(--ease);
+}
+.thing:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 10px; }
+
+/* Hovering lifts a thing, and the rest of the room steps back for it. */
+.thing:hover { transform: translateY(-6px); }
+.thing:hover .lid { opacity: 1; transform: translate(-50%, 0); }
+.stage:has(.thing:hover) .thing:not(:hover) { filter: brightness(0.6) saturate(0.7); }
+/* Whatever you have picked up comes in front of the room, which steps back. */
+.thing.is-open { z-index: 30; }
+.thing.is-open:hover { transform: none; }
+.thing.is-open .lid { display: none; }
+
+/* What a thing is called, shown as you come near it. */
+.lid {
+  position: absolute;
+  left: 50%;
+  bottom: -42px;
+  z-index: 2;
+  transform: translate(-50%, 6px);
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 7px 15px;
+  border-radius: 999px;
+  background: rgba(8, 11, 22, 0.84);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+  pointer-events: none;
+}
+.lid b { font-family: var(--serif); font-weight: 400; font-size: 19px; }
+.lid span { font-size: 13px; color: var(--dim); }
+
+/* The monitor: the one real thing in the room. The glass is the shape the
+   captures are, so nothing of the app is ever cropped away to fit it. */
+.monitor { left: 460px; top: 204px; width: 680px; }
+.screen {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1800 / 1125;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #05070f;
+  box-shadow:
+    0 0 0 9px #0c0f1d,
+    0 0 0 10px rgba(255, 255, 255, 0.08),
+    0 40px 90px -20px rgba(0, 0, 0, 0.95),
+    0 0 130px 8px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.screen img, .screen video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.7s var(--ease);
+}
+.screen img.is-on, .screen video.is-on { opacity: 1; }
+/* The glass itself: a sheen that catches the window. */
+.screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* The capture already carries the hour's light, so this is only glass. */
+  opacity: calc(0.2 + 0.45 * var(--light-on));
+  background: linear-gradient(102deg, transparent 18%, rgba(214, 228, 255, 0.06) 34%, rgba(214, 228, 255, 0.02) 46%, transparent 58%);
+}
+
+/* The stand, and the shadow it stands in. */
+.monitor .neck {
+  position: absolute;
+  left: 50%;
+  bottom: -62px;
+  width: 52px;
+  height: 64px;
+  margin-left: -26px;
+  background: linear-gradient(180deg, rgba(17, 20, 37, 0.5), #0c0f1d);
+  border-radius: 0 0 6px 6px;
+}
+.monitor .foot {
+  position: absolute;
+  left: 50%;
+  bottom: -74px;
+  width: 216px;
+  height: 18px;
+  margin-left: -108px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #161a2e, #0b0e1a);
+  box-shadow: 0 10px 30px -6px rgba(0, 0, 0, 0.9);
+}
+
+/* The phone, propped up a little way off, playing the vertical ad. */
+.phone { left: 1222px; top: 364px; width: 136px; }
+.phone .glass {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  border-radius: 15px;
+  overflow: hidden;
+  background: #05070f;
+  box-shadow:
+    0 0 0 4px #0c0f1d,
+    0 0 0 5px rgba(255, 255, 255, 0.09),
+    0 24px 50px -14px rgba(0, 0, 0, 0.95),
+    0 0 60px 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.phone .glass img, .phone .glass video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.phone .glass video { opacity: 0; transition: opacity 0.7s var(--ease); }
+.phone .glass video.is-on { opacity: 1; }
+
+/* ── The updates: a pile of cards ────────────────────────────────────────────
+   Lying on the desk they are a pile, the one you are on at the top. Picked
+   up, they stand and fan out: the one you are reading in front and lit, the
+   one either side of it turned a little, smaller, and out of focus behind. */
+
+.cards {
+  left: 116px;
+  top: 482px;
+  width: 240px;
+  height: 320px;
+  /* Towards where you are sitting — not all the way, or the pile leans
+     like a card on its edge rather than lying on the desk. */
+  perspective: 2600px;
+  perspective-origin: 290px -230px;
+  pointer-events: none;
+  transition: perspective-origin 0.9s var(--ease);
+  --lie: 66deg;
+}
+.cards:hover { transform: none; }
+.cards.is-open { perspective-origin: 50% 50%; }
+
+.cards .card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 7px;
+  border-radius: 17px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #1f2645 calc(50% + 50% * var(--light-on)), #0c0f1f),
+    color-mix(in srgb, #141a33 calc(46% + 50% * var(--light-on)), #090b17));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, calc(0.08 + 0.1 * var(--light-on))),
+    0 20px 34px -18px rgba(0, 0, 0, 0.95);
+  transform-origin: 50% 100%;
+  transform:
+    translate3d(var(--x, 0px), var(--y, 0px), 0)
+    rotateX(var(--rx, var(--lie)))
+    translateZ(var(--lift, 0px))
+    rotateZ(var(--rz, 0deg))
+    scale(var(--s, 1));
+  transition:
+    transform 0.85s cubic-bezier(0.3, 1.22, 0.45, 1) var(--late, 0s),
+    filter 0.6s var(--ease),
+    opacity 0.45s var(--ease);
+  pointer-events: auto;
+  cursor: pointer;
+}
+/* Hovering the pile lifts its far edge, as a hand would. */
+.cards:not(.is-open):hover .card { --rx: 58deg; }
+.cards.is-open .card { --rx: 0deg; --y: -6px; }
+.cards.is-open .card:not([data-d='0']) { filter: grayscale(1) blur(1.3px) brightness(0.62); }
+.cards.is-open .card[data-d='0'] { cursor: default; }
+
+.card .pic {
+  position: relative;
+  display: block;
+  flex: none;
+  height: 138px;
+  border-radius: 11px;
+  overflow: hidden;
+  background: #070912;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.card .pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card .txt { display: flex; flex-direction: column; padding: 11px 7px 0; }
+.card .meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.card .meta .tag {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: inset 0 0 0 0.75px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+.card .meta .no { margin-left: auto; color: var(--dim); font-variant-numeric: tabular-nums; }
+.card .ttl {
+  display: block;
+  margin-top: 9px;
+  font-family: var(--serif);
+  font-size: 17.5px;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--moon);
+}
+.card .ttl em { font-style: italic; color: var(--accent); }
+.card .say { display: block; margin-top: 8px; font-size: 10.2px; line-height: 1.45; color: var(--haze); }
+
+/* ── PulseNews ───────────────────────────────────────────────────────────────
+   A paper folded in half on the desk, masthead up. Picked up, it stands, the
+   lower half swings down out of the crease, and the pages turn on the spine
+   the way a paper's do — each one carrying its print on both sides, so a turn
+   opens onto a spread: the picture and the pull quote on the left, the story
+   on the right. Everything printed on it is ink on newsprint, lit by whatever
+   is lighting the room. */
+
+.paper {
+  left: 1262px;
+  top: 700px;
+  width: 270px;
+  height: 100px;
+  perspective: 2600px;
+  perspective-origin: 30px -260px;
+  pointer-events: none;
+  transition: perspective-origin 0.9s var(--ease);
+  --lit: min(100%, calc(16% + 62% * var(--light-on) + 46% * var(--lamp)));
+  --newsprint: color-mix(in srgb, #f0eadb var(--lit), #1d2137);
+  --ink: color-mix(in srgb, #18171d 90%, transparent);
+  --spot: #8f2f28;
+}
+.paper:hover { transform: none; }
+/* Held up to read, it catches more of the light than it does lying down. */
+.paper.is-open { --lit: min(100%, calc(56% + 44% * var(--light-on) + 36% * var(--lamp))); }
+
+.paper .np {
+  position: absolute;
+  left: 0;
+  top: -80px;
+  width: 270px;
+  height: 360px;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  transform:
+    translate3d(var(--npx, 0px), var(--npy, 0px), 0)
+    rotateX(var(--nprx, 64deg))
+    rotateZ(var(--nprz, -5deg));
+  /* Put down: it folds first, then lies back. */
+  transition: transform 0.9s var(--ease) 0.32s;
+}
+.paper:not(.is-open):hover .np { --nprx: 58deg; --npy: -3px; transition-delay: 0s; }
+.paper.is-open .np { --nprx: 0deg; --nprz: 0deg; transition-delay: 0s; }
+
+.np .pg {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 0 50%;   /* the spine */
+  transform: rotateY(var(--turn, 0deg)) translateZ(var(--pz, 0px));
+  transition: transform 1s cubic-bezier(0.5, 0.06, 0.28, 1);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.np .pg[data-pg='1'] { --pz: -0.7px; }
+.np .pg[data-pg='2'] { --pz: -1.4px; }
+.np .pg[data-pg='3'] { --pz: -2.1px; }
+.np .pg.is-turned { --turn: -180deg; }
+/* Folded, there is only the front page. The rest are inside it. */
+.paper:not(.is-unfolded) .pg:not(.pg--cover) { visibility: hidden; }
+
+/* The front page folds, so it is two halves, and the lower one swings out of
+   the crease once the paper is up. */
+.np .half {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  transform-style: preserve-3d;
+}
+.np .half.top { top: 0; }
+.np .half.bottom {
+  top: 50%;
+  transform-origin: 50% 0;
+  transform: rotateX(var(--fold, -180deg)) translateZ(0.4px);
+  transition: transform 0.75s var(--ease);
+}
+.paper.is-open .half.bottom { --fold: 0deg; transition-delay: 0.5s; }
+
+.np .face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  color: var(--ink);
+  background-color: var(--newsprint);
+  /* the grain of the paper, and the crease across the middle of it */
+  background-image:
+    linear-gradient(180deg, transparent calc(50% - 7px), rgba(0, 0, 0, 0.07) 50%, rgba(255, 255, 255, 0.06) calc(50% + 1px), transparent calc(50% + 7px)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 120px 120px;
+}
+.np .half .face { background-size: 100% 200%, 120px 120px; }
+.np .half.bottom .face { background-position: 0 100%, 0 0; }
+.np .face.back { transform: rotateY(180deg); }
+/* The gutter: the paper darkens into the spine. */
+.np .face::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  width: 26px;
+  background: linear-gradient(90deg, rgba(20, 16, 10, 0.16), transparent);
+  pointer-events: none;
+}
+.np .face.back::before { left: auto; right: 0; background: linear-gradient(270deg, rgba(20, 16, 10, 0.16), transparent); }
+/* A page darkens as it comes up off the paper and lightens as it lands. */
+.np .face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0;
+  background: linear-gradient(90deg, rgba(10, 8, 6, 0.32), rgba(10, 8, 6, 0.08) 45%, rgba(255, 250, 240, 0.1) 75%, rgba(10, 8, 6, 0.16));
+  pointer-events: none;
+}
+.np .pg.is-turning .face::after { animation: page-shade 1s ease-in-out; }
+@keyframes page-shade { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+
+/* The thickness of the fold, along the near edge while it lies folded. */
+.np .lip {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  height: 4px;
+  transform-origin: 50% 0;
+  transform: rotateX(-90deg);
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #fbf6ea var(--lit), #262a44),
+    color-mix(in srgb, #b9b1a0 var(--lit), #13162a));
+  transition: opacity 0.3s var(--ease);
+}
+.paper.is-open .np .lip { opacity: 0; }
+
+/* What is printed on a page. */
+.pp {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 10px;
+  font-family: var(--serif);
+  color: var(--ink);
+}
+/* Each half of the folding page carries the whole page and shows its half. */
+.np .half .pp { height: 200%; }
+.np .half.bottom .pp { top: -100%; }
+
+.pp .ear,
+.pp .run,
+.pp .foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 5.6px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+.pp .ear, .pp .run { padding-bottom: 4px; border-bottom: 0.5px solid currentColor; }
+.pp .run i, .pp .mast i { font-style: italic; }
+.pp .run span:first-child { font-family: var(--serif); font-size: 7.5px; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.pp.left .run span:first-child { font-family: var(--sans); font-size: 5.6px; letter-spacing: 0.13em; text-transform: uppercase; }
+.pp.left .run span:last-child { font-family: var(--serif); font-size: 7.5px; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.pp .foot { margin-top: auto; padding-top: 4px; border-top: 0.5px solid currentColor; opacity: 0.66; }
+
+.pp .mast {
+  display: block;
+  margin: 5px 0 3px;
+  text-align: center;
+  font-weight: 650;
+  font-size: 43px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variation-settings: 'opsz' 72;
+}
+.pp .mast--small { font-size: 30px; margin-top: 30px; }
+.pp .motto {
+  display: block;
+  padding: 3px 0 4px;
+  border-top: 1.5px solid currentColor;
+  border-bottom: 0.5px solid currentColor;
+  text-align: center;
+  font-style: italic;
+  font-size: 7px;
+}
+.pp .kick {
+  display: block;
+  margin-top: 9px;
+  font-family: var(--sans);
+  font-size: 6.2px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--spot);
+}
+.pp .hed {
+  display: block;
+  margin-top: 3px;
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.02;
+  letter-spacing: -0.028em;
+  font-variation-settings: 'opsz' 48;
+}
+.pp.cover .hed { font-size: 18.5px; }
+.pp .dek { display: block; margin-top: 6px; font-style: italic; font-size: 9.2px; line-height: 1.28; opacity: 0.86; }
+.pp .ph {
+  display: block;
+  flex: none;
+  margin-top: 8px;
+  height: 80px;
+  overflow: hidden;
+  background: #1b1d27;
+}
+.pp .ph img { display: block; width: 100%; height: 100%; object-fit: cover; filter: saturate(0.82) contrast(1.04); }
+.pp.cover .ph { height: 74px; }
+.pp .ph--big { height: 150px; margin-top: 10px; }
+.pp .cap { display: block; margin-top: 3px; font-family: var(--sans); font-size: 5.8px; line-height: 1.32; opacity: 0.72; }
+.pp .cols {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 8px;
+  overflow: hidden;
+  column-count: 2;
+  column-gap: 11px;
+  column-rule: 0.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  column-fill: auto;
+  font-size: 8.6px;
+  line-height: 1.32;
+  letter-spacing: -0.004em;
+  word-spacing: -0.02em;
+  text-align: justify;
+  hyphens: auto;
+}
+.pp .cols .p { display: block; text-indent: 1em; }
+.pp .cols .p:first-child { text-indent: 0; }
+.pp .cols .p:first-child::first-letter {
+  float: left;
+  padding: 1.5px 3px 0 0;
+  font-size: 26px;
+  line-height: 0.84;
+  font-weight: 600;
+}
+.pp .pull {
+  display: block;
+  margin-top: 12px;
+  padding: 8px 0 9px;
+  border-top: 1.5px solid currentColor;
+  border-bottom: 0.5px solid currentColor;
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+.pp .brief { display: block; margin-top: 9px; font-size: 8.7px; line-height: 1.34; text-align: justify; hyphens: auto; }
+.pp.back .motto { margin-top: 2px; }
+.pp .index { display: grid; gap: 7px; margin-top: 22px; }
+.pp .index span { display: flex; gap: 9px; align-items: baseline; font-size: 10px; line-height: 1.2; }
+.pp .index b { flex: none; width: 10px; font-family: var(--sans); font-size: 7px; color: var(--spot); }
+
+/* ── What the room steps back behind while you read ──────────────────────── */
+
+.hush {
+  position: absolute;
+  z-index: 20;
+  left: -1400px;
+  right: -1400px;
+  top: -900px;
+  bottom: -900px;
+  background: rgba(3, 4, 11, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s var(--ease);
+}
+.stage.is-reading .hush { opacity: 1; pointer-events: auto; cursor: zoom-out; }
+/* and goes out of focus, the way a room does behind something held close */
+.stage.is-reading .thing:not(.is-open),
+.stage.is-reading .kb,
+.stage.is-reading .lampy { filter: blur(2px); }
+
+/* ── The lamp in the corner ──────────────────────────────────────────────────
+   A floor lamp behind the desk, its pole going down behind it. A linen drum
+   that glows from inside once it is on, a pool of light thrown up the wall, a
+   bulb you can see the bottom of — and a chain. Pull the chain and the day
+   moves on to its next part. */
+
+.lampy {
+  position: absolute;
+  z-index: 4;
+  left: 1436px;
+  top: 222px;
+  width: 136px;
+  height: 392px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* The light it throws: out of the top of the shade and up the wall in a
+   widening fan, and out of the bottom in a pool. */
+.lampy .up,
+.lampy .down {
+  position: absolute;
+  pointer-events: none;
+  opacity: var(--lamp);
+  filter: blur(7px);
+}
+.lampy .up {
+  left: -70px;
+  top: -232px;
+  width: 276px;
+  height: 236px;
+  clip-path: polygon(0 0, 100% 0, 66% 100%, 34% 100%);
+  background:
+    radial-gradient(60% 46% at 50% 100%, rgba(255, 232, 196, 0.46), transparent 80%),
+    linear-gradient(0deg, rgba(255, 210, 150, 0.3), rgba(255, 210, 150, 0.08) 62%, transparent);
+}
+.lampy .down {
+  left: -48px;
+  top: 78px;
+  width: 232px;
+  height: 250px;
+  clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+  background:
+    radial-gradient(54% 34% at 50% 0%, rgba(255, 232, 196, 0.4), transparent 80%),
+    linear-gradient(180deg, rgba(255, 206, 140, 0.24), rgba(255, 206, 140, 0.05) 70%, transparent);
+}
+.lampy .pole {
+  position: absolute;
+  left: 66px;
+  top: 76px;
+  width: 5px;
+  height: 316px;
+  border-radius: 3px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, #a08c62 calc(16% + 34% * var(--light-on) + 40% * var(--lamp)), #15172a),
+    color-mix(in srgb, #3b3428 40%, #0b0d18));
+}
+.lampy .shade {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  width: 112px;
+  height: 80px;
+  clip-path: polygon(17% 0, 83% 0, 100% 100%, 0 100%);
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.045) 0 1.5px, transparent 1.5px 6px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.36), transparent 28%, transparent 66%, rgba(0, 0, 0, 0.42)),
+    linear-gradient(180deg,
+      color-mix(in srgb, #ffe4bd calc(100% * var(--lamp)), color-mix(in srgb, #cdbfa8 calc(12% + 40% * var(--light-on)), #1c1f36)),
+      color-mix(in srgb, #ffc684 calc(100% * var(--lamp)), color-mix(in srgb, #a99c88 calc(10% + 34% * var(--light-on)), #171a2e)));
+  transition: filter 0.3s var(--ease);
+}
+.lampy .shade i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34px;
+  background: radial-gradient(62% 100% at 50% 100%, rgba(255, 240, 210, calc(0.9 * var(--lamp))), transparent 76%);
+}
+.lampy .bulb {
+  position: absolute;
+  left: 22px;
+  top: 74px;
+  width: 92px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    rgba(255, 248, 230, calc(0.95 * var(--lamp))),
+    rgba(255, 196, 120, calc(0.45 * var(--lamp))) 62%,
+    transparent);
+  filter: blur(0.8px);
+}
+.lampy .chain {
+  position: absolute;
+  left: 100px;
+  top: 76px;
+  width: 2px;
+  height: 46px;
+  transform-origin: 50% 0;
+  background: repeating-linear-gradient(180deg,
+    color-mix(in srgb, #d1bd92 calc(18% + 40% * var(--light-on) + 50% * var(--lamp)), #262433) 0 2px,
+    transparent 2px 3.4px);
+}
+.lampy .chain i {
+  position: absolute;
+  left: -2.5px;
+  bottom: -9px;
+  width: 7px;
+  height: 10px;
+  border-radius: 40% 40% 50% 50%;
+  background: color-mix(in srgb, #d1bd92 calc(18% + 40% * var(--light-on) + 50% * var(--lamp)), #262433);
+}
+.lampy:hover .chain { animation: chain-swing 1.8s ease-in-out infinite; }
+.lampy:hover .shade { filter: brightness(1.12); }
+.lampy.is-pulled .chain { animation: chain-pull 0.7s cubic-bezier(0.3, 1.5, 0.5, 1); }
+.lampy:focus-visible .shade { filter: brightness(1.2) drop-shadow(0 0 2px var(--accent)); }
+@keyframes chain-swing {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes chain-pull {
+  0% { transform: none; }
+  28% { transform: scaleY(1.24); }
+  100% { transform: none; }
+}
+/* Above the shade, where nothing on the desk stands in front of it. */
+.lampy .lid { left: 4px; bottom: auto; top: -52px; }
+.lampy:hover .lid, .lampy:focus-visible .lid { opacity: 1; transform: translate(-50%, 0); }
+
+/* What the lamp does to the room once it is on. */
+.lamp {
+  position: absolute;
+  z-index: 3;
+  right: -140px;
+  top: 166px;
+  width: 760px;
+  height: 740px;
+  opacity: var(--lamp);
+  transition: opacity 1.2s linear;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(46% 52% at 69% 18%, rgba(255, 206, 148, 0.42), transparent 74%);
+  filter: blur(18px);
+}
+
+/* ── The bar ─────────────────────────────────────────────────────────────── */
+
+.top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 74px;
+  padding: 0 clamp(16px, 3vw, 44px);
+  pointer-events: none;
+}
+.top > * { pointer-events: auto; }
+.top::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4, 6, 13, 0.7), transparent);
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
+  pointer-events: none;
+}
+
+.brand { display: inline-flex; align-items: center; gap: 10px; flex: none; white-space: nowrap; color: var(--moon); text-decoration: none; font-family: var(--serif); font-size: 19px; }
+.brand svg { width: 38px; color: var(--accent); }
+
+.tabs { display: flex; gap: 2px; margin-left: auto; }
+.tabs button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--haze);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.25s, background 0.25s;
+}
+.tabs button:hover, .tabs button.is-here { color: var(--moon); background: rgba(255, 255, 255, 0.11); }
+
+/* Bottom left, big: it is the thing scrolling actually moves, so it reads
+   as the room's own clock rather than a line in the bar. Under it, which of
+   the app's four lights the hour falls in. */
+.clock {
+  position: fixed;
+  left: clamp(16px, 3vw, 44px);
+  bottom: 20px;
+  z-index: 38;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 350;
+  font-size: clamp(30px, 2.8vw, 46px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  text-shadow: 0 2px 30px rgba(3, 5, 12, 0.9);
+  pointer-events: none;
+}
+.clock small { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--moon);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.ghost:hover { background: rgba(255, 255, 255, 0.15); }
+.ghost svg { width: 16px; height: 16px; }
+.ghost span { display: inline; }
+
+/* ── What a thing says when you open it ──────────────────────────────────── */
+
+.leaf {
+  position: fixed;
+  z-index: 50;
+  left: 50%;
+  bottom: 5svh;
+  width: min(880px, calc(100vw - 36px));
+  transform: translate(-50%, 24px);
+  padding: clamp(20px, 2.4vw, 32px) clamp(22px, 2.6vw, 36px);
+  border-radius: 20px;
+  background: rgba(9, 12, 24, 0.86);
+  box-shadow: inset 0 0 0 1px var(--edge), 0 40px 90px -30px rgba(0, 0, 0, 1);
+  backdrop-filter: blur(20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+}
+.leaf.is-open { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+
+.leaf .at { display: flex; align-items: center; gap: 9px; margin: 0 0 10px; font-size: 12.5px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); }
+.leaf .at::before { content: ''; width: 22px; height: 1.5px; background: currentColor; opacity: 0.6; }
+.leaf h2 { margin: 0; font-family: var(--serif); font-weight: 350; font-size: clamp(26px, 3vw, 44px); line-height: 1.04; letter-spacing: -0.03em; }
+.leaf h2 em { font-style: italic; color: var(--accent); }
+.leaf p { margin: 12px 0 0; max-width: 62ch; font-size: clamp(14.5px, 1.05vw, 17px); color: var(--haze); }
+
+.leaf .shut {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--moon);
+  cursor: pointer;
+}
+.leaf .shut:hover { background: rgba(255, 255, 255, 0.18); }
+.leaf .shut svg { width: 15px; }
+
+/* The views, as a row you can pick from — this is the Features tab. */
+.picks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.picks button {
+  padding: 9px 15px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--haze);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s;
+}
+.picks button:hover { background: rgba(255, 255, 255, 0.13); color: var(--moon); }
+.picks button.is-on { background: var(--moon); color: #05070f; box-shadow: none; }
+
+/* The cards and the paper say everything themselves; underneath them is
+   only a way to move through them, and on to the pages behind the room. */
+.leaf.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  max-width: calc(100vw - 24px);
+  bottom: 24px;
+  padding: 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.leaf.bar .shut { position: static; flex: none; width: 42px; height: 42px; margin-left: 2px; }
+.bar .step {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--moon);
+  cursor: pointer;
+  transition: background 0.25s;
+}
+.bar .step:hover { background: rgba(255, 255, 255, 0.17); }
+.bar .step svg { width: 16px; }
+.leaf.bar .count {
+  display: flex;
+  gap: 5px;
+  margin: 0 4px;
+  font-size: 14px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.leaf.bar .count b { color: var(--moon); font-weight: 600; }
+.leaf.bar .pill { height: 42px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--moon);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.pill:hover { background: rgba(255, 255, 255, 0.15); }
+.pill--lit { background: var(--moon); color: #05070f; box-shadow: none; }
+.pill--lit:hover { background: #fff; }
+.pill svg { width: 16px; height: 16px; }
+
+/* ── How to move ─────────────────────────────────────────────────────────── */
+
+.hint {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 30;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 18px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: rgba(8, 11, 22, 0.6);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  backdrop-filter: blur(12px);
+  font-size: 13.5px;
+  color: var(--haze);
+  white-space: nowrap;
+  transition: opacity 0.6s var(--ease);
+}
+.hint.is-gone { opacity: 0; pointer-events: none; }
+.hint b { color: var(--moon); font-weight: 600; }
+
+/* ── The player ──────────────────────────────────────────────────────────── */
+
+.player {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: clamp(14px, 3vw, 44px);
+  background: rgba(3, 5, 11, 0.94);
+  backdrop-filter: blur(24px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s var(--ease);
+}
+.player.is-open { opacity: 1; pointer-events: auto; }
+.player video { max-width: 100%; max-height: 100%; border-radius: 12px; background: #000; }
+.player video[data-shape='tall'] { max-width: min(420px, 100%); }
+.player .shut {
+  position: absolute;
+  top: clamp(12px, 2vw, 26px);
+  right: clamp(12px, 2vw, 26px);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--moon);
+  cursor: pointer;
+}
+.player .shut svg { width: 17px; }
+
+/* ── Narrow ──────────────────────────────────────────────────────────────── */
+
+/*
+ * A phone cannot hold a room and fill its screen — two thirds of it would be
+ * bare wall and bare desk. So the room takes the top of the glass and the
+ * leaf takes the bottom, permanently: the thing you tapped is always saying
+ * something underneath it. The cards and the paper are the exception — they
+ * carry their own words, so they get the whole glass and only the bar of
+ * controls sits under them.
+ */
+@media (max-width: 860px) {
+  .frame {
+    bottom: 46svh;
+    -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent);
+    mask-image: linear-gradient(180deg, #000 72%, transparent);
+  }
+  body.is-reading .frame { bottom: 0; -webkit-mask-image: none; mask-image: none; }
+  .frame::after { background: radial-gradient(130% 120% at 50% 40%, transparent 46%, rgba(2, 3, 9, 0.78) 100%); }
+
+  .leaf {
+    left: 12px;
+    right: 12px;
+    top: calc(54svh - 8px);
+    bottom: 66px;
+    width: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateY(14px);
+    border-radius: 20px;
+    background: rgba(9, 12, 24, 0.92);
+  }
+  .leaf.is-open { transform: none; }
+  .leaf h2 { font-size: clamp(25px, 7vw, 34px); }
+  /* It is never closed down here, so there is nothing to close. */
+  .leaf .shut { display: none; }
+
+  .leaf.bar {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: 74px;
+    overflow: visible;
+    transform: translate(-50%, 14px);
+    background: rgba(9, 12, 24, 0.94);
+  }
+  .leaf.bar.is-open { transform: translate(-50%, 0); }
+  .leaf.bar .shut { display: grid; }
+  .leaf.bar .pill:not(.pill--lit) { display: none; }
+
+  .top { gap: 10px; height: 62px; }
+  .clock small { display: none; }
+  .ghost span { display: none; }
+
+  /* The tabs come off the bar and sit where a thumb is. */
+  .tabs {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    z-index: 45;
+    margin: 0;
+    transform: translateX(-50%);
+    gap: 3px;
+    padding: 5px;
+    max-width: calc(100vw - 20px);
+    overflow-x: auto;
+    border-radius: 999px;
+    background: rgba(8, 11, 22, 0.76);
+    box-shadow: inset 0 0 0 1px var(--edge);
+    backdrop-filter: blur(14px);
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  /* No corner to spare down there, so the clock goes back up to the bar. */
+  .clock {
+    position: fixed;
+    left: 50%;
+    top: 14px;
+    bottom: auto;
+    transform: translateX(-50%);
+    font-size: 26px;
+    gap: 7px;
+  }
+  .clock small { font-size: 9.5px; }
+  .ghost { margin-left: auto; }
+  .tabs button { font-size: 13.5px; padding: 8px 13px; }
+  /* A portrait crop cuts the desk off below the keyboard, so the line moves
+     up under the title. It stays inside the stage — `fixed` would resolve
+     against the stage's own transform rather than the window. */
+  .mark { top: 8px; font-size: 92px; }
+  .tagline { top: 112px; font-size: 25px; }
+  .hint { display: none; }
+  .lid { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage, .thing, .leaf, .cards .card, .paper .np, .np .pg, .np .half.bottom { transition: none; }
+  .motes i, .plant s, .steam i, .lampy .chain { animation: none; }
+  .steam i { opacity: 0.35; }
+}

@@ -3,285 +3,279 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pulse OS — your whole day, on one calm screen</title>
-<meta name="description" content="Your plans, your projects, your email, the weather, the news, the markets, your music and your travel in one place, with an assistant that can read all of it and act on it.">
-<meta name="theme-color" content="#0a0d1c">
-<link rel="canonical" href="https://eeliya-hub.github.io/pulseOS/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Pulse OS">
-<meta property="og:title" content="Pulse OS — your whole day, on one calm screen">
-<meta property="og:description" content="Your plans, your projects, your email, the weather, the news, the markets, your music and your travel in one place, with an assistant that can read all of it and act on it.">
-<meta property="og:url" content="https://eeliya-hub.github.io/pulseOS/">
-<meta property="og:image" content="https://eeliya-hub.github.io/pulseOS/films/tour-poster.jpg">
-<meta property="og:image:width" content="1600">
-<meta property="og:image:height" content="900">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Pulse OS — your whole day, on one calm screen">
-<meta name="twitter:description" content="Your plans, your projects, your email, the weather, the news, the markets, your music and your travel in one place, with an assistant that can read all of it and act on it.">
-<meta name="twitter:image" content="https://eeliya-hub.github.io/pulseOS/films/tour-poster.jpg">
+<title>Pulse OS</title>
+<meta name="description" content="A dashboard for your whole day — mail, plans, projects, news, music and travel on one screen, lit by the hour you are in.">
+<meta name="theme-color" content="#04060d">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%230a0d1c'/%3E%3Cpath d='M5 25h9l2.6-5.5 4.2 11 3.8-14.5 3.2 9H39' fill='none' stroke='%23a9bbff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/home.css?v=202610271800">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Schibsted+Grotesk:wght@400..600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/room.css">
 </head>
 <body>
-<div class="sky" aria-hidden="true"></div>
-<div class="grain" aria-hidden="true"></div>
+
+<div class="frame">
+  <div class="stage">
+
+    <div class="wall" aria-hidden="true"></div>
+
+    <div class="window" aria-hidden="true">
+      <i></i><b></b><u></u>
+    </div>
+    <div class="sill" aria-hidden="true"></div>
+    <div class="plant" aria-hidden="true"><i></i><s></s><s></s><s></s><s></s><s></s><s></s></div>
+    <div class="shelf" aria-hidden="true"><b></b><b></b><u></u><i></i></div>
+    <div class="glow" aria-hidden="true"></div>
+
+    <h1 class="mark">Pulse OS</h1>
+
+    <!-- The lamp in the corner. It is behind the desk, standing on the floor,
+         and its chain moves the day on — dawn, day, dusk, night. -->
+    <div class="lampy" data-lamp tabindex="0" role="button" aria-label="The lamp. Pull the chain to move the day on.">
+      <span class="up" aria-hidden="true"></span>
+      <span class="down" aria-hidden="true"></span>
+      <span class="pole" aria-hidden="true"></span>
+      <span class="shade" aria-hidden="true"><i></i></span>
+      <span class="bulb" aria-hidden="true"></span>
+      <span class="chain" aria-hidden="true"><i></i></span>
+      <span class="lid"><b>The lamp</b><span>pull it, and the day moves on</span></span>
+    </div>
+
+    <div class="desk" aria-hidden="true"></div>
+
+    <div class="beam" aria-hidden="true"><i></i></div>
+    <div class="motes" aria-hidden="true"><i style="left:14%;top:72%;--s:1.0;--d:-3s;--w:17.0s"></i><i style="left:31%;top:46%;--s:0.7;--d:-9s;--w:21.0s"></i><i style="left:47%;top:80%;--s:1.2;--d:-14s;--w:15.0s"></i><i style="left:58%;top:38%;--s:0.8;--d:-5s;--w:23.0s"></i><i style="left:69%;top:66%;--s:1.0;--d:-18s;--w:19.0s"></i><i style="left:22%;top:30%;--s:0.6;--d:-11s;--w:25.0s"></i><i style="left:80%;top:52%;--s:0.9;--d:-7s;--w:18.0s"></i><i style="left:39%;top:62%;--s:1.1;--d:-21s;--w:22.0s"></i><i style="left:63%;top:86%;--s:0.7;--d:-2s;--w:20.0s"></i><i style="left:8%;top:54%;--s:0.8;--d:-16s;--w:24.0s"></i><i style="left:88%;top:74%;--s:1.0;--d:-12s;--w:16.0s"></i><i style="left:52%;top:22%;--s:0.6;--d:-20s;--w:26.0s"></i></div>
+    <div class="lamp" aria-hidden="true"></div>
+    <div class="spill" aria-hidden="true"></div>
+
+    <span class="cast cast--mon" aria-hidden="true"></span>
+    <span class="cast cast--kb" aria-hidden="true"></span>
+    <span class="cast cast--phone" aria-hidden="true"></span>
+    <span class="cast cast--cards" aria-hidden="true"></span>
+    <span class="cast cast--post" aria-hidden="true"></span>
+
+    <p class="tagline">Your day, in a heartbeat.</p>
+
+    <div class="kb" aria-hidden="true"><div class="deck">
+      <i class="fk" style="--u:6"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i><i class="fk" style="--u:4"></i>
+      <i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:6"></i>
+      <i style="--u:6"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i>
+      <i style="--u:7"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:7"></i>
+      <i style="--u:9"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:9"></i>
+      <i style="--u:4"></i><i style="--u:4"></i><i style="--u:4"></i><i style="--u:5"></i><i style="--u:20"></i><i style="--u:5"></i><i style="--u:4"></i><b class="arrows"><i></i><i></i><i></i><i></i></b>
+    </div></div>
+    <span class="kb-lip" aria-hidden="true"></span>
+    <div class="mug" aria-hidden="true">
+      <span class="steam" aria-hidden="true">
+        <svg class="steam-defs" width="0" height="0" focusable="false">
+          <defs>
+            <filter id="steam-f" x="-80%" y="-10%" width="260%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.035 0.06" numOctaves="2" seed="11" result="n"/>
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G"/>
+              <feGaussianBlur stdDeviation="1.3"/>
+            </filter>
+            <linearGradient id="steam-g" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+              <stop offset=".14" stop-color="#fff" stop-opacity=".85"/>
+              <stop offset=".5" stop-color="#fff" stop-opacity=".45"/>
+              <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <i><svg viewBox="0 0 40 120"><path filter="url(#steam-f)" d="M20 118 C 14 98, 27 86, 20 68 S 11 38, 21 18 S 25 4, 19 -2" fill="none" stroke="url(#steam-g)" stroke-width="8" stroke-linecap="round"/></svg></i>
+        <i><svg viewBox="0 0 40 120"><path filter="url(#steam-f)" d="M21 118 C 28 100, 14 88, 22 70 S 30 42, 19 22 S 15 6, 22 -2" fill="none" stroke="url(#steam-g)" stroke-width="6.5" stroke-linecap="round"/></svg></i>
+        <i><svg viewBox="0 0 40 120"><path filter="url(#steam-f)" d="M19 118 C 13 104, 22 92, 17 76 S 10 50, 19 32 S 24 14, 18 4" fill="none" stroke="url(#steam-g)" stroke-width="5.5" stroke-linecap="round"/></svg></i>
+        <i><svg viewBox="0 0 40 120"><path filter="url(#steam-f)" d="M20 118 C 26 104, 17 90, 23 74 S 28 46, 20 28 S 16 10, 21 0" fill="none" stroke="url(#steam-g)" stroke-width="7" stroke-linecap="round"/></svg></i>
+      </span>
+      <i></i><b></b><s></s>
+    </div>
+
+    <!-- The monitor: everything the app does, and the tour. -->
+    <div class="thing monitor" data-open="screen" tabindex="0" role="button" aria-label="The app, and the tour">
+      <div class="screen">
+        <img class="pane is-on" alt="The Pulse OS home screen">
+        <img class="pane" alt="" aria-hidden="true">
+        <video data-view="film" src="films/tour-loop.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+      </div>
+      <span class="neck" aria-hidden="true"></span>
+      <span class="foot" aria-hidden="true"></span>
+      <span class="lid"><b>Pulse OS</b><span>the app, and the tour</span></span>
+    </div>
+
+    <!-- The phone: the vertical ad. -->
+    <div class="thing phone" data-open="phone" tabindex="0" role="button" aria-label="Morning to midnight, the ad">
+      <div class="glass">
+        <img src="films/day-poster.jpg" alt="A frame from the Pulse OS ad">
+        <video src="films/day-loop.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
+      </div>
+      <span class="lid"><b>The ad</b><span>1:56</span></span>
+    </div>
+
+    <!-- The updates: a pile of cards on the desk, which stands up and fans
+         out into a carousel when you pick it up. -->
+    <div class="thing cards" data-open="book" tabindex="0" role="button" aria-label="Updates &mdash; what changed, and why">
+      <article class="card" data-card="0">
+        <span class="pic"><img src="release/gallery/projects-board.jpg" alt="" loading="lazy" decoding="async" style="object-position:50% 30%"></span>
+        <span class="txt">
+          <span class="meta"><span class="tag">Feature</span><span>17 Oct</span><span class="no">01 / 06</span></span>
+          <span class="ttl">Projects &mdash; <em>boards, a timeline and a table</em></span>
+          <span class="say">One set of cards drawn three ways: lanes for what is in flight, a timeline for when it lands, a table for the whole lot at once. Drag a card into the last list and it is ticked off.</span>
+        </span>
+      </article>
+      <article class="card" data-card="1">
+        <span class="pic"><img src="release/gallery/projects-timeline.jpg" alt="" loading="lazy" decoding="async" style="object-position:62% 70%"></span>
+        <span class="txt">
+          <span class="meta"><span class="tag">Feature</span><span>17 Oct</span><span class="no">02 / 06</span></span>
+          <span class="ttl">Ask Pulse can work on <em>your boards</em></span>
+          <span class="say">It reads a board before it answers, adds a card to the list you name, and moving one to done ticks it off. A name that fits two cards moves nothing &mdash; it asks which.</span>
+        </span>
+      </article>
+      <article class="card" data-card="2">
+        <span class="pic"><img src="release/gallery/schedule.jpg" alt="" loading="lazy" decoding="async" style="object-position:40% 60%"></span>
+        <span class="txt">
+          <span class="meta"><span class="tag">Feature</span><span>17 Oct</span><span class="no">03 / 06</span></span>
+          <span class="ttl">Schedule, rebuilt <em>around the month</em></span>
+          <span class="say">The calendar is the screen now. Events are written into the days, the months either side stay in view, and the day sits beside it with what is on now lit.</span>
+        </span>
+      </article>
+      <article class="card" data-card="3">
+        <span class="pic"><img src="release/gallery/mail-project.jpg" alt="" loading="lazy" decoding="async" style="object-position:50% 55%"></span>
+        <span class="txt">
+          <span class="meta"><span class="tag">Improvement</span><span>17 Oct</span><span class="no">04 / 06</span></span>
+          <span class="ttl">Mail gets a tab, and <em>lines onto boards</em></span>
+          <span class="say">Asking Pulse to write is a button, not a box under every message &mdash; and highlighting a line puts a card on the right board, dated from the email&rsquo;s own words.</span>
+        </span>
+      </article>
+      <article class="card" data-card="4">
+        <span class="pic"><img src="release/gallery/home.jpg" alt="" loading="lazy" decoding="async" style="object-position:30% 40%"></span>
+        <span class="txt">
+          <span class="meta"><span class="tag">Improvement</span><span>10 Oct</span><span class="no">05 / 06</span></span>
+          <span class="ttl">Pulse fills <em>a big screen</em></span>
+          <span class="say">On a 2560 &times; 1440 display the layout used to sit small in the middle. It scales up to fill it now, and nothing at or below 1920 &times; 1080 moves.</span>
+        </span>
+      </article>
+      <article class="card" data-card="5">
+        <span class="pic"><img src="release/gallery/mail-inbox.jpg" alt="" loading="lazy" decoding="async" style="object-position:55% 70%"></span>
+        <span class="txt">
+          <span class="meta"><span class="tag">Feature</span><span>9 Oct</span><span class="no">06 / 06</span></span>
+          <span class="ttl">Mail &mdash; <em>Gmail and Outlook</em></span>
+          <span class="say">Both services under one way of working, the dates in a message worked out in code rather than guessed, and nothing ever sent, filed or deleted on its own.</span>
+        </span>
+      </article>
+      <span class="lid"><b>Updates</b><span>what changed, and why</span></span>
+    </div>
+
+    <!-- PulseNews: folded in half on the desk. Picked up, it stands, opens out
+         from the crease, and its pages turn. -->
+    <div class="thing paper" data-open="post" tabindex="0" role="button" aria-label="Announcements &mdash; PulseNews">
+      <span class="np">
+        <span class="pg pg--cover" data-pg="0"><span class="half top"><span class="face front"><span class="pp cover"><span class="ear"><span>No. 4</span><span>Saturday 17 October 2026</span><span>Free</span></span><span class="mast">Pulse<i>News</i></span><span class="motto">Your day, in a heartbeat &middot; the bigger moments</span><span class="kick">Projects &middot; Schedule &middot; Mail</span><span class="hed">Mail, Projects and Schedule, talking to each other</span><span class="ph"><img src="release/gallery/projects-board.jpg" alt="" loading="lazy" decoding="async" style="object-position:50% 6%"></span><span class="cap">The board is what is in flight. A due date goes amber on the day and red after it.</span><span class="cols"><span class="p">Mail and Projects have tabs of their own, and the calendar is rebuilt around the month.</span><span class="p">The point is that they read each other: a meeting in an email arrives in your calendar, and a line in one becomes a card on the right board.</span></span><span class="foot"><span>Inside: your inbox, a film, Afterglow</span><span>1</span></span></span></span><span class="face back"><span class="pp left"><span class="run"><span>Page 2</span><span>9 October 2026</span><span>Pulse<i>News</i></span></span><span class="ph ph--big"><img src="release/gallery/mail-inbox.jpg" alt="" loading="lazy" decoding="async" style="object-position:50% 60%"></span><span class="cap">Two accounts, one inbox. Gmail&rsquo;s categories appear for the account that has them.</span><span class="pull">The dates are worked out in code, not guessed.</span><span class="brief">Ask a model for the date of &ldquo;Thursday&rsquo;s design review&rdquo; and it answers confidently, often wrongly. So Pulse does not ask. The model quotes the email&rsquo;s own words, and tested code works out the day &mdash; against the day it was sent.</span><span class="foot"><span>2</span><span>Continued opposite</span></span></span></span></span><span class="half bottom"><span class="face front" aria-hidden="true"><span class="pp cover"><span class="ear"><span>No. 4</span><span>Saturday 17 October 2026</span><span>Free</span></span><span class="mast">Pulse<i>News</i></span><span class="motto">Your day, in a heartbeat &middot; the bigger moments</span><span class="kick">Projects &middot; Schedule &middot; Mail</span><span class="hed">Mail, Projects and Schedule, talking to each other</span><span class="ph"><img src="release/gallery/projects-board.jpg" alt="" loading="lazy" decoding="async" style="object-position:50% 6%"></span><span class="cap">The board is what is in flight. A due date goes amber on the day and red after it.</span><span class="cols"><span class="p">Mail and Projects have tabs of their own, and the calendar is rebuilt around the month.</span><span class="p">The point is that they read each other: a meeting in an email arrives in your calendar, and a line in one becomes a card on the right board.</span></span><span class="foot"><span>Inside: your inbox, a film, Afterglow</span><span>1</span></span></span></span><span class="face back" aria-hidden="true"><span class="pp left"><span class="run"><span>Page 2</span><span>9 October 2026</span><span>Pulse<i>News</i></span></span><span class="ph ph--big"><img src="release/gallery/mail-inbox.jpg" alt="" loading="lazy" decoding="async" style="object-position:50% 60%"></span><span class="cap">Two accounts, one inbox. Gmail&rsquo;s categories appear for the account that has them.</span><span class="pull">The dates are worked out in code, not guessed.</span><span class="brief">Ask a model for the date of &ldquo;Thursday&rsquo;s design review&rdquo; and it answers confidently, often wrongly. So Pulse does not ask. The model quotes the email&rsquo;s own words, and tested code works out the day &mdash; against the day it was sent.</span><span class="foot"><span>2</span><span>Continued opposite</span></span></span></span></span></span>
+        <span class="pg" data-pg="1"><span class="face front"><span class="pp"><span class="run"><span>Pulse<i>News</i></span><span>9 October 2026</span><span>Page 3</span></span><span class="kick">Gmail &middot; Outlook &middot; Microsoft 365</span><span class="hed">Your inbox, in Pulse</span><span class="dek">Gmail and Outlook under one way of working, with the dates in a message worked out in tested code.</span><span class="cols"><span class="p">Gmail and Outlook now connect to Pulse OS &mdash; not as another mail client bolted on the side, but as a part of your day the rest of Pulse can read. An email that mentions Thursday at half two becomes something in your calendar; one that asks for the Q4 deck by Friday becomes a task with the right date on it.</span><span class="p">Gmail speaks in labels and Outlook in folders, so Pulse keeps one idea of a mailbox and lets each service say what it can actually do. Connect both and the inbox interleaves by date.</span><span class="p">One press of Dates &amp; tasks reads a message once and hands back the meetings, the asks and the deadlines, each with the button that acts on it. It never sends, and nothing is written until you press the button on the review card.</span></span><span class="foot"><span>The whole story: Announcements</span><span>3</span></span></span></span><span class="face back"><span class="pp left"><span class="run"><span>Page 4</span><span>7 October 2026</span><span>Pulse<i>News</i></span></span><span class="ph ph--big"><img src="launch/launch-poster.jpg" alt="" loading="lazy" decoding="async" style="object-position:50% 50%"></span><span class="cap">The launch film. Since retired: the tour covers every part of Pulse as it stands.</span><span class="pull">Every frame is code.</span><span class="brief">Built in Remotion from Pulse&rsquo;s own components rather than recorded off a screen, so every frame is sharp at any size &mdash; and every number on screen is the one the story needs.</span><span class="foot"><span>4</span><span>Continued opposite</span></span></span></span></span>
+        <span class="pg" data-pg="2"><span class="face front"><span class="pp"><span class="run"><span>Pulse<i>News</i></span><span>7 October 2026</span><span>Page 5</span></span><span class="kick">Film &middot; 2 min 29 s, narrated</span><span class="hed">Pulse OS has a film</span><span class="dek">Two and a half minutes covering every part of the app &mdash; and every frame of it is code.</span><span class="cols"><span class="p">Pulse&rsquo;s own views are rebuilt in Remotion from its components rather than recorded off a screen, so every frame is sharp at any size and every number on screen is the one the story needs.</span><span class="p">Two voices &mdash; a narrator, and Pulse itself &mdash; were generated with Google&rsquo;s Gemini, each line read three times and the best take chosen blind. whisper.cpp timed every word, and the picture moves on the words, on a ninety-beat grid with a score composed in code.</span><span class="p">With it came a thirty-second ad made for phones. It has no voice at all: it runs at 124 beats a minute, cut on the bars of &ldquo;Rising Forest&rdquo; by Diego Nava.</span></span><span class="foot"><span>The whole story: Announcements</span><span>5</span></span></span></span><span class="face back"><span class="pp left"><span class="run"><span>Page 6</span><span>21 September 2026</span><span>Pulse<i>News</i></span></span><span class="ph ph--big"><img src="release/gallery/home.jpg" alt="" loading="lazy" decoding="async" style="object-position:30% 40%"></span><span class="cap">Dawn, day, dusk and night each light the whole screen differently.</span><span class="pull">The sky is the hour.</span><span class="brief">Newsreader for display and figures, Schibsted Grotesk for everything else, on one scale used everywhere &mdash; and colour, not size, carries the hierarchy.</span><span class="foot"><span>6</span><span>Continued opposite</span></span></span></span></span>
+        <span class="pg" data-pg="3"><span class="face front"><span class="pp"><span class="run"><span>Pulse<i>News</i></span><span>21 September 2026</span><span>Page 7</span></span><span class="kick">Release &middot; the frontend, rebuilt</span><span class="hed">v2 &mdash; Afterglow</span><span class="dek">One spatial system for every view, lit by the hour you are actually in.</span><span class="cols"><span class="p">Every view is now composed of the same three parts: a sky holding what the view is about, set large and straight on the light; a horizon at a fixed height, so the line falls in the same place between tabs; and a ground divided by space and a faint rule rather than chopped into cards.</span><span class="p">The background is not a picture of a sky. It is the hour itself &mdash; dawn, day, dusk and night each light the screen differently, crossfading as the day turns.</span><span class="p">Travel went live with it &mdash; flights tracked from community ADS-B receivers, real exchange rates, maps that need no key &mdash; and the assistant learned to speak.</span></span><span class="foot"><span>The whole story: Announcements</span><span>7</span></span></span></span><span class="face back"><span class="pp back"><span class="mast mast--small">Pulse<i>News</i></span><span class="motto">Printed by the light of whatever hour you read it in.</span><span class="index"><span><b>1</b>Mail, Projects and Schedule, talking to each other</span><span><b>3</b>Your inbox, in Pulse</span><span><b>5</b>Pulse OS has a film</span><span><b>7</b>v2 &mdash; Afterglow</span></span><span class="foot"><span>Every story, in full, under Announcements</span><span>8</span></span></span></span></span>
+        <span class="lip" aria-hidden="true"></span>
+      </span>
+      <span class="lid"><b>PulseNews</b><span>the announcements</span></span>
+    </div>
+
+    <!-- What the room steps back behind while you read something. -->
+    <div class="hush" aria-hidden="true"></div>
+
+    <!-- The same shaft again, in front of everything, at a fifth of it: the
+         haze you would actually be looking through. -->
+    <div class="beam beam--front" aria-hidden="true"><i></i></div>
+
+  </div>
+</div>
 
 <header class="top">
-  <a class="brand" href="index.html" aria-label="Pulse OS — home">
+  <a class="brand" href="#" data-home>
     <svg viewBox="0 0 44 18" fill="none" aria-hidden="true"><path d="M1.5 10.5h10l2.6-5.5 4.2 11 3.8-14.5 3.2 9h17.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>Pulse OS</span>
   </a>
-  <nav class="tabs" aria-label="Sections">
-    <a href="index.html" aria-current="page">Pulse OS</a>
-    <a href="updates.html">Updates</a>
-    <a href="announcements.html">Announcements</a>
+  <nav class="tabs" aria-label="The room">
+    <button type="button" data-go="screen">Features</button>
+    <button type="button" data-go="phone">Films</button>
+    <button type="button" data-go="book">Updates</button>
+    <button type="button" data-go="post">Announcements</button>
   </nav>
-  <a class="pill pill--lit" href="https://github.com/eeliya-hub/pulseOS">
+  <a class="ghost" href="https://github.com/eeliya-hub/pulseOS">
     <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-    GitHub
+    <span>GitHub</span>
   </a>
 </header>
 
-<main>
+<!-- ── What each thing says when you open it ───────────────────────────── -->
 
-  <!-- ── The stage ─────────────────────────────────────────────────────── -->
-  <section class="stage">
-    <p class="eyebrow reveal">A dashboard for your whole day</p>
-    <h1 class="reveal" data-delay="1">Every day has a <em>pulse.</em></h1>
-    <p class="lede reveal" data-delay="2">
-      Your plans, your mail, your projects, the weather, the news, your music and
-      wherever you are headed — on one screen, lit by the hour you are actually in,
-      with an assistant that can read all of it and act on it.
-    </p>
-
-    <div class="films reveal" data-delay="3">
-      <figure class="film film--wide" tabindex="0" role="button"
-              data-film="https://github.com/eeliya-hub/pulseOS/releases/download/films/pulseos-tour.mp4"
-              data-shape="wide" aria-label="Watch the tour — four minutes thirty-one">
-        <img src="films/tour-poster.jpg" alt="Pulse OS on a desktop at dawn: the greeting, what is on today, the forecast and the apps">
-        <video src="films/tour-loop.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
-        <figcaption>
-          <span>
-            <span class="name">The tour</span>
-            <span class="meta">Every part of it, asked for out loud · 4:31</span>
-          </span>
-          <span class="go" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg></span>
-        </figcaption>
-      </figure>
-
-      <figure class="film film--tall" tabindex="0" role="button"
-              data-film="https://github.com/eeliya-hub/pulseOS/releases/download/films/pulseos-day.mp4"
-              data-shape="tall" aria-label="Watch the day, from morning to midnight — one minute fifty-six">
-        <img src="films/day-poster.jpg" alt="A line of type from the Pulse OS ad: say what you mean, you press send">
-        <video src="films/day-loop.mp4" muted loop playsinline preload="none" aria-hidden="true"></video>
-        <figcaption>
-          <span>
-            <span class="name">Morning to midnight</span>
-            <span class="meta">The whole day, at speed · 1:56</span>
-          </span>
-          <span class="go" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg></span>
-        </figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <!-- ── What it is ────────────────────────────────────────────────────── -->
-  <section class="band" id="what">
-    <p class="eyebrow reveal">What it is</p>
-    <h2 class="reveal" data-delay="1">Nine apps' worth of your day,<br><em>in one place.</em></h2>
-    <p class="lede reveal" data-delay="2">
-      Pulse OS puts the things you check all day on a single screen and gives them
-      one way of working. Ask it for something and it does it — moves the meeting,
-      writes the reply, puts the card on the board — rather than telling you where
-      to go and do it yourself.
-    </p>
-
-    <div class="spread">
-      <figure class="surface surface--wide reveal">
-        <img src="release/gallery/home.jpg" alt="The Pulse OS home screen" loading="lazy">
-        <figcaption>
-          <span class="name">Home</span>
-          <p class="says">What is on today, the forecast hour by hour, and everything you open most — under a sky that follows your clock.</p>
-        </figcaption>
-      </figure>
-
-      <figure class="surface reveal">
-        <img src="release/gallery/mail-findings.jpg" alt="Pulse reading an email and finding its dates and tasks" loading="lazy">
-        <figcaption>
-          <span class="name">Mail</span>
-          <p class="says">Gmail and Outlook side by side. Pulse reads ahead, finds the dates, and puts them where they belong.</p>
-        </figcaption>
-      </figure>
-
-      <figure class="surface reveal" data-delay="1">
-        <img src="release/gallery/projects-board.jpg" alt="The Pulse OS project board" loading="lazy">
-        <figcaption>
-          <span class="name">Projects</span>
-          <p class="says">Boards that move, a timeline, and a table — the same cards, three ways of looking at them.</p>
-        </figcaption>
-      </figure>
-
-      <figure class="surface surface--third reveal">
-        <img src="release/gallery/schedule.jpg" alt="The Pulse OS schedule" loading="lazy">
-        <figcaption>
-          <span class="name">Schedule</span>
-          <p class="says">Google and Apple calendars together, the month at a glance and the day beside it.</p>
-        </figcaption>
-      </figure>
-
-      <figure class="surface surface--third reveal" data-delay="1">
-        <img src="release/gallery/markets-news.jpg" alt="The Pulse OS news and markets view" loading="lazy">
-        <figcaption>
-          <span class="name">News &amp; markets</span>
-          <p class="says">A channel live in the corner, your watchlist ticking by, and your teams.</p>
-        </figcaption>
-      </figure>
-
-      <figure class="surface surface--third reveal" data-delay="2">
-        <img src="release/gallery/travel.jpg" alt="The Pulse OS travel view" loading="lazy">
-        <figcaption>
-          <span class="name">Travel</span>
-          <p class="says">The flight tracked, the time and money there, and every day of the plan on the map.</p>
-        </figcaption>
-      </figure>
-
-      <figure class="surface reveal">
-        <img src="release/gallery/voice-speaking.jpg" alt="Pulse in voice mode, answering" loading="lazy">
-        <figcaption>
-          <span class="name">Ask Pulse</span>
-          <p class="says">Type it or say it. It reads your calendar, your mail and your boards, and it acts — it does not just answer.</p>
-        </figcaption>
-      </figure>
-
-      <figure class="surface reveal" data-delay="1">
-        <img src="release/gallery/immersive.jpg" alt="The Pulse OS immersive music player" loading="lazy">
-        <figcaption>
-          <span class="name">Music</span>
-          <p class="says">Your Spotify built in, and a full screen lit by whatever is playing, lyrics right on time.</p>
-        </figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <!-- ── Updates ───────────────────────────────────────────────────────── -->
-  <section class="band" id="updates">
-    <p class="eyebrow reveal">Updates</p>
-    <h2 class="reveal" data-delay="1">What changed, <em>and why.</em></h2>
-
-    <div class="pair">
-      <div class="reveal" data-delay="2">
-        <p class="lede" style="margin-top:0">
-          Every release is written up the same way: what moved, what broke, and what
-          it took to fix. The last one gave Mail, Projects and Schedule places of
-          their own.
-        </p>
-        <a class="more" href="updates.html">
-          All updates
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-      </div>
-
-      <figure class="film film--wide reveal" data-delay="3" tabindex="0" role="button"
-              data-film="update/pulseos-update.mp4" data-shape="wide"
-              aria-label="Watch the update film — two minutes twelve">
-        <img src="update/update-poster.jpg" alt="A still from the Pulse OS update film">
-        <figcaption>
-          <span>
-            <span class="name">The update film</span>
-            <span class="meta">Mail, Projects, Schedule · 2:12</span>
-          </span>
-          <span class="go" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg></span>
-        </figcaption>
-      </figure>
-    </div>
-
-    <div class="notes">
-      <a class="note reveal" href="updates.html">
-        <span class="when">Latest</span>
-        <span>
-          <span class="what">Projects — boards, a timeline and a table</span>
-          <p class="says">One set of cards, three ways to look at them, and Ask Pulse able to work on the board itself.</p>
-        </span>
-        <span class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      </a>
-      <a class="note reveal" data-delay="1" href="updates.html">
-        <span class="when">Before that</span>
-        <span>
-          <span class="what">Schedule, rebuilt around the month</span>
-          <p class="says">The Life Hub became Schedule: the month leads, the day reads down the side, and to-dos come back until they are done.</p>
-        </span>
-        <span class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      </a>
-    </div>
-  </section>
-
-  <!-- ── Announcements ─────────────────────────────────────────────────── -->
-  <section class="band" id="announcements">
-    <p class="eyebrow reveal">Announcements</p>
-    <h2 class="reveal" data-delay="1">The bigger <em>moments.</em></h2>
-    <p class="lede reveal" data-delay="2">
-      When something lands that changes how the whole thing feels, it gets written
-      up properly — what it does, how it was built, and what it cost to get right.
-    </p>
-
-    <div class="notes">
-      <a class="note reveal" href="announcements.html">
-        <span class="when">Latest</span>
-        <span>
-          <span class="what">Mail, Projects and Schedule</span>
-          <p class="says">Three places of their own, and a way for them to hand things to each other — a line in an email becomes a card, a date becomes a meeting.</p>
-        </span>
-        <span class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      </a>
-      <a class="note reveal" data-delay="1" href="announcements.html">
-        <span class="when">Before that</span>
-        <span>
-          <span class="what">Your inbox, read ahead</span>
-          <p class="says">Gmail and Outlook under one way of working, with the dates worked out in code rather than guessed by a model.</p>
-        </span>
-        <span class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-      </a>
-    </div>
-
-    <a class="more reveal" href="announcements.html">
-      All announcements
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h9M8.5 4l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </a>
-  </section>
-
-</main>
-
-<section class="close-out">
-  <h2 class="reveal">Your day, in a <em>heartbeat.</em></h2>
-  <p class="lede reveal" data-delay="1">Built in the open. The code, the films and every write-up are on GitHub.</p>
-  <div class="row reveal" data-delay="2">
-    <a class="pill pill--lit" href="https://github.com/eeliya-hub/pulseOS">
-      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      The repository
-    </a>
-    <a class="pill" href="updates.html">Updates</a>
-    <a class="pill" href="announcements.html">Announcements</a>
+<div class="leaf" data-leaf="screen" role="dialog" aria-label="Pulse OS">
+  <button class="shut" type="button" aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13" stroke-linecap="round"/></svg></button>
+  <p class="at">On the screen</p>
+  <h2>Your whole day, <em>in one place.</em></h2>
+  <p data-says>Your plans, the forecast and everything you open most — under a sky that follows your clock.</p>
+  <div class="picks">
+    <button type="button" data-view="home" data-title="Your whole day, <em>in one place.</em>" class="is-on" data-says="Your plans, the forecast and everything you open most — under a sky that follows your clock.">Home</button>
+    <button type="button" data-view="mail" data-title="It reads your mail <em>first.</em>" data-says="Gmail and Outlook together. Pulse reads ahead, finds the dates, and puts them in your calendar.">Mail</button>
+    <button type="button" data-view="projects" data-title="Boards that <em>move.</em>" data-says="One set of cards as a board, a timeline and a table — and Ask Pulse can work on it.">Projects</button>
+    <button type="button" data-view="schedule" data-title="Both calendars, <em>at last.</em>" data-says="Google and Apple side by side, the month at a glance and the day beside it.">Schedule</button>
+    <button type="button" data-view="apps" data-title="Everything you open, <em>where you put it.</em>" data-says="The applications you really have installed, the sites you use, in the folders and under the names you chose.">Apps</button>
+    <button type="button" data-view="ask" data-title="It doesn't answer. <em>It does it.</em>" data-says="Type it or say it. It reads your mail, your calendar and your boards — then it acts.">Ask Pulse</button>
+    <button type="button" data-view="news" data-title="Live, in the <em>corner.</em>" data-says="A channel running live in the corner, your watchlist ticking by, and your teams.">News</button>
+    <button type="button" data-view="travel" data-title="Wherever you're <em>headed.</em>" data-says="The flight tracked, the time and money there, and every day of the plan on the map.">Travel</button>
+    <button type="button" data-view="music" data-title="Lit by whatever's <em>playing.</em>" data-says="Your Spotify built in, and a full screen lit by whatever is playing.">Music</button>
   </div>
-</section>
+  <div class="row">
+    <button class="pill pill--lit" type="button" data-play="https://github.com/eeliya-hub/pulseOS/releases/download/films/pulseos-tour.mp4" data-shape="wide">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>
+      Watch the tour &middot; 4:31
+    </button>
+    <a class="pill" href="features.html" data-features>Every feature, in full</a>
+  </div>
+</div>
 
-<footer>
-  <span>Pulse OS</span>
-  <a href="https://github.com/eeliya-hub/pulseOS">GitHub</a>
-  <a href="PulseOS-Doc.html">Documentation</a>
-  <span class="hour" data-hour-says>Lit for the hour you are in</span>
-</footer>
+<div class="leaf" data-leaf="phone" role="dialog" aria-label="The ad">
+  <button class="shut" type="button" aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13" stroke-linecap="round"/></svg></button>
+  <p class="at">Propped against the monitor</p>
+  <h2>Morning to <em>midnight.</em></h2>
+  <p>Two minutes, no interface — a whole day in Pulse OS told in motion, from the first alarm to the last song.</p>
+  <div class="row">
+    <button class="pill pill--lit" type="button" data-play="https://github.com/eeliya-hub/pulseOS/releases/download/films/pulseos-day.mp4" data-shape="tall">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>
+      Watch the ad · 1:56
+    </button>
+    <button class="pill" type="button" data-play="https://github.com/eeliya-hub/pulseOS/releases/download/films/pulseos-tour.mp4" data-shape="wide">The tour · 4:31</button>
+  </div>
+</div>
 
-<!-- The film, full size, over everything. -->
+<div class="leaf bar" data-leaf="book" role="group" aria-label="Updates">
+  <button class="step" type="button" data-step="-1" aria-label="The update before this one"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <p class="count" aria-live="polite"><b data-at>1</b><span>of</span><span data-of>6</span></p>
+  <button class="step" type="button" data-step="1" aria-label="The next update"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <a class="pill pill--lit" href="updates.html">All updates</a>
+  <button class="shut" type="button" aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13" stroke-linecap="round"/></svg></button>
+</div>
+
+<div class="leaf bar" data-leaf="post" role="group" aria-label="PulseNews">
+  <button class="step" type="button" data-step="-1" aria-label="Turn back a page"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <p class="count" aria-live="polite"><b data-at>1</b><span>of</span><span data-of>4</span></p>
+  <button class="step" type="button" data-step="1" aria-label="Turn the page"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <a class="pill pill--lit" data-more href="announcements.html#talking">Read it in full</a>
+  <a class="pill" href="announcements.html">All announcements</a>
+  <button class="shut" type="button" aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13" stroke-linecap="round"/></svg></button>
+</div>
+
+<p class="clock" aria-hidden="true"><span data-clock>07:05</span><small data-half>dawn</small></p>
+
+<p class="hint"><span><b>Scroll</b> to move the day</span><span><b>Click</b> anything on the desk</span></p>
+
 <div class="player" id="player" role="dialog" aria-modal="true" aria-label="Film">
-  <button class="shut" type="button" aria-label="Close">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke-linecap="round"/></svg>
-  </button>
+  <button class="shut" type="button" aria-label="Close"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13" stroke-linecap="round"/></svg></button>
   <video controls playsinline preload="none"></video>
 </div>
 
-<script src="assets/home.js?v=202610271800"></script>
+<script type="application/json" id="stories">[{"id":"talking","hed":"Mail, Projects and Schedule, talking to each other"},{"id":"inbox","hed":"Your inbox, in Pulse"},{"id":"film","hed":"Pulse OS has a film"},{"id":"afterglow","hed":"v2 — Afterglow"}]</script>
+
+<div class="runway" aria-hidden="true"></div>
+
+<script src="assets/room.js"></script>
 </body>
 </html>
