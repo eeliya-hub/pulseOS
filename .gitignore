@@ -46,3 +46,9 @@ ios/DerivedData/
 # it reproducible from `npm run desktop:build`.
 desktop/out/
 promo/out/
+
+# The two long films are release assets, not committed video — see the `films`
+# release. The silent loops beside them (tour-loop, day-loop) are committed,
+# because those have to start the moment the page does.
+docs/films/pulseos-tour.mp4
+docs/films/pulseos-day.mp4
